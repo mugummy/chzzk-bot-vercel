@@ -4,8 +4,8 @@ import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const handleNaverLogin = () => {
-    signIn('naver', { callbackUrl: '/dashboard' });
+  const handleChzzkLogin = () => {
+    signIn('chzzk', { callbackUrl: '/dashboard' });
   };
 
   return (
@@ -29,33 +29,33 @@ export default function LoginPage() {
               <span className="text-purple-400">Chzzk</span> Bot
             </h1>
             <p className="text-gray-400">
-              네이버 계정으로 로그인하세요
+              치지직 계정으로 로그인하세요
             </p>
           </div>
 
-          {/* Naver Login Button */}
+          {/* Chzzk Login Button */}
           <button
-            onClick={handleNaverLogin}
-            className="w-full bg-[#03C75A] hover:bg-[#02b350] text-white font-semibold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
+            onClick={handleChzzkLogin}
+            className="w-full bg-[#00FFA3] hover:bg-[#00DD8E] text-black font-semibold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16.273 12.845L7.376 0H0v24h7.726V11.155L16.624 24H24V0h-7.727z"/>
+              <circle cx="12" cy="12" r="10"/>
             </svg>
-            네이버로 로그인
+            치지직으로 로그인
           </button>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>로그인 시 치지직 채널과 연동됩니다</p>
+            <p>로그인 시 채널 정보와 자동 연동됩니다</p>
           </div>
 
           {/* Info Box */}
           <div className="mt-8 bg-gray-900/50 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-gray-300 mb-2">
-              왜 네이버 로그인인가요?
+              안전한 로그인
             </h3>
             <p className="text-xs text-gray-500">
-              치지직은 네이버의 서비스입니다. 네이버 계정으로 로그인하면
-              자동으로 치지직 채널 정보와 연동됩니다.
+              치지직 공식 OAuth를 통해 로그인합니다.
+              비밀번호는 저장되지 않습니다.
             </p>
           </div>
         </div>

@@ -13,8 +13,8 @@ declare module 'next-auth' {
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    naverId?: string;
-    nickname?: string;
-    profileImage?: string;
+    channelId?: string;
+    channelName?: string;
+    channelImageUrl?: string;
   }
 }

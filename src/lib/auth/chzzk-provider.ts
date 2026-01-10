@@ -1,57 +1,98 @@
 // 치지직 OAuth Provider for NextAuth
-// 참고: 치지직은 공식 OAuth를 제공하지 않으므로
-// 네이버 로그인을 통해 치지직 계정 정보를 가져오는 방식 사용
+// 치지직 공식 개발자 센터 OAuth 사용
 
-import type { OAuthConfig, OAuthUserConfig } from "next-auth/providers";
+import type { OAuthUserConfig } from "next-auth/providers";
 
 export interface ChzzkProfile {
-  resultCode: string;
+  code: number;
   message: string;
   content: {
-    userIdHash: string;
-    nickname: string;
-    profileImageUrl: string | null;
     channelId: string;
     channelName: string;
+    channelImageUrl: string | null;
   };
 }
 
-export interface NaverProfile {
-  resultcode: string;
+export interface ChzzkTokenResponse {
+  code: number;
   message: string;
-  response: {
-    id: string;
-    nickname: string;
-    profile_image: string;
-    email: string;
-    name: string;
+  content: {
+    accessToken: string;
+    refreshToken: string;
+    tokenType: string;
+    expiresIn: number;
   };
 }
 
-// 네이버 OAuth Provider (치지직 연동용)
-export function NaverProvider(
-  options: OAuthUserConfig<NaverProfile>
+// 치지직 OAuth Provider
+export function ChzzkProvider(
+  options: OAuthUserConfig<ChzzkProfile>
 ) {
   return {
-    ...options,
-    id: "naver",
-    name: "Naver",
+    id: "chzzk",
+    name: "Chzzk",
     type: "oauth" as const,
     checks: ["state"] as ("state" | "pkce" | "none")[],
     authorization: {
-      url: "https://nid.naver.com/oauth2.0/authorize",
-      params: { response_type: "code" },
+      url: "https://chzzk.naver.com/account-interlock",
+      params: {
+        clientId: options.clientId,
+      },
     },
-    token: "https://nid.naver.com/oauth2.0/token",
-    userinfo: "https://openapi.naver.com/v1/nid/me",
-    profile(profile: NaverProfile) {
+    token: {
+      url: "https://openapi.chzzk.naver.com/auth/v1/token",
+      async request({ params, provider }: any) {
+        const response = await fetch("https://openapi.chzzk.naver.com/auth/v1/token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            grantType: "authorization_code",
+            clientId: provider.clientId,
+            clientSecret: provider.clientSecret,
+            code: params.code,
+            state: params.state,
+          }),
+        });
+
+        const data: ChzzkTokenResponse = await response.json();
+
+        if (data.code !== 200) {
+          throw new Error(data.message || "Token request failed");
+        }
+
+        return {
+          tokens: {
+            access_token: data.content.accessToken,
+            refresh_token: data.content.refreshToken,
+            token_type: data.content.tokenType,
+            expires_in: data.content.expiresIn,
+          },
+        };
+      },
+    },
+    userinfo: {
+      url: "https://openapi.chzzk.naver.com/open/v1/users/me",
+      async request({ tokens }: any) {
+        const response = await fetch("https://openapi.chzzk.naver.com/open/v1/users/me", {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+          },
+        });
+
+        const data = await response.json();
+        return data;
+      },
+    },
+    profile(profile: ChzzkProfile) {
       return {
-        id: profile.response.id,
-        name: profile.response.nickname || profile.response.name,
-        email: profile.response.email,
-        image: profile.response.profile_image,
+        id: profile.content.channelId,
+        name: profile.content.channelName,
+        image: profile.content.channelImageUrl,
       };
     },
+    ...options,
   };
 }
 

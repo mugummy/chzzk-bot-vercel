@@ -1,42 +1,42 @@
 import NextAuth from "next-auth";
-import { NaverProvider } from "@/lib/auth/chzzk-provider";
+import { ChzzkProvider } from "@/lib/auth/chzzk-provider";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    NaverProvider({
-      clientId: process.env.NAVER_CLIENT_ID!,
-      clientSecret: process.env.NAVER_CLIENT_SECRET!,
+    ChzzkProvider({
+      clientId: process.env.CHZZK_CLIENT_ID!,
+      clientSecret: process.env.CHZZK_CLIENT_SECRET!,
     }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === "naver" && profile) {
+      if (account?.provider === "chzzk" && profile) {
         try {
           const supabase = createServiceClient();
-          const naverProfile = profile as any;
+          const chzzkProfile = profile as any;
 
           // 사용자 정보 저장 또는 업데이트
           const { data: existingUser } = await supabase
             .from('users')
             .select('*')
-            .eq('chzzk_id', naverProfile.response.id)
+            .eq('chzzk_id', chzzkProfile.content.channelId)
             .single();
 
           if (!existingUser) {
             // 새 사용자 생성
             await supabase.from('users').insert({
-              chzzk_id: naverProfile.response.id,
-              channel_id: naverProfile.response.id, // 나중에 치지직 채널 연동 시 업데이트
-              channel_name: naverProfile.response.nickname || '새 사용자',
-              profile_image: naverProfile.response.profile_image,
+              chzzk_id: chzzkProfile.content.channelId,
+              channel_id: chzzkProfile.content.channelId,
+              channel_name: chzzkProfile.content.channelName || '새 사용자',
+              profile_image: chzzkProfile.content.channelImageUrl,
             });
 
             // 기본 설정 생성
             const { data: newUser } = await supabase
               .from('users')
               .select('id')
-              .eq('chzzk_id', naverProfile.response.id)
+              .eq('chzzk_id', chzzkProfile.content.channelId)
               .single();
 
             if (newUser) {
@@ -44,6 +44,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 user_id: newUser.id,
               });
             }
+          } else {
+            // 기존 사용자 정보 업데이트
+            await supabase.from('users').update({
+              channel_name: chzzkProfile.content.channelName,
+              profile_image: chzzkProfile.content.channelImageUrl,
+              updated_at: new Date().toISOString(),
+            }).eq('chzzk_id', chzzkProfile.content.channelId);
           }
         } catch (error) {
           console.error('Error saving user:', error);
@@ -52,19 +59,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
     async jwt({ token, user, account, profile }) {
-      if (account?.provider === "naver" && profile) {
-        const naverProfile = profile as any;
-        token.naverId = naverProfile.response.id;
-        token.nickname = naverProfile.response.nickname;
-        token.profileImage = naverProfile.response.profile_image;
+      if (account?.provider === "chzzk" && profile) {
+        const chzzkProfile = profile as any;
+        token.channelId = chzzkProfile.content.channelId;
+        token.channelName = chzzkProfile.content.channelName;
+        token.channelImageUrl = chzzkProfile.content.channelImageUrl;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.naverId as string;
-        session.user.name = token.nickname as string;
-        session.user.image = token.profileImage as string;
+        session.user.id = token.channelId as string;
+        session.user.name = token.channelName as string;
+        session.user.image = token.channelImageUrl as string;
       }
       return session;
     },
