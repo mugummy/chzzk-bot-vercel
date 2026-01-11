@@ -6,7 +6,17 @@ const redirectUri = process.env.NEXTAUTH_URL
   ? `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`
   : "https://mugumchzzkbot.vercel.app/api/auth/callback/chzzk";
 
+// 디버그 로그
+console.log("[Auth] Config:", {
+  clientId: process.env.CHZZK_CLIENT_ID ? "SET" : "MISSING",
+  clientSecret: process.env.CHZZK_CLIENT_SECRET ? "SET" : "MISSING",
+  redirectUri,
+  nextauthUrl: process.env.NEXTAUTH_URL,
+  authSecret: process.env.AUTH_SECRET ? "SET" : "MISSING",
+});
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  debug: true,
   providers: [
     ChzzkProvider({
       clientId: process.env.CHZZK_CLIENT_ID!,
