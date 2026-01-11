@@ -28,11 +28,15 @@ export interface ChzzkTokenResponse {
 export function ChzzkProvider(
   options: OAuthUserConfig<ChzzkProfile>
 ) {
+  const checks: ("state" | "pkce" | "none")[] = ["state"];
+
   return {
     id: "chzzk",
     name: "Chzzk",
     type: "oauth" as const,
-    checks: ["state"] as ("state" | "pkce" | "none")[],
+    clientId: options.clientId,
+    clientSecret: options.clientSecret,
+    checks,
     authorization: {
       url: "https://chzzk.naver.com/account-interlock",
       params: {
@@ -92,7 +96,6 @@ export function ChzzkProvider(
         image: profile.content.channelImageUrl,
       };
     },
-    ...options,
   };
 }
 
