@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import DashboardNav from '@/components/dashboard/DashboardNav';
 
@@ -7,17 +7,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const session = await getSession();
 
   if (!session) {
     redirect('/login');
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <DashboardNav user={session.user} />
-      <main className="lg:pl-64">
-        <div className="p-6">
+    <div className="min-h-screen bg-[#0a0a0f]">
+      <DashboardNav user={{
+        name: session.channelName,
+        image: session.channelImageUrl,
+      }} />
+      <main className="lg:pl-72">
+        <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           {children}
         </div>
       </main>
