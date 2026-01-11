@@ -49,24 +49,31 @@ export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig
     token: {
       url: "https://openapi.chzzk.naver.com/auth/v1/token",
       async request({ params, provider }: any) {
-        console.log("[Chzzk] Token request params:", { code: params.code, state: params.state });
+        const redirectUri = process.env.NEXTAUTH_URL
+          ? `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`
+          : "https://mugumchzzkbot.vercel.app/api/auth/callback/chzzk";
+
+        const requestBody = {
+          grantType: "authorization_code",
+          clientId: provider.clientId,
+          clientSecret: provider.clientSecret,
+          code: params.code,
+          state: params.state,
+          redirectUri: redirectUri,
+        };
+
+        console.log("[Chzzk] Token request body:", JSON.stringify(requestBody, null, 2));
 
         const response = await fetch("https://openapi.chzzk.naver.com/auth/v1/token", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            grantType: "authorization_code",
-            clientId: provider.clientId,
-            clientSecret: provider.clientSecret,
-            code: params.code,
-            state: params.state,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const data = await response.json() as ChzzkTokenResponse;
-        console.log("[Chzzk] Token response:", data);
+        console.log("[Chzzk] Token response:", JSON.stringify(data, null, 2));
 
         if (data.code !== 200) {
           console.error("[Chzzk] Token error:", data);
