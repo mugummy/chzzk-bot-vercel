@@ -1,7 +1,7 @@
-// 치지직 OAuth Provider for NextAuth
+// 치지직 OAuth Provider for NextAuth v5
 // 치지직 공식 개발자 센터 OAuth 사용
 
-import type { OAuthUserConfig } from "next-auth/providers";
+import type { OAuthConfig, OAuthUserConfig } from "next-auth/providers";
 
 export interface ChzzkProfile {
   code: number;
@@ -24,64 +24,58 @@ export interface ChzzkTokenResponse {
   };
 }
 
+export interface ChzzkProviderConfig extends OAuthUserConfig<ChzzkProfile> {
+  redirectUri?: string;
+}
+
 // 치지직 OAuth Provider
-export function ChzzkProvider(
-  options: OAuthUserConfig<ChzzkProfile> & { redirectUri?: string }
-) {
-  const checks: ("state" | "pkce" | "none")[] = ["state"];
-  const redirectUri = options.redirectUri || process.env.NEXTAUTH_URL + "/api/auth/callback/chzzk";
+export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig<ChzzkProfile> {
+  const redirectUri = options.redirectUri || `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`;
 
   return {
     id: "chzzk",
     name: "Chzzk",
-    type: "oauth" as const,
-    clientId: options.clientId,
-    clientSecret: options.clientSecret,
-    checks,
+    type: "oauth",
+
     authorization: {
       url: "https://chzzk.naver.com/account-interlock",
       params: {
         clientId: options.clientId,
         redirectUri: redirectUri,
-        state: undefined, // NextAuth가 자동 생성
+        state: crypto.randomUUID(),
       },
     },
+
     token: {
       url: "https://openapi.chzzk.naver.com/auth/v1/token",
-      async request({ params, provider }: any) {
-        const response = await fetch("https://openapi.chzzk.naver.com/auth/v1/token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            grantType: "authorization_code",
-            clientId: provider.clientId,
-            clientSecret: provider.clientSecret,
-            code: params.code,
-            state: params.state,
-          }),
-        });
-
-        const data: ChzzkTokenResponse = await response.json();
+      conform: async (response: Response) => {
+        // Chzzk API는 항상 200을 반환하고 내부 code로 성공/실패 구분
+        // NextAuth가 response를 처리할 수 있도록 변환
+        const data = await response.json() as ChzzkTokenResponse;
 
         if (data.code !== 200) {
+          console.error("Chzzk token error:", data);
           throw new Error(data.message || "Token request failed");
         }
 
-        return {
-          tokens: {
-            access_token: data.content.accessToken,
-            refresh_token: data.content.refreshToken,
-            token_type: data.content.tokenType,
-            expires_in: data.content.expiresIn,
-          },
-        };
+        // NextAuth가 기대하는 표준 OAuth 응답 형식으로 변환
+        const standardResponse = new Response(JSON.stringify({
+          access_token: data.content.accessToken,
+          refresh_token: data.content.refreshToken,
+          token_type: data.content.tokenType || "Bearer",
+          expires_in: data.content.expiresIn,
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+
+        return standardResponse;
       },
     },
+
     userinfo: {
       url: "https://openapi.chzzk.naver.com/open/v1/users/me",
-      async request({ tokens }: any) {
+      async request({ tokens }: { tokens: { access_token: string } }) {
         const response = await fetch("https://openapi.chzzk.naver.com/open/v1/users/me", {
           headers: {
             Authorization: `Bearer ${tokens.access_token}`,
@@ -92,6 +86,7 @@ export function ChzzkProvider(
         return data;
       },
     },
+
     profile(profile: ChzzkProfile) {
       return {
         id: profile.content.channelId,
@@ -99,8 +94,18 @@ export function ChzzkProvider(
         image: profile.content.channelImageUrl,
       };
     },
+
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
+
+    clientId: options.clientId,
+    clientSecret: options.clientSecret,
   };
 }
+
+// Named export도 추가
+export { ChzzkProvider };
 
 // 치지직 채널 정보 가져오기
 export async function getChzzkChannelInfo(channelId: string): Promise<{

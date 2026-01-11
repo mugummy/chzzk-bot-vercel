@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { ChzzkProvider } from "@/lib/auth/chzzk-provider";
+import ChzzkProvider from "@/lib/auth/chzzk-provider";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const redirectUri = process.env.NEXTAUTH_URL
