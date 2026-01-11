@@ -2,11 +2,16 @@ import NextAuth from "next-auth";
 import { ChzzkProvider } from "@/lib/auth/chzzk-provider";
 import { createServiceClient } from "@/lib/supabase/server";
 
+const redirectUri = process.env.NEXTAUTH_URL
+  ? `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`
+  : "https://mugumchzzkbot.vercel.app/api/auth/callback/chzzk";
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     ChzzkProvider({
       clientId: process.env.CHZZK_CLIENT_ID!,
       clientSecret: process.env.CHZZK_CLIENT_SECRET!,
+      redirectUri: redirectUri,
     }),
   ],
   callbacks: {

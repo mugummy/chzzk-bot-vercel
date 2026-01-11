@@ -26,9 +26,10 @@ export interface ChzzkTokenResponse {
 
 // 치지직 OAuth Provider
 export function ChzzkProvider(
-  options: OAuthUserConfig<ChzzkProfile>
+  options: OAuthUserConfig<ChzzkProfile> & { redirectUri?: string }
 ) {
   const checks: ("state" | "pkce" | "none")[] = ["state"];
+  const redirectUri = options.redirectUri || process.env.NEXTAUTH_URL + "/api/auth/callback/chzzk";
 
   return {
     id: "chzzk",
@@ -41,6 +42,8 @@ export function ChzzkProvider(
       url: "https://chzzk.naver.com/account-interlock",
       params: {
         clientId: options.clientId,
+        redirectUri: redirectUri,
+        state: undefined, // NextAuth가 자동 생성
       },
     },
     token: {
