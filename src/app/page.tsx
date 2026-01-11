@@ -184,7 +184,6 @@ export default async function Home() {
             <div className="relative rounded-3xl overflow-hidden">
               {/* Background */}
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600" />
-              <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
 
               <div className="relative px-8 py-16 md:px-16 md:py-20 text-center">
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
