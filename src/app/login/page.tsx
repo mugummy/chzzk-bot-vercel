@@ -1,11 +1,16 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+
   const handleChzzkLogin = () => {
-    signIn('chzzk', { callbackUrl: '/dashboard' });
+    // 직접 만든 OAuth 시작 엔드포인트로 이동
+    window.location.href = '/api/auth/chzzk';
   };
 
   return (
@@ -21,6 +26,15 @@ export default function LoginPage() {
           </svg>
           홈으로 돌아가기
         </Link>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+            <p className="text-red-400 text-sm">
+              로그인에 실패했습니다: {error}
+            </p>
+          </div>
+        )}
 
         {/* Login Card */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-8">
@@ -66,5 +80,17 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="text-white">로딩 중...</div>
+      </main>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

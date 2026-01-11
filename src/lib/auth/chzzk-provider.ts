@@ -1,8 +1,6 @@
 // 치지직 OAuth Provider for NextAuth v5
 // 치지직 공식 개발자 센터 OAuth 사용
 
-import type { OAuthConfig, OAuthUserConfig } from "next-auth/providers";
-
 export interface ChzzkProfile {
   code: number;
   message: string;
@@ -24,19 +22,20 @@ export interface ChzzkTokenResponse {
   };
 }
 
-export interface ChzzkProviderConfig extends OAuthUserConfig<ChzzkProfile> {
+export interface ChzzkProviderConfig {
+  clientId: string;
+  clientSecret: string;
   redirectUri?: string;
 }
 
 // 치지직 OAuth Provider
-export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig<ChzzkProfile> {
+export default function ChzzkProvider(options: ChzzkProviderConfig) {
   const redirectUri = options.redirectUri || `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`;
 
   return {
     id: "chzzk",
     name: "Chzzk",
-    type: "oauth",
-    checks: ["state"],
+    type: "oauth" as const,
 
     authorization: {
       url: "https://chzzk.naver.com/account-interlock",
@@ -46,55 +45,53 @@ export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig
       },
     },
 
+    // NextAuth v5: token endpoint 설정
     token: {
       url: "https://openapi.chzzk.naver.com/auth/v1/token",
-      async request({ params, provider }: any) {
-        const redirectUri = process.env.NEXTAUTH_URL
-          ? `${process.env.NEXTAUTH_URL}/api/auth/callback/chzzk`
-          : "https://mugumchzzkbot.vercel.app/api/auth/callback/chzzk";
+      conform: async (response: Response) => {
+        const text = await response.text();
+        console.log("[Chzzk] Raw token response:", text);
 
-        const requestBody = {
-          grantType: "authorization_code",
-          clientId: provider.clientId,
-          clientSecret: provider.clientSecret,
-          code: params.code,
-          state: params.state,
-          redirectUri: redirectUri,
-        };
+        try {
+          const data = JSON.parse(text) as ChzzkTokenResponse;
 
-        console.log("[Chzzk] Token request body:", JSON.stringify(requestBody, null, 2));
+          if (data.code !== 200) {
+            console.error("[Chzzk] Token error:", data);
+            // 에러를 표준 OAuth 에러로 변환
+            return new Response(JSON.stringify({
+              error: "server_error",
+              error_description: data.message || "Token request failed",
+            }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
 
-        const response = await fetch("https://openapi.chzzk.naver.com/auth/v1/token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        const data = await response.json() as ChzzkTokenResponse;
-        console.log("[Chzzk] Token response:", JSON.stringify(data, null, 2));
-
-        if (data.code !== 200) {
-          console.error("[Chzzk] Token error:", data);
-          throw new Error(data.message || "Token request failed");
-        }
-
-        return {
-          tokens: {
+          // 성공: 표준 OAuth 응답으로 변환
+          const standardResponse = {
             access_token: data.content.accessToken,
             refresh_token: data.content.refreshToken,
             token_type: data.content.tokenType || "Bearer",
-            expires_at: Math.floor(Date.now() / 1000) + data.content.expiresIn,
-          },
-        };
+            expires_in: data.content.expiresIn,
+          };
+
+          console.log("[Chzzk] Transformed token response:", standardResponse);
+
+          return new Response(JSON.stringify(standardResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (e) {
+          console.error("[Chzzk] Failed to parse token response:", e);
+          throw e;
+        }
       },
     },
 
     userinfo: {
       url: "https://openapi.chzzk.naver.com/open/v1/users/me",
-      async request({ tokens }: any) {
-        console.log("[Chzzk] Userinfo request with token:", tokens.access_token?.substring(0, 20) + "...");
+      request: async ({ tokens }: { tokens: { access_token?: string } }) => {
+        console.log("[Chzzk] Fetching userinfo...");
 
         const response = await fetch("https://openapi.chzzk.naver.com/open/v1/users/me", {
           headers: {
@@ -103,13 +100,13 @@ export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig
         });
 
         const data = await response.json();
-        console.log("[Chzzk] Userinfo response:", data);
+        console.log("[Chzzk] Userinfo response:", JSON.stringify(data));
         return data;
       },
     },
 
     profile(profile: ChzzkProfile) {
-      console.log("[Chzzk] Profile:", profile);
+      console.log("[Chzzk] Profile:", JSON.stringify(profile));
       return {
         id: profile.content.channelId,
         name: profile.content.channelName,
@@ -119,6 +116,11 @@ export default function ChzzkProvider(options: ChzzkProviderConfig): OAuthConfig
 
     clientId: options.clientId,
     clientSecret: options.clientSecret,
+
+    // Chzzk는 JSON body로 토큰 요청
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
   };
 }
 
