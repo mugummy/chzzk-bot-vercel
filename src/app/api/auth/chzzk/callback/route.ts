@@ -21,7 +21,9 @@ interface ChzzkUserResponse {
   content?: {
     channelId: string;
     channelName: string;
-    channelImageUrl: string | null;
+    nickname?: string;
+    channelImageUrl?: string | null;
+    profileImageUrl?: string | null;
   };
 }
 
@@ -99,7 +101,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=user_info_failed", request.url));
     }
 
-    const { channelId, channelName, channelImageUrl } = userData.content;
+    const { channelId, channelName, channelImageUrl, profileImageUrl } = userData.content;
+    const imageUrl = channelImageUrl || profileImageUrl || null;
 
     // 3. Supabase에 사용자 저장/업데이트
     const supabase = createServiceClient();
@@ -120,7 +123,7 @@ export async function GET(request: NextRequest) {
           chzzk_id: channelId,
           channel_id: channelId,
           channel_name: channelName || "새 사용자",
-          profile_image: channelImageUrl,
+          profile_image: imageUrl,
         })
         .select("id")
         .single();
@@ -148,7 +151,7 @@ export async function GET(request: NextRequest) {
         .from("users")
         .update({
           channel_name: channelName,
-          profile_image: channelImageUrl,
+          profile_image: imageUrl,
           updated_at: new Date().toISOString(),
         })
         .eq("chzzk_id", channelId);
@@ -162,7 +165,7 @@ export async function GET(request: NextRequest) {
       userId,
       channelId,
       channelName,
-      channelImageUrl,
+      channelImageUrl: imageUrl,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -170,16 +173,20 @@ export async function GET(request: NextRequest) {
       .sign(secret);
 
     // 5. 세션 쿠키 설정 및 대시보드로 리다이렉트
-    const response = NextResponse.redirect(new URL("/dashboard", request.url));
+    const baseUrl = process.env.NEXTAUTH_URL || "https://mugumchzzkbot.vercel.app";
+    const response = NextResponse.redirect(`${baseUrl}/dashboard`);
 
     response.cookies.set("session", sessionToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7일
+      path: "/",
     });
 
     console.log("[Chzzk Callback] Login successful for:", channelName);
+    console.log("[Chzzk Callback] Redirecting to:", `${baseUrl}/dashboard`);
+    console.log("[Chzzk Callback] Session token set:", sessionToken.substring(0, 20) + "...");
 
     return response;
   } catch (error) {
