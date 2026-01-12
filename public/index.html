@@ -3,308 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot Dashboard</title>
-    <!-- 필수 스크립트 (절대 경로) -->
-    <script src="/config.js"></script>
-    <script src="/api-adapter.js"></script>
-    
+    <title>Chzzk Bot - Home</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- 원본 스타일 (절대 경로) -->
-    <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="/vote-ui-enhanced.css">
-
-    <!-- ✨ 프리미엄 랜딩 페이지 스타일 (독립적용) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        #landing-layer {
-            position: fixed; inset: 0; z-index: 99999;
-            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #05050a 100%);
-            display: flex; align-items: center; justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        #landing-layer.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-        .aurora-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
-        .blob { position: absolute; filter: blur(80px); opacity: 0.4; animation: floatBlob 15s infinite alternate; }
-        .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7047eb; }
-        .blob-2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: #00ff94; animation-delay: -5s; }
-        @keyframes floatBlob { from { transform: translate(0,0) scale(1); } to { transform: translate(50px,50px) scale(1.2); } }
-        
-        .premium-card {
-            background: rgba(255,255,255,0.03); backdrop-filter: blur(30px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px;
-            padding: 60px 40px; text-align: center; width: 90%; max-width: 450px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .landing-logo { font-size: 60px; margin-bottom: 20px; background: linear-gradient(135deg, #00ff94, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .landing-title { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 10px; }
-        .landing-subtitle { color: rgba(255,255,255,0.6); margin-bottom: 40px; font-size: 16px; }
-        
-        .landing-btn {
-            padding: 15px 50px; font-size: 18px; font-weight: 700; background: #00ff94; color: #000;
-            border: none; border-radius: 50px; cursor: pointer; transition: 0.3s;
-            box-shadow: 0 0 20px rgba(0, 255, 148, 0.3); display: inline-block;
-        }
-        .landing-btn:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(0, 255, 148, 0.5); background: #fff; }
-        
-        #auth-section { display: none; animation: fadeIn 0.3s ease; }
-        #home-section { animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .btn-chzzk { 
-            display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px; 
-            background: #00ff94; color: #000; border-radius: 15px; font-weight: 800; text-decoration: none; 
-            font-size: 18px; margin-top: 20px; transition: 0.2s; border: none; cursor: pointer;
-        }
-        .btn-chzzk:hover { background: #fff; transform: translateY(-2px); }
-        .btn-back { background: none; border: none; color: #888; text-decoration: underline; margin-top: 15px; cursor: pointer; font-size: 14px; }
+        :root { --p: #00ff94; --bg: #05050a; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .hero { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; z-index: 1; }
+        .aurora { position: absolute; inset: 0; z-index: -1; }
+        .blob { position: absolute; filter: blur(100px); opacity: 0.4; animation: f 10s infinite alternate; }
+        .b1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7047eb; }
+        .b2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: var(--p); animation-delay: -5s; }
+        @keyframes f { from { transform: translate(0,0); } to { transform: translate(50px,50px); } }
+        .card { background: rgba(255,255,255,0.03); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1); border-radius: 40px; padding: 80px 40px; width: 90%; max-width: 450px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); }
+        .logo { font-size: 80px; margin-bottom: 20px; background: linear-gradient(135deg, var(--p), #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h1 { font-size: 48px; font-weight: 900; margin: 0 0 10px; letter-spacing: -2px; }
+        p { color: rgba(255,255,255,0.6); margin-bottom: 50px; font-size: 18px; }
+        .btn-start { padding: 18px 60px; font-size: 20px; font-weight: 800; background: var(--p); color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 30px rgba(0,255,148,0.3); }
+        .btn-start:hover { transform: scale(1.05); background: #fff; }
+        #auth-section { display: none; }
+        .btn-chzzk { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 16px; background: #03C75A; color: white; border-radius: 15px; text-decoration: none; font-weight: 700; font-size: 18px; margin-top: 20px; }
+        .back { background: none; border: none; color: #888; text-decoration: underline; margin-top: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <!-- ✨ 프리미엄 랜딩 레이어 -->
-    <div id="landing-layer">
-        <div class="aurora-bg">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-        </div>
-        <div class="premium-card">
-            <!-- 1. 시작 화면 -->
-            <div id="home-section">
-                <i class="fas fa-robot landing-logo"></i>
-                <h1 class="landing-title">CHZZK BOT</h1>
-                <p class="landing-subtitle">방송 관리를 위한 올인원 솔루션</p>
-                <button class="landing-btn" onclick="showAuth()">시작하기</button>
+    <div class="hero">
+        <div class="aurora"><div class="blob b1"></div><div class="blob b2"></div></div>
+        <div class="card">
+            <div id="h">
+                <i class="fas fa-robot logo"></i>
+                <h1>CHZZK BOT</h1>
+                <p>더 강력하고 아름다운 방송 관리</p>
+                <button class="btn-start" onclick="goA()">시작하기</button>
             </div>
-            <!-- 2. 로그인 화면 -->
             <div id="auth-section">
-                <h2 style="color:white; margin-bottom:10px; font-size: 28px; font-weight: 700;">로그인</h2>
-                <p style="color:#aaa; font-size:14px; margin-bottom: 20px;">치지직 계정으로 봇을 연결합니다.</p>
-                
+                <h2>로그인</h2>
                 <a href="/auth/login" class="btn-chzzk">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="white" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/></svg>
                     치지직으로 로그인
                 </a>
-                
-                <button class="btn-back" onclick="showHome()">뒤로가기</button>
+                <button class="back" onclick="goH()">뒤로가기</button>
             </div>
         </div>
     </div>
-
-    <!-- 🖥️ 원본 대시보드 (초기 상태 hidden) -->
-    <div id="app-container" style="display: none;">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="sidebar-toggle" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
-                <h1 class="header-title" id="header-title">대시보드</h1>
-            </div>
-            <div class="header-right" id="header-profile" style="display: none;">
-                <div class="header-profile-info">
-                    <div class="header-avatar" id="header-avatar"></div>
-                    <span class="header-username" id="header-username"></span>
-                </div>
-                <button class="header-logout" id="logout-btn" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-        </header>
-
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                CHZZK BOT
-            </div>
-            <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
-                <div class="sidebar-avatar" id="sidebar-avatar"></div>
-                <div class="sidebar-info">
-                    <div class="sidebar-name" id="sidebar-name"></div>
-                    <div class="sidebar-status">
-                        <span class="status-indicator online" id="bot-status-indicator"></span>
-                        <span id="bot-status-text">연결됨</span>
-                    </div>
-                </div>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <ul class="nav-list">
-                    <li class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i><span>대시보드</span></li>
-                    <li class="nav-item" data-tab="commands"><i class="fas fa-terminal"></i><span>명령어</span></li>
-                    <li class="nav-item" data-tab="macros"><i class="fas fa-clock"></i><span>매크로</span></li>
-                    <li class="nav-item" data-tab="counters"><i class="fas fa-calculator"></i><span>카운터</span></li>
-                    <li class="nav-item" data-tab="songs"><i class="fas fa-music"></i><span>신청곡</span></li>
-                    <li class="nav-item" data-tab="votes"><i class="fas fa-poll"></i><span>투표</span></li>
-                    <li class="nav-item" data-tab="participation"><i class="fas fa-users"></i><span>참여</span></li>
-                    <li class="nav-item" data-tab="points"><i class="fas fa-coins"></i><span>포인트</span></li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Dashboard Tab -->
-            <div id="dashboard-tab" class="tab-content active">
-                <div class="dashboard-grid">
-                    <div class="card channel-card">
-                        <div class="channel-info">
-                            <div class="channel-avatar" id="channel-avatar-lg"></div>
-                            <div class="channel-details">
-                                <h2 class="channel-name" id="channel-name-lg">-</h2>
-                                <p class="channel-stats" id="follower-count">팔로워: -</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card chat-card" style="grid-column: span 2;">
-                        <div class="card-title"><span><i class="fas fa-comments"></i> 실시간 채팅</span></div>
-                        <div class="chat-container" id="chat-messages">
-                            <div class="chat-empty" style="text-align:center; padding-top:100px; color:#666;">채팅 대기 중...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Commands Tab -->
-            <div id="commands-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        명령어 목록
-                        <button class="btn btn-primary" id="add-command-btn">추가</button>
-                    </div>
-                    <div class="item-list" id="commands-list"></div>
-                </div>
-            </div>
-
-            <!-- Macros Tab -->
-            <div id="macros-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        매크로 목록
-                        <button class="btn btn-primary" id="add-macro-btn">추가</button>
-                    </div>
-                    <div class="item-list" id="macros-list"></div>
-                </div>
-            </div>
-
-            <!-- Counters Tab -->
-            <div id="counters-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        카운터 목록
-                        <button class="btn btn-primary" id="add-counter-btn">추가</button>
-                    </div>
-                    <div class="item-list" id="counters-list"></div>
-                </div>
-            </div>
-
-            <!-- Songs Tab -->
-            <div id="songs-tab" class="tab-content">
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">현재 재생</div>
-                        <div id="current-song" style="text-align:center; padding:20px; font-size:18px;">재생 중인 곡 없음</div>
-                        <div class="player-controls" style="margin-top:20px; display:flex; justify-content:center; gap:15px;">
-                            <button class="btn btn-primary" id="play-pause-btn"><i class="fas fa-play"></i></button>
-                            <button class="btn btn-secondary" id="skip-song-btn"><i class="fas fa-step-forward"></i></button>
-                            <button class="btn btn-danger" id="stop-song-btn"><i class="fas fa-stop"></i></button>
-                        </div>
-                        <div style="margin-top:20px; padding-top:20px; border-top:1px solid #333;">
-                            <div class="form-group"><label>쿨타임(초)</label><input type="number" id="song-cooldown" class="form-input" value="30"></div>
-                            <div class="form-group"><label>최소 후원금</label><input type="number" id="song-min-donation" class="form-input" value="1000"></div>
-                            <button class="btn btn-primary" id="save-song-settings" style="width:100%;">저장</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">대기열 (<span id="queue-count">0</span>)</div>
-                        <div class="item-list" id="song-queue-list" style="height:400px; overflow-y:auto;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Votes Tab -->
-            <div id="votes-tab" class="tab-content">
-                <div class="vote-tabs">
-                    <button class="vote-sub-tab active" data-vote-subtab="draw">추첨</button>
-                    <button class="vote-sub-tab" data-vote-subtab="vote">투표</button>
-                    <button class="vote-sub-tab" data-vote-subtab="roulette">룰렛</button>
-                    <button class="vote-sub-tab" data-vote-subtab="settings">설정</button>
-                </div>
-                <div id="draw-subtab" class="vote-subtab active"></div>
-                <div id="vote-subtab" class="vote-subtab"></div>
-                <div id="roulette-subtab" class="vote-subtab"></div>
-                <div id="settings-subtab" class="vote-subtab"></div>
-            </div>
-
-            <!-- Participation Tab -->
-            <div id="participation-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        시청자 참여
-                        <div>
-                            <button class="btn btn-primary" id="toggle-participation-btn">시작</button>
-                            <button class="btn btn-secondary" id="clear-participation-btn">초기화</button>
-                        </div>
-                    </div>
-                    <div class="dashboard-grid" style="margin-top:20px;">
-                        <div>
-                            <h4>대기열 (<span id="waiting-count">0</span>)</h4>
-                            <div class="item-list" id="waiting-queue" style="min-height:200px; background:rgba(255,255,255,0.05);"></div>
-                        </div>
-                        <div>
-                            <h4>참여중 (<span id="active-count">0</span>)</h4>
-                            <div class="item-list" id="active-participants" style="min-height:200px; background:rgba(255,255,255,0.05);"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Points Tab -->
-            <div id="points-tab" class="tab-content">
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">포인트 설정</div>
-                        <div class="form-group"><label>지급량</label><input type="number" id="points-per-chat" class="form-input" value="10"></div>
-                        <div class="form-group"><label>쿨타임</label><input type="number" id="points-cooldown" class="form-input" value="60"></div>
-                        <button class="btn btn-primary" id="save-points-settings" style="width:100%;">저장</button>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">랭킹</div>
-                        <div class="item-list" id="points-ranking" style="height:400px; overflow-y:auto;"></div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <div id="add-command-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>명령어 추가</h2><button class="modal-close" onclick="hideModal('add-command-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>명령어</label><input type="text" id="new-command-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-command-response" class="form-textarea"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-command-modal')">취소</button><button class="btn btn-primary" onclick="addCommand()">저장</button></div></div></div>
-    
-    <!-- (Other modals omitted for brevity but present in logic) -->
-    
-    <div id="notification-container"></div>
-
     <script>
-        // Inline Landing Logic (No external dependency)
-        window.showAuth = function() {
-            document.getElementById('home-section').style.display = 'none';
-            document.getElementById('auth-section').style.display = 'block';
-        };
-        window.showHome = function() {
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('home-section').style.display = 'block';
-        };
-        window.hideLanding = function() {
-            const landing = document.getElementById('landing-layer');
-            landing.style.opacity = '0';
-            setTimeout(() => {
-                landing.style.display = 'none';
-                document.getElementById('app-container').style.display = 'flex'; // 대시보드 표시
-            }, 500);
-        };
-        window.showLanding = function() {
-            const landing = document.getElementById('landing-layer');
-            landing.style.display = 'flex';
-            setTimeout(() => landing.style.opacity = '1', 10);
-            document.getElementById('app-container').style.display = 'none';
-        };
+        function goA() { document.getElementById('h').style.display='none'; document.getElementById('auth-section').style.display='block'; }
+        function goH() { document.getElementById('auth-section').style.display='none'; document.getElementById('h').style.display='block'; }
+        // 이미 로그인된 경우 체크
+        fetch('/api/auth/session').then(r => r.json()).then(d => { if(d.authenticated) location.href='/dashboard/' + d.user.channelName; });
     </script>
-    <script src="/vote-system.js"></script>
-    <script src="/dashboard.js"></script>
 </body>
 </html>
