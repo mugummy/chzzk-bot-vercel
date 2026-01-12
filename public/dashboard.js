@@ -320,8 +320,8 @@ async function initAuth() {
     let sessionUser = null;
     
     try {
-        // 1. 서버 세션 시도
-        const res = await fetch('/api/auth/session');
+        // 1. 서버 세션 시도 (쿠키 포함 필수!)
+        const res = await fetch('/api/auth/session', { credentials: 'include' });
         if (res.ok) {
             const session = await res.json();
             sessionUser = session.user;

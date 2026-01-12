@@ -18,6 +18,12 @@
                 const newUrl = API_BASE + url;
                 return originalFetch(newUrl, options);
             }
+            
+            // 인증 API인 경우 쿠키 강제 포함
+            if (isAuthApi) {
+                const newOptions = { ...options, credentials: 'include' };
+                return originalFetch(url, newOptions);
+            }
         }
         return originalFetch(url, options);
     };
