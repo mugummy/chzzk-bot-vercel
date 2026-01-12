@@ -6,6 +6,7 @@
     "start": "serve public"
   },
   "dependencies": {
+    "@lydell/node-pty-win32-x64": "^1.2.0-beta.3",
     "serve": "^14.2.0"
   }
 }
