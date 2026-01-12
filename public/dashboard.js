@@ -202,6 +202,16 @@ function initWebSocket() {
 
 function sendWebSocket(data) {
     if (socket && socket.readyState === WebSocket.OPEN) {
+        // 보안 검사: 데이터를 변경하는 요청은 로그인 필수
+        const writeOperations = ['update', 'add', 'remove', 'create', 'start', 'stop', 'save', 'set', 'perform', 'execute', 'clear', 'spin', 'control'];
+        const isWriteOp = writeOperations.some(op => data.type.startsWith(op));
+
+        if (isWriteOp && !currentUser) {
+            console.warn('[Security] Blocked write operation due to no session:', data.type);
+            showNotification('로그인이 필요한 기능입니다.', 'error');
+            return;
+        }
+
         socket.send(JSON.stringify(data));
     }
 }
@@ -344,23 +354,30 @@ async function initAuth() {
     if (sessionUser) {
         currentUser = sessionUser;
         updateUserProfile(currentUser);
-        hideLoginScreen();
-        
-        // 봇 연결
-        setTimeout(() => {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'connect',
-                    data: { 
-                        channel: currentUser.channelId || currentUser.id,
-                        token: currentUser.accessToken 
-                    }
-                }));
-            }
-        }, 500);
+        // 봇 연결 (정식 세션 정보 사용)
+        connectToBot(currentUser.channelId || currentUser.id);
     } else {
-        console.log('[Auth] No session found, showing login');
-        showLoginScreen();
+        console.log('[Auth] No session found. Features requiring auth will be disabled.');
+        // 수동 입력(Prompt) 삭제 - 보안 강화
+        showNotification('로그인이 필요합니다. 일부 기능이 제한됩니다.', 'warning');
+    }
+}
+
+function connectToBot(channelId) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log('[Auth] Connecting to bot with channel:', channelId);
+        socket.send(JSON.stringify({
+            type: 'connect',
+            data: { channel: channelId }
+        }));
+        
+        // 연결 후 데이터 요청 한 번 더
+        setTimeout(() => {
+            socket.send(JSON.stringify({ type: 'requestData', dataType: 'all' }));
+        }, 1000);
+    } else {
+        console.log('[Auth] Socket not ready, retrying in 1s...');
+        setTimeout(() => connectToBot(channelId), 1000);
     }
 }
 
@@ -1237,6 +1254,12 @@ function deleteCounter(index) {
 function updateSettings(settings) {
     console.log('[Settings] Received settings:', settings);
     if (!settings) return;
+    
+    // Bot Chat Toggle
+    const chatToggle = document.getElementById('bot-chat-toggle');
+    if (chatToggle && settings.chatEnabled !== undefined) {
+        chatToggle.checked = settings.chatEnabled;
+    }
     
     // Song settings
     const modeSelect = document.getElementById('song-request-mode');
@@ -2904,39 +2927,59 @@ function updateHeaderTitle(tab) {
 // Button Event Listeners
 // ============================================
 function initButtonListeners() {
+    console.log('[Dashboard] Initializing button listeners...');
+
+    const safeAddListener = (id, event, handler) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener(event, handler);
+        } else {
+            console.warn(`[Dashboard] Button not found: ${id}`);
+        }
+    };
+
+    // Bot Chat Toggle
+    safeAddListener('bot-chat-toggle', 'change', (e) => {
+        sendWebSocket({
+            type: 'updateSettings',
+            data: { chatEnabled: e.target.checked }
+        });
+        showNotification(e.target.checked ? '봇 채팅이 활성화되었습니다' : '봇 채팅이 비활성화되었습니다', 'info');
+    });
+
     // Commands
-    document.getElementById('add-command-btn')?.addEventListener('click', () => showModal('add-command-modal'));
+    safeAddListener('add-command-btn', 'click', () => showModal('add-command-modal'));
     
     // Macros
-    document.getElementById('add-macro-btn')?.addEventListener('click', () => showModal('add-macro-modal'));
+    safeAddListener('add-macro-btn', 'click', () => showModal('add-macro-modal'));
     
     // Counters
-    document.getElementById('add-counter-btn')?.addEventListener('click', () => showModal('add-counter-modal'));
+    safeAddListener('add-counter-btn', 'click', () => showModal('add-counter-modal'));
     
     // Songs
-    document.getElementById('save-song-settings')?.addEventListener('click', saveSongSettings);
+    safeAddListener('save-song-settings', 'click', saveSongSettings);
     
     // Vote
-    document.getElementById('add-vote-option-btn')?.addEventListener('click', addVoteOption);
-    document.getElementById('create-vote-btn')?.addEventListener('click', createVote);
-    document.getElementById('start-vote-btn')?.addEventListener('click', startVote);
-    document.getElementById('end-vote-btn')?.addEventListener('click', endVote);
-    document.getElementById('reset-vote-btn')?.addEventListener('click', resetVote);
+    safeAddListener('add-vote-option-btn', 'click', addVoteOption);
+    safeAddListener('create-vote-btn', 'click', createVote);
+    safeAddListener('start-vote-btn', 'click', startVote);
+    safeAddListener('end-vote-btn', 'click', endVote);
+    safeAddListener('reset-vote-btn', 'click', resetVote);
     
     // Draw
-    document.getElementById('draw-start-btn')?.addEventListener('click', toggleDraw);
-    document.getElementById('draw-perform-btn')?.addEventListener('click', performDraw);
-    document.getElementById('draw-reset-btn')?.addEventListener('click', resetDraw);
-    document.getElementById('draw-save-keyword-btn')?.addEventListener('click', saveDrawKeyword);
+    safeAddListener('draw-start-btn', 'click', toggleDraw);
+    safeAddListener('draw-perform-btn', 'click', performDraw);
+    safeAddListener('draw-reset-btn', 'click', resetDraw);
+    safeAddListener('draw-save-keyword-btn', 'click', saveDrawKeyword);
     
     // Roulette
-    document.getElementById('add-roulette-item-btn')?.addEventListener('click', addRouletteItem);
-    document.getElementById('roulette-spin-btn')?.addEventListener('click', spinRoulette);
-    document.getElementById('roulette-reset-btn')?.addEventListener('click', resetRoulette);
+    safeAddListener('add-roulette-item-btn', 'click', addRouletteItem);
+    safeAddListener('roulette-spin-btn', 'click', spinRoulette);
+    safeAddListener('roulette-reset-btn', 'click', resetRoulette);
     
-    // Participation (HTML ID에 맞춤)
-    document.getElementById('toggle-participation-btn')?.addEventListener('click', toggleParticipation);
-    document.getElementById('clear-participation-btn')?.addEventListener('click', clearParticipants);
+    // Participation
+    safeAddListener('toggle-participation-btn', 'click', toggleParticipation);
+    safeAddListener('clear-participation-btn', 'click', clearParticipants);
     
     // Participation slider
     const maxSlider = document.getElementById('max-participants-slider');
@@ -2953,11 +2996,11 @@ function initButtonListeners() {
     }
     
     // Points
-    document.getElementById('save-points-settings')?.addEventListener('click', savePointsSettings);
+    safeAddListener('save-points-settings', 'click', savePointsSettings);
     
     // Overlay settings
-    document.getElementById('copy-overlay-url')?.addEventListener('click', copyOverlayUrl);
-    document.getElementById('save-overlay-settings')?.addEventListener('click', saveOverlaySettings);
+    safeAddListener('copy-overlay-url', 'click', copyOverlayUrl);
+    safeAddListener('save-overlay-settings', 'click', saveOverlaySettings);
     
     // Overlay sliders
     const opacitySlider = document.getElementById('overlay-opacity');

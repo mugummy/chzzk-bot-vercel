@@ -133,7 +133,13 @@
 
                 <!-- Stats Card -->
                 <div class="card stats-card">
-                    <h3 class="card-title"><i class="fas fa-chart-line"></i> 봇 현황</h3>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 class="card-title" style="margin: 0;"><i class="fas fa-chart-line"></i> 봇 현황</h3>
+                        <label class="toggle-switch" title="봇 채팅 켜기/끄기">
+                            <input type="checkbox" id="bot-chat-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                     <div class="stats-grid">
                         <div class="stat-item">
                             <div class="stat-value" id="stat-commands">0</div>
