@@ -11,9 +11,10 @@
     window.fetch = function(url, options) {
         if (typeof url === 'string') {
             const isStaticAsset = /\.(html|js|css|png|jpg|svg|json)$/i.test(url);
+            const isAuthApi = url.startsWith('/api/auth'); // 인증 API 체크
             
-            // 루트(/)로 시작하고 정적 파일이 아닌 경우에만 인터셉트
-            if (url.startsWith('/') && !isStaticAsset) {
+            // 루트(/)로 시작하고 정적 파일이 아니며, 인증 API가 아닌 경우에만 인터셉트
+            if (url.startsWith('/') && !isStaticAsset && !isAuthApi) {
                 const newUrl = API_BASE + url;
                 return originalFetch(newUrl, options);
             }
