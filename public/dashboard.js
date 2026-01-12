@@ -3148,7 +3148,7 @@ if (document.readyState === 'loading') {
 } else {
     initDashboard();
 }
-\
+
 // Expose functions to global scope for HTML onclick attributes
 window.addCommand = addCommand;
 window.updateCommand = updateCommand;
@@ -3178,4 +3178,4 @@ window.handleLegacyLogin = handleLegacyLogin;
 window.handleLogout = handleLogout;
 window.showModal = showModal;
 window.hideModal = hideModal;
-window.closeModal = hideModal;\
+window.closeModal = hideModal;
