@@ -38,7 +38,7 @@ class EnhancedChatSystem {
         const floatingChat = document.createElement('div');
         floatingChat.id = 'floating-chat';
         floatingChat.className = 'floating-chat hidden';
-        floatingChat.style.cssText = "
+        floatingChat.style.cssText = `
             position: fixed;
             top: 100px;
             right: 20px;
@@ -53,12 +53,12 @@ class EnhancedChatSystem {
             flex-direction: column;
             transform: translateX(100%);
             transition: transform 0.3s ease;
-        ";
+        `;
 
         // Chat header
         const chatHeader = document.createElement('div');
         chatHeader.id = 'chatHeader';
-        chatHeader.style.cssText = "
+        chatHeader.style.cssText = `
             padding: 12px 16px;
             background: var(--bg-tertiary);
             border-bottom: 1px solid var(--border-color);
@@ -68,10 +68,10 @@ class EnhancedChatSystem {
             display: flex;
             align-items: center;
             justify-content: space-between;
-        ";
-        chatHeader.innerHTML = "
+        `;
+        chatHeader.innerHTML = `
             <span>실시간 채팅</span>
-            <button id=\"close-floating-chat\" style=\" 
+            <button id="close-floating-chat" style="
                 background: none;
                 border: none;
                 color: var(--text-secondary);
@@ -79,47 +79,47 @@ class EnhancedChatSystem {
                 cursor: pointer;
                 padding: 4px;
                 border-radius: 4px;
-            \">×</button>
-        ";
+            ">×</button>
+        `;
 
         // Chat log
         const chatLog = document.createElement('div');
         chatLog.id = 'floatingChatLog';
-        chatLog.style.cssText = "
+        chatLog.style.cssText = `
             flex: 1;
             overflow-y: auto;
             padding: 12px;
             background: var(--bg-primary);
             scrollbar-width: thin;
             scrollbar-color: var(--border-color) transparent;
-        ";
-        chatLog.innerHTML = "
-            <div class=\"chat-placeholder\" style=\" 
+        `;
+        chatLog.innerHTML = `
+            <div class="chat-placeholder" style="
                 text-align: center;
                 color: var(--text-secondary);
                 padding: 40px 20px;
                 font-size: 14px;
-            \">
-                <i class=\"fas fa-comments\" style=\"font-size: 32px; margin-bottom: 12px; opacity: 0.5;\"></i>
+            ">
+                <i class="fas fa-comments" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
                 <p>채팅이 여기에 표시됩니다...</p>
             </div>
-        ";
+        `;
 
         // Chat input
         const chatInputContainer = document.createElement('div');
         chatInputContainer.className = 'chat-input-container';
-        chatInputContainer.style.cssText = "
+        chatInputContainer.style.cssText = `
             padding: 12px;
             border-top: 1px solid var(--border-color);
             background: var(--bg-secondary);
             border-radius: 0 0 var(--radius-md) var(--radius-md);
-        ";
+        `;
 
         const chatInput = document.createElement('input');
         chatInput.id = 'floatingChatInput';
         chatInput.type = 'text';
         chatInput.placeholder = '채팅 입력...';
-        chatInput.style.cssText = "
+        chatInput.style.cssText = `
             width: 100%;
             padding: 8px 12px;
             border: 1px solid var(--border-color);
@@ -128,7 +128,7 @@ class EnhancedChatSystem {
             color: var(--text-primary);
             font-size: 14px;
             outline: none;
-        ";
+        `;
 
         chatInputContainer.appendChild(chatInput);
 
@@ -146,7 +146,7 @@ class EnhancedChatSystem {
 
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'chatToggleBtn';
-        toggleBtn.style.cssText = "
+        toggleBtn.style.cssText = `
             position: fixed;
             bottom: 30px;
             right: 30px;
@@ -164,7 +164,7 @@ class EnhancedChatSystem {
             display: flex;
             align-items: center;
             justify-content: center;
-        ";
+        `;
         toggleBtn.innerHTML = '<i class="fas fa-comments"></i>';
 
         // Add hover effects
@@ -369,32 +369,32 @@ class EnhancedChatSystem {
             minute: '2-digit'
         }) : '';
 
-        const baseStyle = "
+        const baseStyle = `
             margin-bottom: 8px;
-            padding: " + (isFloating ? '6px 8px' : '8px 12px') + ",
+            padding: ${isFloating ? '6px 8px' : '8px 12px'};
             background: var(--bg-tertiary);
             border-radius: var(--radius-sm);
-            font-size: " + (isFloating ? '13px' : '14px') + ",
+            font-size: ${isFloating ? '13px' : '14px'};
             line-height: 1.4;
             word-wrap: break-word;
-        ";
+        `;
 
-        return " 
-            <div class=\"chat-message\" style=\"" + baseStyle + "\">
-                <div style=\"display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;\">
-                    <strong style=\"color: var(--accent-primary); font-size: " + (isFloating ? '12px' : '13px') + ";\">
-                        " + this.escapeHTML(profile?.nickname || 'Unknown') + "
+        return `
+            <div class="chat-message" style="${baseStyle}">
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;">
+                    <strong style="color: var(--accent-primary); font-size: ${isFloating ? '12px' : '13px'};">
+                        ${this.escapeHTML(profile?.nickname || 'Unknown')}
                     </strong>
-                    " + (timeStr ? `<span style=\"color: var(--text-tertiary); font-size: 11px;\">${timeStr}</span>` : '') + "
+                    ${timeStr ? `<span style="color: var(--text-tertiary); font-size: 11px;">${timeStr}</span>` : ''}
                 </div>
-                <div style=\"color: var(--text-primary);\">
-                    " + (hidden ? 
+                <div style="color: var(--text-primary);">
+                    ${hidden ? 
                         '<span style="color: var(--text-tertiary); font-style: italic;">[블라인드]</span>' : 
                         this.escapeHTML(message || '')
-                    ) + "
+                    }
                 </div>
             </div>
-        ";
+        `;
     }
 
     sendChatMessage(message) {
@@ -426,7 +426,7 @@ class EnhancedChatSystem {
     }
 
     escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\\]/g, '\\$&');
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     // Configuration methods

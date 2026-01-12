@@ -33,15 +33,12 @@
             <div id="h">
                 <i class="fas fa-robot logo"></i>
                 <h1>CHZZK BOT</h1>
-                <p>더 강력하고 아름다운 방송 관리</p>
+                <p>방송 관리를 위한 프리미엄 솔루션</p>
                 <button class="btn-start" onclick="goA()">시작하기</button>
             </div>
             <div id="auth-section">
                 <h2>로그인</h2>
-                <a href="/auth/login" class="btn-chzzk">
-                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="white" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/></svg>
-                    치지직으로 로그인
-                </a>
+                <a href="/auth/login" class="btn-chzzk">치지직으로 로그인</a>
                 <button class="back" onclick="goH()">뒤로가기</button>
             </div>
         </div>
@@ -49,8 +46,10 @@
     <script>
         function goA() { document.getElementById('h').style.display='none'; document.getElementById('auth-section').style.display='block'; }
         function goH() { document.getElementById('auth-section').style.display='none'; document.getElementById('h').style.display='block'; }
-        // 이미 로그인된 경우 체크
-        fetch('/api/auth/session').then(r => r.json()).then(d => { if(d.authenticated) location.href='/dashboard/' + d.user.channelName; });
+        // 이미 로그인된 경우 대시보드로 자동 이동
+        fetch('/api/auth/session').then(r => r.json()).then(d => { 
+            if(d.authenticated) location.href='/dashboard/' + encodeURIComponent(d.user.channelName); 
+        });
     </script>
 </body>
 </html>

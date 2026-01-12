@@ -1,7 +1,16 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://web-production-19eef.up.railway.app/api/:path*" },
-    { "source": "/auth/:path*", "destination": "https://web-production-19eef.up.railway.app/auth/:path*" },
-    { "source": "/dashboard/:path*", "destination": "/dashboard.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://web-production-19eef.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "https://web-production-19eef.up.railway.app/auth/:path*"
+    },
+    {
+      "source": "/dashboard/:channelName(.*)",
+      "destination": "/dashboard.html"
+    }
   ]
 }

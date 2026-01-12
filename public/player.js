@@ -1,3 +1,4 @@
+// player.js - Chzzk Bot Player
 let ytPlayer;
 let isPlayerReady = false;
 let serverState = { currentSong: null, queue: [], isPlaying: false };
@@ -7,20 +8,17 @@ let ws = null;
 
 // 플레이어 전용 WebSocket 연결 초기화
 function initPlayerWebSocket() {
-    // 수정: 전역 함수 사용 또는 location 기반 (api-adapter가 있으면 전역 함수 사용됨)
-    let wsUrl;
-    if (window.getServerWebSocketUrl) {
-        wsUrl = window.getServerWebSocketUrl();
-    } else {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${wsProtocol}//${window.location.host}`;
-    }
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Railway 서버 URL을 환경 설정에서 가져옴 (api-adapter가 있으면 window.getServerWebSocketUrl 사용 가능)
+    const wsUrl = (typeof window.getServerWebSocketUrl === 'function') 
+        ? window.getServerWebSocketUrl() 
+        : `${wsProtocol}//${window.location.host}`;
     
+    console.log('[Player] Connecting to:', wsUrl);
     ws = new WebSocket(wsUrl);
     
     ws.onopen = function() {
         console.log('[Player] WebSocket connected');
-        // 초기 데이터 요청
         ws.send(JSON.stringify({ type: 'requestData', dataType: 'all' }));
     };
     
@@ -53,16 +51,15 @@ function handlePlayerWebSocketMessage(data) {
         currentVolume = data.payload;
         const volumeSlider = document.getElementById('volume-slider');
         if (volumeSlider) volumeSlider.value = currentVolume;
-        if (isPlayerReady) ytPlayer.setVolume(currentVolume);
+        if (isPlayerReady && ytPlayer) ytPlayer.setVolume(currentVolume);
     }
 }
 
 const sendControl = (action, payload = null) => {
-    // 전역 ws 변수가 존재하고 연결되어 있는지 확인
-    if (typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "controlMusic", action, payload }));
     } else {
-        console.warn('[player.js] WebSocket is not connected. Cannot send control message.');
+        console.warn('[player.js] WebSocket is not connected.');
     }
 };
 
@@ -97,7 +94,6 @@ function onPlayerStateChange(event) {
 
 function onPlayerError(event) {
     console.error("YouTube Player Error:", event.data);
-    // On error, try to skip to the next song
     sendControl('skip');
 }
 
@@ -106,30 +102,29 @@ function render(isNewSong = false) {
     const isPlaying = serverState.isPlaying;
     const queue = serverState.queue;
 
-    // Update background and album art
     const background = document.getElementById('background');
     const albumArt = document.getElementById('album-art');
     const albumArtPlaceholder = document.getElementById('album-art-placeholder');
+    
     if (song && song.thumbnail) {
-        background.style.backgroundImage = `url(${song.thumbnail})`;
-        albumArt.style.backgroundImage = `url(${song.thumbnail})`;
-        albumArtPlaceholder.classList.add('hidden');
+        if(background) background.style.backgroundImage = `url(${song.thumbnail})`;
+        if(albumArt) albumArt.style.backgroundImage = `url(${song.thumbnail})`;
+        if(albumArtPlaceholder) albumArtPlaceholder.classList.add('hidden');
     } else {
-        background.style.backgroundImage = '';
-        albumArt.style.backgroundImage = '';
-        albumArtPlaceholder.classList.remove('hidden');
+        if(background) background.style.backgroundImage = '';
+        if(albumArt) albumArt.style.backgroundImage = '';
+        if(albumArtPlaceholder) albumArtPlaceholder.classList.remove('hidden');
     }
 
-    // Update song info
-    document.getElementById('song-title').textContent = song ? song.title : '재생 대기 중...';
-    document.getElementById('requester-info').textContent = song ? `신청자: ${song.requester}` : '-';
+    if(document.getElementById('song-title')) document.getElementById('song-title').textContent = song ? song.title : '재생 대기 중...';
+    if(document.getElementById('requester-info')) document.getElementById('requester-info').textContent = song ? `신청자: ${song.requester}` : '-';
     
-    // Update controls
-    document.getElementById('play-pause-btn').innerHTML = `<i class="fas ${isPlaying ? 'fa-pause-circle' : 'fa-play-circle'}"></i>`;
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    if(playPauseBtn) playPauseBtn.innerHTML = `<i class="fas ${isPlaying ? 'fa-pause-circle' : 'fa-play-circle'}"></i>`;
 
-    updateQueue(queue, song?.id);
+    updateQueue(queue || [], song?.id);
 
-    if (isPlayerReady) {
+    if (isPlayerReady && ytPlayer) {
         const currentVideoId = ytPlayer.getVideoData?.().video_id;
         if (song && song.id) {
             if (currentVideoId !== song.id) {
@@ -143,7 +138,7 @@ function render(isNewSong = false) {
                 }
             }
         } else {
-            if (ytPlayer.getPlayerState() !== YT.PlayerState.UNSTARTED) {
+            if (ytPlayer.getPlayerState && ytPlayer.getPlayerState() !== YT.PlayerState.UNSTARTED) {
                  ytPlayer.stopVideo();
             }
         }
@@ -152,14 +147,15 @@ function render(isNewSong = false) {
 
 function updateQueue(queue, currentSongId) {
     const list = document.getElementById('queue-list');
-    document.getElementById('queue-count').textContent = `(${queue.length}곡)`;
+    if(!list) return;
+    if(document.getElementById('queue-count')) document.getElementById('queue-count').textContent = `(${queue.length}곡)`;
     
     list.innerHTML = queue.length > 0 ? queue.map(song => `
         <div class="queue-item ${song.id === currentSongId ? 'playing' : ''}" data-id="${song.id}">
             <img src="${song.thumbnail || ''}" alt="thumbnail">
             <div class="queue-item-info">
-                <p class="queue-item-title">${song.title}</p>
-                <p class="queue-item-requester">신청자: ${song.requester}</p>
+                <p class="queue-item-title">${escapeHTML(song.title)}</p>
+                <p class="queue-item-requester">신청자: ${escapeHTML(song.requester)}</p>
             </div>
             <div class="queue-item-actions">
                 <button class="queue-action-btn play-queue-btn" title="재생"><i class="fas fa-play"></i></button>
@@ -176,27 +172,38 @@ function updateQueue(queue, currentSongId) {
 }
 
 function updateProgress() {
-    if (ytPlayer?.getDuration) {
+    if (ytPlayer && ytPlayer.getDuration && ytPlayer.getDuration() > 0) {
         const progress = (ytPlayer.getCurrentTime() / ytPlayer.getDuration()) * 100;
-        document.getElementById("progress-bar").style.width = `${progress}%`;
+        const bar = document.getElementById("progress-bar");
+        if(bar) bar.style.width = `${progress}%`;
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // WebSocket 연결 초기화
     initPlayerWebSocket();
     
-    document.getElementById("play-pause-btn").addEventListener("click", () => sendControl('togglePlayPause'));
-    document.getElementById("skip-btn").addEventListener("click", () => sendControl('skip'));
-    document.getElementById("delete-btn").addEventListener("click", () => {
+    document.getElementById("play-pause-btn")?.addEventListener("click", () => sendControl('togglePlayPause'));
+    document.getElementById("skip-btn")?.addEventListener("click", () => sendControl('skip'));
+    document.getElementById("delete-btn")?.addEventListener("click", () => {
         if (confirm('현재 곡을 삭제하시겠습니까?')) sendControl('deleteCurrent');
     });
-    document.getElementById("volume-slider").addEventListener("input", e => sendControl('changeVolume', parseInt(e.target.value, 10)));
-    document.getElementById("progress-container").addEventListener("click", e => {
-        if (ytPlayer?.getDuration) {
+    document.getElementById("volume-slider")?.addEventListener("input", e => {
+        const vol = parseInt(e.target.value, 10);
+        sendControl('changeVolume', vol);
+        if(isPlayerReady && ytPlayer) ytPlayer.setVolume(vol);
+    });
+    document.getElementById("progress-container")?.addEventListener("click", e => {
+        if (ytPlayer && ytPlayer.getDuration) {
             const rect = e.currentTarget.getBoundingClientRect();
             const newTime = ((e.clientX - rect.left) / rect.width) * ytPlayer.getDuration();
             ytPlayer.seekTo(newTime, true);
         }
     });
 });
+
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}

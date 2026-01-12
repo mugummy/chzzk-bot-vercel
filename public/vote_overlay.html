@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>투표 오버레이 - OBS</title>
-    <script src="config.js"></script>
-    <script src="api-adapter.js"></script>
+    <!-- Vercel 연동 필수 스크립트 -->
+    <script src="/config.js"></script>
+    <script src="/api-adapter.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -550,8 +551,14 @@
         ];
 
         function connectWebSocket() {
-            // 수정: api-adapter.js를 통해 서버 URL 가져오기
-            const wsUrl = window.getServerWebSocketUrl ? window.getServerWebSocketUrl() : (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host;
+            // Railway 서버 URL을 getServerWebSocketUrl 또는 config.js에서 가져옴
+            let wsUrl;
+            if (typeof window.getServerWebSocketUrl === 'function') {
+                wsUrl = window.getServerWebSocketUrl();
+            } else {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${wsProtocol}//${window.location.host}`;
+            }
             
             console.log('[Overlay] Connecting to:', wsUrl);
             socket = new WebSocket(wsUrl);

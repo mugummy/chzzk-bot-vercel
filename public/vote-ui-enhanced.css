@@ -1,66 +1,1620 @@
-/* Vote UI Enhanced */
-.vote-container {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
+/* ========================================
+   투표/추첨/룰렛 UI 개선 스타일
+   Modern, User-friendly, Animated
+======================================== */
+
+/* ========== CSS 변수 추가 ========== */
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-hover: rgba(255, 255, 255, 0.06);
+    --glow-primary: rgba(0, 255, 148, 0.4);
+    --glow-secondary: rgba(153, 102, 255, 0.4);
+    --glow-danger: rgba(255, 71, 87, 0.4);
+    --gradient-primary: linear-gradient(135deg, #00ff94 0%, #00d4aa 100%);
+    --gradient-secondary: linear-gradient(135deg, #9966ff 0%, #7c4dff 100%);
+    --gradient-danger: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+    --gradient-gold: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 30px rgba(0, 255, 148, 0.2);
 }
 
-.vote-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.vote-title {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: var(--primary-color, #00ff94);
-}
-
-.vote-timer {
-    font-family: monospace;
-    font-size: 1.1em;
-    color: #ff4757;
-}
-
-.vote-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.vote-option {
+/* ========== 서브탭 네비게이션 개선 ========== */
+.vote-sub-tabs {
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 10px 15px;
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 28px;
+}
+
+.vote-sub-tab {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 24px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    z-index: 1;
+}
+
+.vote-sub-tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-primary);
+    border-radius: 12px;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: -1;
+}
+
+.vote-sub-tab:hover {
+    color: var(--text-primary);
+}
+
+.vote-sub-tab:hover::before {
+    opacity: 0.1;
+    transform: scale(1);
+}
+
+.vote-sub-tab.active {
+    color: var(--bg-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.vote-sub-tab.active::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.vote-sub-tab.active i {
+    animation: tabIconPop 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tabIconPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.vote-sub-tab i {
+    font-size: 18px;
+    transition: transform 0.3s ease;
+}
+
+.vote-sub-tab:hover i {
+    transform: translateY(-2px);
+}
+
+/* ========== 카드 스타일 개선 ========== */
+#vote-tab .card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
     overflow: hidden;
 }
 
-.vote-bar {
+#vote-tab .card::before {
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
-    bottom: 0;
-    background: rgba(0, 255, 148, 0.2);
-    z-index: 0;
-    transition: width 0.5s ease;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
 
-.vote-content {
+#vote-tab .card:hover {
+    border-color: rgba(0, 255, 148, 0.2);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft), 0 0 40px rgba(0, 255, 148, 0.05);
+}
+
+#vote-tab .card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+#vote-tab .card-title i {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+    border-radius: 10px;
+    color: var(--bg-primary);
+    font-size: 16px;
+}
+
+/* ========== 버튼 스타일 개선 ========== */
+#vote-tab .btn {
     position: relative;
-    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+#vote-tab .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#vote-tab .btn:hover::after {
+    opacity: 1;
+}
+
+#vote-tab .btn:active {
+    transform: scale(0.97);
+}
+
+#vote-tab .btn-primary {
+    background: var(--gradient-primary);
+    color: var(--bg-primary);
+    box-shadow: 0 4px 15px rgba(0, 255, 148, 0.3);
+}
+
+#vote-tab .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(0, 255, 148, 0.4);
+    transform: translateY(-2px);
+}
+
+#vote-tab .btn-secondary {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+}
+
+#vote-tab .btn-secondary:hover {
+    background: var(--glass-hover);
+    border-color: var(--accent-primary);
+}
+
+#vote-tab .btn-danger {
+    background: var(--gradient-danger);
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+}
+
+#vote-tab .btn-danger:hover {
+    box-shadow: 0 6px 25px rgba(255, 71, 87, 0.4);
+    transform: translateY(-2px);
+}
+
+#vote-tab .btn-success {
+    background: var(--gradient-primary);
+    color: var(--bg-primary);
+}
+
+#vote-tab .btn-purple {
+    background: var(--gradient-secondary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(153, 102, 255, 0.3);
+}
+
+#vote-tab .btn-purple:hover {
+    box-shadow: 0 6px 25px rgba(153, 102, 255, 0.4);
+}
+
+#vote-tab .btn-sm {
+    padding: 10px 18px;
+    font-size: 13px;
+    border-radius: 10px;
+}
+
+#vote-tab .btn-lg {
+    padding: 16px 32px;
+    font-size: 16px;
+    border-radius: 14px;
+}
+
+#vote-tab .btn-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 10px;
+}
+
+#vote-tab .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ========== 상태 배지 개선 ========== */
+#vote-tab .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+#vote-tab .status-badge.waiting {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+#vote-tab .status-badge.collecting {
+    background: rgba(0, 255, 148, 0.15);
+    border: 1px solid rgba(0, 255, 148, 0.3);
+    color: var(--accent-primary);
+    box-shadow: 0 0 20px rgba(0, 255, 148, 0.2);
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+#vote-tab .status-badge.stopped {
+    background: rgba(255, 193, 7, 0.15);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #ffc107;
+}
+
+#vote-tab .status-badge.completed {
+    background: rgba(153, 102, 255, 0.15);
+    border: 1px solid rgba(153, 102, 255, 0.3);
+    color: #9966ff;
+}
+
+@keyframes statusPulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(0, 255, 148, 0.2);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(0, 255, 148, 0.4);
+        transform: scale(1.02);
+    }
+}
+
+/* ========== 참여자 태그 개선 ========== */
+#vote-tab .participant-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+}
+
+#vote-tab .participant-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 25px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: tagAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tagAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#vote-tab .participant-tag:hover {
+    background: linear-gradient(135deg, rgba(0, 255, 148, 0.15), rgba(0, 255, 148, 0.05));
+    border-color: rgba(0, 255, 148, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 255, 148, 0.1);
+}
+
+#vote-tab .participant-remove {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 71, 87, 0.2);
+    border: none;
+    border-radius: 50%;
+    color: #ff6b6b;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+}
+
+#vote-tab .participant-tag:hover .participant-remove {
+    opacity: 1;
+    transform: scale(1);
+}
+
+#vote-tab .participant-remove:hover {
+    background: rgba(255, 71, 87, 0.4);
+}
+
+/* ========== 입력 필드 개선 ========== */
+#vote-tab .form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+#vote-tab .form-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 148, 0.1), 0 0 20px rgba(0, 255, 148, 0.1);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+#vote-tab .form-input::placeholder {
+    color: var(--text-muted);
+}
+
+#vote-tab .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ========== 투표 옵션 아이템 개선 ========== */
+#vote-tab .vote-option-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+#vote-tab .vote-option-item:hover {
+    border-color: rgba(0, 255, 148, 0.2);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+#vote-tab .vote-option-number {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+    border-radius: 8px;
+    color: var(--bg-primary);
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+#vote-tab .vote-option-item .form-input {
+    flex: 1;
+    padding: 10px 14px;
+}
+
+/* ========== 투표 결과 표시 개선 ========== */
+#vote-tab .vote-results-display {
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+}
+
+#vote-tab .vote-question-display {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+#vote-tab .vote-timer-display {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-align: center;
+    margin-bottom: 20px;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 20px rgba(0, 255, 148, 0.5);
+}
+
+#vote-tab .vote-result-item {
+    margin-bottom: 16px;
+    animation: resultSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes resultSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+#vote-tab .vote-result-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+#vote-tab .vote-option-badge {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-secondary);
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#vote-tab .vote-option-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+#vote-tab .vote-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+#vote-tab .vote-progress-bar {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#vote-tab .vote-progress-fill {
+    height: 100%;
+    background: var(--gradient-primary);
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+#vote-tab .vote-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progressShine 2s ease-in-out infinite;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+#vote-tab .vote-total-count {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--glass-border);
+}
+
+#vote-tab .vote-action-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+/* ========== 당첨자 카드 개선 ========== */
+#vote-tab #draw-winner-card {
+    margin-top: 24px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 170, 0, 0.05));
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: winnerCardAppear 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes winnerCardAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#vote-tab #draw-winner-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg, transparent, rgba(255, 215, 0, 0.1), transparent, rgba(255, 170, 0, 0.1), transparent);
+    animation: winnerGlow 4s linear infinite;
+}
+
+@keyframes winnerGlow {
+    to { transform: rotate(360deg); }
+}
+
+#vote-tab #draw-winner-card h4 {
+    position: relative;
+    font-size: 20px;
+    color: #ffd700;
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+#vote-tab #draw-winner-list {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+#vote-tab .winner-name-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--gradient-gold);
+    border-radius: 30px;
+    color: #000;
+    font-size: 16px;
+    font-weight: 700;
+    animation: winnerTagPop 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes winnerTagPop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 룰렛 스타일 개선 ========== */
+#vote-tab .roulette-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 320px;
+    padding: 24px;
+}
+
+#vote-tab .roulette-wheel-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#vote-tab .roulette-pointer {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 32px;
+    color: var(--accent-primary);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    z-index: 10;
+    animation: pointerBounce 1s ease-in-out infinite;
+}
+
+@keyframes pointerBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(5px); }
+}
+
+#vote-tab .roulette-wheel {
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    box-shadow: 
+        0 0 0 8px rgba(255, 255, 255, 0.1),
+        0 0 0 12px var(--bg-primary),
+        0 0 40px rgba(0, 0, 0, 0.5),
+        inset 0 0 30px rgba(0, 0, 0, 0.3);
+    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+}
+
+#vote-tab .roulette-wheel svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+#vote-tab .roulette-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+#vote-tab #spin-roulette-btn {
+    padding: 18px 48px;
+    font-size: 18px;
+    border-radius: 30px;
+    background: var(--gradient-primary);
+    box-shadow: 0 6px 30px rgba(0, 255, 148, 0.4);
+    animation: spinBtnPulse 2s ease-in-out infinite;
+}
+
+@keyframes spinBtnPulse {
+    0%, 100% { box-shadow: 0 6px 30px rgba(0, 255, 148, 0.4); }
+    50% { box-shadow: 0 6px 40px rgba(0, 255, 148, 0.6); }
+}
+
+#vote-tab .roulette-result-display {
+    margin-top: 24px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(0, 255, 148, 0.1), rgba(153, 102, 255, 0.1));
+    border: 2px solid var(--accent-primary);
+    border-radius: 16px;
+    text-align: center;
+    animation: resultPop 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes resultPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+#vote-tab .roulette-result-label {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+#vote-tab .roulette-result-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-shadow: 0 0 20px rgba(0, 255, 148, 0.5);
+}
+
+/* ========== 룰렛 항목 입력 개선 ========== */
+#vote-tab .roulette-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+#vote-tab .roulette-item:hover {
+    border-color: rgba(153, 102, 255, 0.3);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+#vote-tab .roulette-item .form-input {
+    padding: 10px 14px;
+}
+
+#vote-tab .roulette-item .weight-input {
+    width: 80px !important;
+    text-align: center;
+}
+
+#vote-tab .roulette-item-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+#vote-tab .roulette-create-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--glass-border);
+}
+
+/* ========== Empty State 개선 ========== */
+#vote-tab .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+}
+
+#vote-tab .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+
+#vote-tab .empty-state p {
+    font-size: 14px;
+    text-align: center;
+}
+
+/* ========== 투표 기록 개선 ========== */
+#vote-tab #vote-history {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#vote-tab .vote-history-item {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+#vote-tab .vote-history-item:hover {
+    border-color: rgba(0, 255, 148, 0.2);
+    transform: translateX(4px);
+}
+
+/* ========== 스크롤바 스타일 ========== */
+#vote-tab ::-webkit-scrollbar {
+    width: 6px;
+}
+
+#vote-tab ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+#vote-tab ::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+#vote-tab ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-secondary);
+}
+
+/* ========== 설정 탭 개선 ========== */
+#settings-subtab .overlay-link-container {
+    display: flex;
+    gap: 12px;
+}
+
+#settings-subtab .overlay-link-input {
+    flex: 1;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--accent-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+#settings-subtab .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#settings-subtab .form-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+}
+
+#settings-subtab .form-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 255, 148, 0.4);
+    transition: transform 0.2s ease;
+}
+
+#settings-subtab .form-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+#settings-subtab .slider-value {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+#settings-subtab .color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#settings-subtab .form-color {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+#settings-subtab .color-presets {
+    display: flex;
+    gap: 8px;
+}
+
+#settings-subtab .color-preset {
+    width: 32px;
+    height: 32px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#settings-subtab .color-preset:hover {
+    transform: scale(1.1);
+}
+
+#settings-subtab .color-preset.active {
+    border-color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+#settings-subtab .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#settings-subtab .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+#settings-subtab .checkbox-label:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+#settings-subtab .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-primary);
+}
+
+/* ========== 참여자 수 표시 개선 ========== */
+#vote-tab #draw-participant-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 16px;
+    background: var(--gradient-primary);
+    border-radius: 20px;
+    color: var(--bg-primary);
+    font-size: 18px;
+    font-weight: 700;
+    margin-left: 12px;
+}
+
+/* ========== 키워드 표시 개선 ========== */
+#vote-tab #draw-keyword-display {
+    display: inline-block;
+    padding: 8px 16px;
+    background: rgba(153, 102, 255, 0.2);
+    border: 1px solid rgba(153, 102, 255, 0.3);
+    border-radius: 8px;
+    color: #9966ff;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* ========== 반응형 디자인 ========== */
+@media (max-width: 768px) {
+    #vote-tab .vote-sub-tabs {
+        flex-direction: column;
+    }
+    
+    #vote-tab .vote-sub-tab {
+        justify-content: flex-start;
+    }
+    
+    #vote-tab .vote-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    #vote-tab .roulette-wheel {
+        width: 250px;
+        height: 250px;
+    }
+}
+
+
+/* ========== 투표 추첨 당첨자 모달 - 개선된 버전 ========== */
+.winner-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.winner-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.winner-modal {
+    position: relative;
+    background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 24px;
+    padding: 40px;
+    max-width: 550px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 
+        0 25px 80px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(255, 215, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: scale(0.8) translateY(20px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.winner-modal-overlay.show .winner-modal {
+    transform: scale(1) translateY(0);
+}
+
+/* 회전하는 광선 효과 */
+.winner-modal::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(255, 215, 0, 0.1),
+        transparent,
+        rgba(255, 170, 0, 0.1),
+        transparent
+    );
+    animation: modalGlow 6s linear infinite;
+    z-index: -1;
+}
+
+@keyframes modalGlow {
+    to { transform: rotate(360deg); }
+}
+
+/* 상단 장식선 */
+.winner-modal::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    border-radius: 3px;
+}
+
+.winner-modal-header {
+    position: relative;
+    margin-bottom: 32px;
+}
+
+.winner-modal-header h2 {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    text-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+    animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+    0%, 100% { 
+        filter: brightness(1);
+        transform: scale(1);
+    }
+    50% { 
+        filter: brightness(1.2);
+        transform: scale(1.02);
+    }
+}
+
+.winner-modal-body {
+    margin-bottom: 32px;
+}
+
+.winner-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+.winner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    color: #000;
+    border-radius: 40px;
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 
+        0 8px 30px rgba(255, 215, 0, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.3);
+    animation: winnerBadgeAppear 0.6s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.winner-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: badgeShine 2s ease-in-out infinite;
+}
+
+@keyframes badgeShine {
+    0% { left: -100%; }
+    50%, 100% { left: 100%; }
+}
+
+.winner-badge:nth-child(1) { animation-delay: 0.1s; }
+.winner-badge:nth-child(2) { animation-delay: 0.2s; }
+.winner-badge:nth-child(3) { animation-delay: 0.3s; }
+.winner-badge:nth-child(4) { animation-delay: 0.4s; }
+.winner-badge:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes winnerBadgeAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-10deg);
+    }
+    50% {
+        transform: scale(1.1) rotate(3deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.winner-modal-footer {
+    margin-top: 24px;
+}
+
+.winner-modal-footer .btn {
+    min-width: 150px;
+    padding: 16px 40px;
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #00ff94, #00d4aa);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 25px rgba(0, 255, 148, 0.4);
+}
+
+.winner-modal-footer .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 35px rgba(0, 255, 148, 0.5);
+}
+
+.winner-modal-footer .btn:active {
+    transform: translateY(-1px);
+}
+
+/* 파티클 효과 (선택사항) */
+@keyframes confetti {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(400px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+
+/* ========== 슬롯머신 모달 ========== */
+.slot-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slot-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.slot-modal {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 3px solid #ffd700;
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 
+        0 0 60px rgba(255, 215, 0, 0.3),
+        inset 0 0 60px rgba(255, 215, 0, 0.05);
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slot-modal-overlay.show .slot-modal {
+    transform: scale(1);
+}
+
+.slot-header h2 {
+    font-size: 28px;
+    color: #ffd700;
+    margin: 0 0 30px 0;
+    animation: slotTitlePulse 1s ease-in-out infinite;
+}
+
+@keyframes slotTitlePulse {
+    0%, 100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+    50% { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+}
+
+.slot-container {
+    position: relative;
+    width: 300px;
+    margin: 0 auto;
+}
+
+.slot-window {
+    height: 80px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 20%, rgba(0,0,0,0.3) 80%, rgba(0,0,0,0.8) 100%);
+    border: 3px solid rgba(255, 215, 0, 0.5);
+    border-radius: 12px;
+    position: relative;
+}
+
+.slot-window::before,
+.slot-window::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 20px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.slot-window::before {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+}
+
+.slot-window::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+}
+
+.slot-reel {
+    transition: transform 0.1s linear;
+}
+
+.slot-item {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, rgba(153, 102, 255, 0.3), rgba(0, 255, 148, 0.3));
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.slot-footer {
+    margin-top: 24px;
+}
+
+.slot-status {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    animation: statusBlink 1s ease-in-out infinite;
+}
+
+@keyframes statusBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ========== 투표자 모달 ========== */
+.voters-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.voters-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.voters-modal {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid rgba(0, 255, 148, 0.3);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.voters-modal-overlay.show .voters-modal {
+    transform: scale(1) translateY(0);
+}
+
+.voters-modal-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 255, 148, 0.05);
 }
 
-.vote-label {
-    font-weight: 500;
+.voters-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.vote-stats {
-    font-size: 0.9em;
-    color: #aaa;
+.modal-close-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: rgba(255, 71, 87, 0.2);
+    color: #ff6b6b;
+}
+
+.voters-modal-body {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.voter-option-group {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.voter-option-group h4 {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    color: var(--text-primary);
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.voter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.voter-tag {
+    display: inline-block;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(153, 102, 255, 0.2), rgba(153, 102, 255, 0.1));
+    border: 1px solid rgba(153, 102, 255, 0.3);
+    border-radius: 20px;
+    font-size: 13px;
+    color: #bb99ff;
+}
+
+.no-voters {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* ========== 룰렛 항목 컨테이너 스크롤 ========== */
+#roulette-items-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+#roulette-items-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#roulette-items-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+#roulette-items-container::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+/* ========== 결과 표시 애니메이션 ========== */
+.result-appear {
+    animation: resultAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes resultAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ========== 기존 스타일 덮어쓰기 (강제 적용) ========== */
+#vote-tab .vote-sub-tabs {
+    position: relative !important;
+    display: flex !important;
+    gap: 4px !important;
+    padding: 6px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(10px) !important;
+    margin-bottom: 28px !important;
+}
+
+#vote-tab .vote-sub-tab {
+    position: relative !important;
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    padding: 16px 24px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 12px !important;
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden !important;
+    z-index: 1 !important;
+}
+
+#vote-tab .vote-sub-tab::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(135deg, #00ff94 0%, #00d4aa 100%) !important;
+    border-radius: 12px !important;
+    opacity: 0 !important;
+    transform: scale(0.9) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: -1 !important;
+}
+
+#vote-tab .vote-sub-tab:hover {
+    color: var(--text-primary) !important;
+}
+
+#vote-tab .vote-sub-tab:hover::before {
+    opacity: 0.1 !important;
+    transform: scale(1) !important;
+}
+
+#vote-tab .vote-sub-tab.active {
+    color: var(--bg-primary) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+#vote-tab .vote-sub-tab.active::before {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+#vote-tab .card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#vote-tab .card:hover {
+    border-color: rgba(0, 255, 148, 0.2) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 255, 148, 0.05) !important;
+}
+
+#vote-tab .btn-primary {
+    background: linear-gradient(135deg, #00ff94 0%, #00d4aa 100%) !important;
+    color: var(--bg-primary) !important;
+    box-shadow: 0 4px 15px rgba(0, 255, 148, 0.3) !important;
+}
+
+#vote-tab .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(0, 255, 148, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+#vote-tab .btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%) !important;
+    color: white !important;
+}
+
+#vote-tab .btn-secondary {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#vote-tab .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--accent-primary) !important;
 }
