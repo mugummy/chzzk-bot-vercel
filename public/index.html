@@ -3,53 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot - Home</title>
+    <title>Chzzk Bot - 스트리밍 도우미</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/modern-ui.css">
     <style>
-        :root { --p: #00ff94; --bg: #05050a; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .hero { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; z-index: 1; }
-        .aurora { position: absolute; inset: 0; z-index: -1; }
-        .blob { position: absolute; filter: blur(100px); opacity: 0.4; animation: f 10s infinite alternate; }
-        .b1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7047eb; }
-        .b2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: var(--p); animation-delay: -5s; }
-        @keyframes f { from { transform: translate(0,0); } to { transform: translate(50px,50px); } }
-        .card { background: rgba(255,255,255,0.03); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1); border-radius: 40px; padding: 80px 40px; width: 90%; max-width: 450px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); }
-        .logo { font-size: 80px; margin-bottom: 20px; background: linear-gradient(135deg, var(--p), #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        h1 { font-size: 48px; font-weight: 900; margin: 0 0 10px; letter-spacing: -2px; }
-        p { color: rgba(255,255,255,0.6); margin-bottom: 50px; font-size: 18px; }
-        .btn-start { padding: 18px 60px; font-size: 20px; font-weight: 800; background: var(--p); color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 30px rgba(0,255,148,0.3); }
-        .btn-start:hover { transform: scale(1.05); background: #fff; }
-        #auth-section { display: none; }
-        .btn-chzzk { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 16px; background: #03C75A; color: white; border-radius: 15px; text-decoration: none; font-weight: 700; font-size: 18px; margin-top: 20px; }
-        .back { background: none; border: none; color: #888; text-decoration: underline; margin-top: 20px; cursor: pointer; }
+        /* Landing Page Specific Styles */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .hero-container {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #00ff94 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -2px;
+            text-shadow: 0 10px 30px rgba(0, 255, 148, 0.2);
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .login-card-wrapper {
+            width: 100%;
+            max-width: 400px;
+            perspective: 1000px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            padding: 30px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #00ff94;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 148, 0.4));
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .feature-desc {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+        }
+
+        .login-btn-lg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: #03C75A;
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px -10px rgba(3, 199, 90, 0.5);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .login-btn-lg:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(3, 199, 90, 0.7);
+            background: #04d663;
+        }
+
+        .login-btn-lg:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        /* Mouse effect for landing */
+        .landing-card {
+            background: rgba(20, 20, 25, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <div class="aurora"><div class="blob b1"></div><div class="blob b2"></div></div>
-        <div class="card">
-            <div id="h">
-                <i class="fas fa-robot logo"></i>
-                <h1>CHZZK BOT</h1>
-                <p>방송 관리를 위한 프리미엄 솔루션</p>
-                <button class="btn-start" onclick="goA()">시작하기</button>
-            </div>
-            <div id="auth-section">
-                <h2>로그인</h2>
-                <a href="/auth/login" class="btn-chzzk">치지직으로 로그인</a>
-                <button class="back" onclick="goH()">뒤로가기</button>
+    <!-- Hero Section -->
+    <div class="hero-container">
+        <h1 class="hero-title">CHZZK BOT</h1>
+        <p class="hero-subtitle">방송을 더 쉽고 재미있게 관리하세요</p>
+        
+        <div class="login-card-wrapper">
+            <div class="card login-card" style="padding: 40px; background: rgba(30, 30, 35, 0.8) !important;">
+                <h2 style="margin-bottom: 20px; font-size: 1.5rem;">시작하기</h2>
+                <p style="color: #aaa; margin-bottom: 30px;">치지직 계정으로 로그인하여 봇을 연결하세요.</p>
+                <a href="/auth/login" class="login-btn-lg">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+                    </svg>
+                    <span>네이버로 로그인</span>
+                </a>
             </div>
         </div>
     </div>
+
+    <!-- Features Grid -->
+    <div class="features-grid">
+        <div class="card feature-card landing-card">
+            <i class="fas fa-terminal feature-icon"></i>
+            <h3 class="feature-title">명령어 관리</h3>
+            <p class="feature-desc">자유롭게 명령어를 추가하고<br>자동 응답을 설정하세요.</p>
+        </div>
+        <div class="card feature-card landing-card">
+            <i class="fas fa-music feature-icon"></i>
+            <h3 class="feature-title">신청곡 시스템</h3>
+            <p class="feature-desc">유튜브 링크로 노래를 신청받고<br>대기열을 관리하세요.</p>
+        </div>
+        <div class="card feature-card landing-card">
+            <i class="fas fa-poll feature-icon"></i>
+            <h3 class="feature-title">투표 & 추첨</h3>
+            <p class="feature-desc">실시간 투표와 추첨 기능으로<br>시청자와 소통하세요.</p>
+        </div>
+        <div class="card feature-card landing-card">
+            <i class="fas fa-chart-line feature-icon"></i>
+            <h3 class="feature-title">대시보드</h3>
+            <p class="feature-desc">한눈에 들어오는 대시보드로<br>방송 상태를 확인하세요.</p>
+        </div>
+    </div>
+
     <script>
-        function goA() { document.getElementById('h').style.display='none'; document.getElementById('auth-section').style.display='block'; }
-        function goH() { document.getElementById('auth-section').style.display='none'; document.getElementById('h').style.display='block'; }
-        // 이미 로그인된 경우 대시보드로 자동 이동
-        fetch('/api/auth/session').then(r => r.json()).then(d => { 
-            if(d.authenticated) location.href='/dashboard/' + encodeURIComponent(d.user.channelName); 
+        // 마우스 효과 스크립트 (모던 UI)
+        document.addEventListener('mousemove', (e) => {
+            document.querySelectorAll('.card').forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
         });
+
+        // 이미 로그인된 경우 대시보드로 자동 이동 (선택 사항)
+        const token = localStorage.getItem('chzzk_session_token');
+        if (token) {
+            // 토큰 유효성 검사는 생략하고 일단 이동 (대시보드에서 검사함)
+            // window.location.href = '/dashboard.html';
+        }
     </script>
 </body>
 </html>

@@ -344,6 +344,9 @@ async function initAuth() {
         localStorage.setItem(SESSION_KEY, urlSession);
         // URL 깨끗하게 정리
         window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // 중요: 서버가 DB에 세션을 저장할 시간을 줌 (1초 대기)
+        await new Promise(r => setTimeout(r, 1000));
     }
     
     // 2. 저장된 토큰 가져오기
@@ -377,8 +380,9 @@ async function initAuth() {
         // 봇 연결 (토큰 포함)
         connectToBot(currentUser.channelId, token);
     } else {
-        console.log('[Auth] No valid session found.');
-        showNotification('로그인이 필요합니다. 일부 기능이 제한됩니다.', 'warning');
+        console.log('[Auth] No valid session found. Redirecting to home...');
+        // 세션 없으면 홈으로 쫓아냄
+        window.location.href = '/';
     }
 }
 
@@ -631,6 +635,7 @@ async function handleLogout() {
         } catch (e) {}
         
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('chzzk_session_token'); // 토큰 삭제
         currentUser = null;
         
         if (socket && socket.readyState === WebSocket.OPEN) {
@@ -638,18 +643,9 @@ async function handleLogout() {
         }
         
         updateBotStatus(false);
-        clearAllData();
-        showLoginScreen();
         
-        const btn = document.getElementById('login-btn');
-        const input = document.getElementById('login-channel-input');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-plug"></i><span>연결</span>';
-        }
-        if (input) input.value = '';
-        
-        showNotification('로그아웃 되었습니다', 'info');
+        // 메인 페이지로 이동
+        window.location.href = '/';
     }
 }
 
@@ -3207,3 +3203,34 @@ if (document.readyState === 'loading') {
 } else {
     initDashboard();
 }
+\
+// Expose functions to global scope for HTML onclick attributes
+window.addCommand = addCommand;
+window.updateCommand = updateCommand;
+window.addMacro = addMacro;
+window.updateMacro = updateMacro;
+window.addCounter = addCounter;
+window.updateCounter = updateCounter;
+window.saveSongSettings = saveSongSettings;
+window.savePointsSettings = savePointsSettings;
+window.saveOverlaySettings = saveOverlaySettings;
+window.toggleDraw = toggleDraw;
+window.performDraw = performDraw;
+window.resetDraw = resetDraw;
+window.createVote = createVote;
+window.startVote = startVote;
+window.endVote = endVote;
+window.resetVote = resetVote;
+window.addVoteOption = addVoteOption;
+window.removeVoteOption = removeVoteOption;
+window.addRouletteItem = addRouletteItem;
+window.removeRouletteItem = removeRouletteItem;
+window.spinRoulette = spinRoulette;
+window.resetRoulette = resetRoulette;
+window.toggleParticipation = toggleParticipation;
+window.clearParticipants = clearParticipants;
+window.handleLegacyLogin = handleLegacyLogin;
+window.handleLogout = handleLogout;
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.closeModal = hideModal;\
