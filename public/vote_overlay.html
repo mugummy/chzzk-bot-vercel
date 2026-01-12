@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>투표 오버레이 - OBS</title>
+    <script src="config.js"></script>
+    <script src="api-adapter.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: transparent;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        .overlay-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: var(--position-align, center);
+            justify-content: center;
+            padding: 40px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .overlay-container.visible { opacity: 1; }
+        .overlay-container.position-top { --position-align: flex-start; }
+        .overlay-container.position-center { --position-align: center; }
+        .overlay-container.position-bottom { --position-align: flex-end; }
+
+        .overlay-card {
+            background: rgba(17, 17, 17, var(--bg-opacity, 0.9));
+            border-radius: 24px;
+            padding: 32px;
+            min-width: 400px;
+            max-width: 600px;
+            width: 100%;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: none;
+        }
+
+        .overlay-container.visible .overlay-card.active {
+            transform: translateY(0) scale(1);
+            display: block;
+        }
+
+        .overlay-card.size-small { min-width: 320px; max-width: 450px; padding: 24px; }
+        .overlay-card.size-medium { min-width: 400px; max-width: 600px; padding: 32px; }
+        .overlay-card.size-large { min-width: 500px; max-width: 800px; padding: 40px; }
+
+        .overlay-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .overlay-icon {
+            width: 48px; height: 48px;
+            background: var(--theme-color, #00ff94);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #111;
+        }
+
+        .overlay-title { flex: 1; }
+        .overlay-title h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .overlay-title .subtitle { font-size: 14px; color: rgba(255, 255, 255, 0.6); }
+
+        .overlay-timer {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--theme-color, #00ff94);
+        }
+
+        .overlay-timer.warning { color: #ffd93d; }
+        .overlay-timer.danger { color: #ff6b6b; }
+
+        /* 투표 화면 */
+        .vote-question {
+            font-size: 24px; font-weight: 700; color: #fff;
+            text-align: center; margin-bottom: 24px; line-height: 1.4;
+        }
+
+        .vote-options { display: flex; flex-direction: column; gap: 12px; }
+
+        .vote-option {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vote-option-bar {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            background: var(--theme-color, #00ff94);
+            opacity: 0.2;
+            transition: width 0.5s ease;
+            border-radius: 12px;
+        }
+
+        .vote-option-content {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .vote-option-left { display: flex; align-items: center; gap: 12px; }
+
+        .vote-option-number {
+            width: 32px; height: 32px;
+            background: var(--theme-color, #00ff94);
+            color: #111;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .vote-option-text { font-size: 16px; color: #fff; font-weight: 500; }
+        .vote-option-right { display: flex; align-items: center; gap: 12px; }
+        .vote-option-count { font-size: 14px; color: rgba(255, 255, 255, 0.6); }
+
+        .vote-option-percentage {
+            font-size: 20px; font-weight: 700;
+            color: var(--theme-color, #00ff94);
+            min-width: 60px; text-align: right;
+        }
+
+        .vote-total {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 추첨 화면 */
+        .draw-content { text-align: center; }
+
+        .draw-participants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .draw-participant {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .draw-count {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--theme-color, #00ff94);
+            margin-bottom: 8px;
+        }
+
+        .draw-label { font-size: 16px; color: rgba(255, 255, 255, 0.6); }
+        .draw-keyword {
+            margin-top: 16px;
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 14px;
+            color: var(--theme-color, #00ff94);
+        }
+
+        /* 당첨자 화면 */
+        .winner-content { text-align: center; padding: 20px 0; }
+
+        .winner-crown {
+            font-size: 64px;
+            margin-bottom: 16px;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .winner-names {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .winner-name {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--theme-color, #00ff94);
+            text-shadow: 0 0 30px var(--theme-color, #00ff94);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px var(--theme-color, #00ff94); }
+            to { text-shadow: 0 0 40px var(--theme-color, #00ff94), 0 0 60px var(--theme-color, #00ff94); }
+        }
+
+        .winner-message { font-size: 18px; color: rgba(255, 255, 255, 0.8); }
+
+        /* 룰렛 화면 */
+        .roulette-content { display: flex; flex-direction: column; align-items: center; }
+
+        .roulette-wrapper {
+            position: relative;
+            width: 300px; height: 300px;
+            margin: 20px 0;
+        }
+
+        .roulette-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid var(--theme-color, #00ff94);
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .roulette-wheel {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 148, 0.3), inset 0 0 20px rgba(0,0,0,0.5);
+            transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        .wheel-segment {
+            position: absolute;
+            width: 50%; height: 50%;
+            top: 0; right: 0;
+            transform-origin: bottom left;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .roulette-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px; height: 60px;
+            background: #222;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 5;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .roulette-result {
+            margin-top: 20px;
+            padding: 16px 32px;
+            background: var(--theme-color, #00ff94);
+            color: #111;
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: 900;
+            display: none;
+        }
+
+        .roulette-result.show { display: block; animation: popIn 0.5s ease; }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 컨페티 */
+        .confetti-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            top: -20px;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* 슬롯머신 스타일 */
+        .slot-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .slot-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+        }
+
+        .slot-window {
+            width: 280px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: 3px solid var(--theme-color, #00ff94);
+            box-shadow: 0 0 30px rgba(var(--theme-color-rgb, 0, 255, 148), 0.3),
+                        inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .slot-window::before,
+        .slot-window::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 30px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .slot-window::before {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(17,17,17,0.9), transparent);
+        }
+
+        .slot-window::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(17,17,17,0.9), transparent);
+        }
+
+        .slot-reel {
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.1s linear;
+        }
+
+        .slot-item {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .slot-status {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+        }
+
+        .slot-result-display {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .slot-result-display.show {
+            display: block;
+            animation: resultPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes resultPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .slot-winner-name {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--theme-color, #00ff94);
+            text-shadow: 0 0 30px var(--theme-color, #00ff94);
+            margin-bottom: 10px;
+        }
+
+        .slot-congrats {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay-container" id="overlay-container">
+        <!-- 투표 카드 -->
+        <div class="overlay-card" id="vote-card">
+            <div class="overlay-header">
+                <div class="overlay-icon"><i class="fas fa-poll"></i></div>
+                <div class="overlay-title">
+                    <h2>투표 진행 중</h2>
+                    <div class="subtitle">채팅으로 참여하세요!</div>
+                </div>
+                <div class="overlay-timer" id="vote-timer">60초</div>
+            </div>
+            <div class="vote-question" id="vote-question">투표 질문이 여기에 표시됩니다</div>
+            <div class="vote-options" id="vote-options"></div>
+            <div class="vote-total">총 <span id="vote-total-count">0</span>명 참여</div>
+        </div>
+
+        <!-- 추첨 카드 -->
+        <div class="overlay-card" id="draw-card">
+            <div class="overlay-header">
+                <div class="overlay-icon"><i class="fas fa-random"></i></div>
+                <div class="overlay-title">
+                    <h2>시청자 추첨</h2>
+                    <div class="subtitle" id="draw-status">참여자 모집 중</div>
+                </div>
+            </div>
+            <div class="draw-content">
+                <div class="draw-count" id="draw-count">0</div>
+                <div class="draw-label">명 참여</div>
+                <div class="draw-participants" id="draw-participants"></div>
+                <div class="draw-keyword" id="draw-keyword">!참여</div>
+            </div>
+        </div>
+
+        <!-- 당첨자 카드 -->
+        <div class="overlay-card" id="winner-card">
+            <div class="overlay-header">
+                <div class="overlay-icon"><i class="fas fa-trophy"></i></div>
+                <div class="overlay-title">
+                    <h2>🎉 축하합니다! 🎉</h2>
+                    <div class="subtitle">당첨을 축하드립니다!</div>
+                </div>
+            </div>
+            <div class="winner-content">
+                <div class="winner-crown">👑</div>
+                <div class="winner-names" id="winner-names"></div>
+                <div class="winner-message">당첨되셨습니다!</div>
+            </div>
+        </div>
+
+        <!-- 룰렛 카드 -->
+        <div class="overlay-card" id="roulette-card">
+            <div class="overlay-header">
+                <div class="overlay-icon"><i class="fas fa-dharmachakra"></i></div>
+                <div class="overlay-title">
+                    <h2>행운의 룰렛</h2>
+                    <div class="subtitle">결과를 기다려주세요!</div>
+                </div>
+            </div>
+            <div class="roulette-content">
+                <div class="roulette-wrapper">
+                    <div class="roulette-pointer"></div>
+                    <div class="roulette-wheel" id="roulette-wheel"></div>
+                    <div class="roulette-center">🎯</div>
+                </div>
+                <div class="roulette-result" id="roulette-result"></div>
+            </div>
+        </div>
+
+        <!-- 슬롯머신 카드 -->
+        <div class="overlay-card" id="slot-card">
+            <div class="overlay-header">
+                <div class="overlay-icon"><i class="fas fa-random"></i></div>
+                <div class="overlay-title">
+                    <h2>🎰 추첨 중...</h2>
+                    <div class="subtitle">당첨자를 선정하고 있습니다!</div>
+                </div>
+            </div>
+            <div class="slot-container">
+                <div class="slot-window">
+                    <div class="slot-reel" id="slot-reel"></div>
+                </div>
+                <div class="slot-status" id="slot-status">추첨이 진행 중입니다...</div>
+                <div class="slot-result-display" id="slot-result-display">
+                    <div class="slot-winner-name" id="slot-winner-name"></div>
+                    <div class="slot-congrats">🎉 축하합니다! 🎉</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="confetti-container" id="confetti-container"></div>
+
+    <script>
+        let socket = null;
+        let settings = {
+            backgroundOpacity: 70,
+            themeColor: '#00ff94',
+            position: 'center',
+            size: 'medium',
+            showAnimation: true,
+            showConfetti: true,
+            enableTTS: false,
+            ttsVolume: 50
+        };
+        let currentScreen = null;
+        let autoHideTimer = null;
+        let voteTimer = null;
+
+        const ROULETTE_COLORS = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+            '#BB8FCE', '#85C1E9', '#F8B500', '#00CED1'
+        ];
+
+        function connectWebSocket() {
+            // 수정: api-adapter.js를 통해 서버 URL 가져오기
+            const wsUrl = window.getServerWebSocketUrl ? window.getServerWebSocketUrl() : (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host;
+            
+            console.log('[Overlay] Connecting to:', wsUrl);
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('[Overlay] WebSocket connected');
+                socket.send(JSON.stringify({ type: 'getOverlaySettings' }));
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('[Overlay] WebSocket disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        function handleMessage(data) {
+            console.log('[Overlay] Received:', data.type);
+
+            switch (data.type) {
+                case 'overlaySettingsUpdate':
+                    applySettings(data.payload);
+                    break;
+
+                case 'voteStateUpdate':
+                    // 현재 투표 화면이 표시 중일 때만 업데이트
+                    if (currentScreen === 'vote' && data.payload?.currentVote) {
+                        updateVoteScreen(data.payload.currentVote);
+                        // 투표가 종료되면 3초 후 오버레이 숨김
+                        if (data.payload.currentVote.status === 'ended') {
+                            setAutoHideTimer(3000);
+                        }
+                    }
+                    break;
+
+                case 'drawStateUpdate':
+                    // 현재 추첨 화면이 표시 중일 때만 업데이트
+                    if (currentScreen === 'draw' && data.payload?.currentSession) {
+                        updateDrawScreen(data.payload.currentSession);
+                    }
+                    break;
+
+                case 'rouletteStateUpdate':
+                    // 현재 룰렛 화면이 표시 중일 때만 업데이트
+                    if (currentScreen === 'roulette' && data.payload?.currentSession) {
+                        updateRouletteScreen(data.payload.currentSession);
+                    }
+                    break;
+
+                case 'drawWinnerResult':
+                    if (data.payload?.winners) {
+                        // 슬롯머신 애니메이션으로 당첨자 표시 (서버에서 받은 시간 사용)
+                        const winnerNames = data.payload.winners.map(w => w.nickname);
+                        const animDuration = data.payload.animationDuration || 4000;
+                        const allParticipants = data.payload.allParticipants || [];
+                        showSlotMachineScreen(winnerNames, animDuration, allParticipants);
+                    }
+                    break;
+
+                case 'rouletteSpinResult':
+                    if (data.payload) {
+                        // 룰렛 화면이 아니면 먼저 표시
+                        if (currentScreen !== 'roulette') {
+                            showScreen('roulette');
+                        }
+                        spinRouletteWheel(data.payload.spinDegree, data.payload.result, data.payload.animationDuration);
+                    }
+                    break;
+
+                case 'overlayShow':
+                    // 새 화면 표시 시 기존 화면 자동으로 닫힘 (한 번에 하나만)
+                    showScreen(data.payload.screen, data.payload.data);
+                    break;
+
+                case 'overlayHide':
+                    hideOverlay();
+                    break;
+            }
+        }
+
+        function applySettings(newSettings) {
+            settings = { ...settings, ...newSettings };
+
+            document.documentElement.style.setProperty('--theme-color', settings.themeColor);
+            document.documentElement.style.setProperty('--bg-opacity', settings.backgroundOpacity / 100);
+
+            const container = document.getElementById('overlay-container');
+            container.classList.remove('position-top', 'position-center', 'position-bottom');
+            container.classList.add(`position-${settings.position}`);
+
+            document.querySelectorAll('.overlay-card').forEach(card => {
+                card.classList.remove('size-small', 'size-medium', 'size-large');
+                card.classList.add(`size-${settings.size}`);
+            });
+        }
+
+        function showScreen(screen, data) {
+            // 이전 화면 숨기기
+            hideAllCards();
+            clearAutoHideTimer();
+
+            currentScreen = screen;
+
+            const container = document.getElementById('overlay-container');
+            container.classList.add('visible');
+
+            switch (screen) {
+                case 'vote':
+                    document.getElementById('vote-card').classList.add('active');
+                    if (data) updateVoteScreen(data);
+                    break;
+
+                case 'draw':
+                    document.getElementById('draw-card').classList.add('active');
+                    if (data) updateDrawScreen(data);
+                    break;
+
+                case 'winner':
+                    document.getElementById('winner-card').classList.add('active');
+                    if (data?.winners) showWinnerContent(data.winners);
+                    // 자동 숨김 시간 (설정값 사용, 기본 5초)
+                    setAutoHideTimer(settings.autoHideDelay || 5000);
+                    break;
+
+                case 'roulette':
+                    document.getElementById('roulette-card').classList.add('active');
+                    if (data) updateRouletteScreen(data);
+                    break;
+
+                case 'slot':
+                    document.getElementById('slot-card').classList.add('active');
+                    break;
+            }
+        }
+
+        function hideOverlay() {
+            const container = document.getElementById('overlay-container');
+            container.classList.remove('visible');
+            hideAllCards();
+            currentScreen = null;
+            clearAutoHideTimer();
+            clearVoteTimer();
+        }
+
+        function hideAllCards() {
+            document.querySelectorAll('.overlay-card').forEach(card => {
+                card.classList.remove('active');
+            });
+        }
+
+        function setAutoHideTimer(ms) {
+            clearAutoHideTimer();
+            autoHideTimer = setTimeout(() => {
+                hideOverlay();
+            }, ms);
+        }
+
+        function clearAutoHideTimer() {
+            if (autoHideTimer) {
+                clearTimeout(autoHideTimer);
+                autoHideTimer = null;
+            }
+        }
+
+        function clearVoteTimer() {
+            if (voteTimer) {
+                clearInterval(voteTimer);
+                voteTimer = null;
+            }
+        }
+
+        function updateVoteScreen(vote) {
+            if (!vote) return;
+
+            document.getElementById('vote-question').textContent = vote.question;
+
+            const optionsContainer = document.getElementById('vote-options');
+            const results = vote.results || {};
+            const total = Object.values(results).reduce((a, b) => a + b, 0);
+
+            optionsContainer.innerHTML = vote.options.map((opt, index) => {
+                const count = results[opt.id] || 0;
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+
+                return `
+                    <div class="vote-option">
+                        <div class="vote-option-bar" style="width: ${percentage}%"></div>
+                        <div class="vote-option-content">
+                            <div class="vote-option-left">
+                                <div class="vote-option-number">${index + 1}</div>
+                                <div class="vote-option-text">${opt.text}</div>
+                            </div>
+                            <div class="vote-option-right">
+                                <div class="vote-option-count">${count}표</div>
+                                <div class="vote-option-percentage">${percentage}%</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('vote-total-count').textContent = total;
+
+            // 타이머 업데이트
+            if (vote.status === 'active' && vote.remainingSeconds !== undefined) {
+                updateVoteTimer(vote.remainingSeconds);
+            }
+        }
+
+        function updateVoteTimer(seconds) {
+            const timerEl = document.getElementById('vote-timer');
+            timerEl.textContent = `${seconds}초`;
+            timerEl.classList.remove('warning', 'danger');
+            if (seconds <= 10) timerEl.classList.add('danger');
+            else if (seconds <= 30) timerEl.classList.add('warning');
+        }
+
+        function updateDrawScreen(session) {
+            if (!session) return;
+
+            document.getElementById('draw-count').textContent = session.participants?.length || 0;
+            document.getElementById('draw-keyword').textContent = session.keyword || '!참여';
+            document.getElementById('draw-status').textContent = session.isCollecting ? '참여자 모집 중' : '모집 마감';
+
+            const participantsContainer = document.getElementById('draw-participants');
+            const participants = session.participants || [];
+            const displayParticipants = participants.slice(-30); // 최근 30명만
+
+            participantsContainer.innerHTML = displayParticipants.map(p => `
+                <div class="draw-participant">${p.nickname}</div>
+            `).join('');
+        }
+
+        function showWinnerContent(winners) {
+            const namesContainer = document.getElementById('winner-names');
+            namesContainer.innerHTML = winners.map(name => `
+                <div class="winner-name">${name}</div>
+            `).join('');
+
+            // 컨페티 효과
+            if (settings.showConfetti) {
+                createConfetti();
+            }
+
+            // TTS
+            if (settings.enableTTS) {
+                speakWinners(winners);
+            }
+            
+            // 5초 후 자동 숨김
+            setAutoHideTimer(5000);
+        }
+
+        function showWinnerScreen(winners) {
+            showScreen('winner', { winners });
+        }
+
+        function updateRouletteScreen(session) {
+            if (!session || !session.items || session.items.length === 0) return;
+
+            renderRouletteWheel(session.items);
+        }
+
+        function renderRouletteWheel(items) {
+            const wheel = document.getElementById('roulette-wheel');
+            if (!wheel || !items || items.length === 0) return;
+
+            const totalWeight = items.reduce((sum, i) => sum + (i.weight || 1), 0);
+            const cx = 150, cy = 150, r = 140;
+            let currentAngle = 0;
+
+            // SVG 기반 렌더링 (skewY 문제 해결)
+            let svgContent = '';
+            items.forEach((item, index) => {
+                const sliceAngle = ((item.weight || 1) / totalWeight) * 360;
+                const color = item.color || ROULETTE_COLORS[index % ROULETTE_COLORS.length];
+
+                if (items.length === 1) {
+                    // 항목이 1개일 때는 전체 원 그리기
+                    svgContent += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#fff" stroke-width="2"/>`;
+                } else {
+                    const startAngle = currentAngle;
+                    const endAngle = currentAngle + sliceAngle;
+
+                    const startRad = (startAngle - 90) * Math.PI / 180;
+                    const endRad = (endAngle - 90) * Math.PI / 180;
+
+                    const x1 = cx + r * Math.cos(startRad);
+                    const y1 = cy + r * Math.sin(startRad);
+                    const x2 = cx + r * Math.cos(endRad);
+                    const y2 = cy + r * Math.sin(endRad);
+
+                    const largeArcFlag = sliceAngle > 180 ? 1 : 0;
+
+                    svgContent += `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
+                }
+
+                // 텍스트 위치 계산
+                const midAngle = items.length === 1 ? 0 : ((currentAngle + currentAngle + sliceAngle) / 2 - 90) * Math.PI / 180;
+                const textR = items.length === 1 ? 0 : r * 0.6;
+                const textX = cx + textR * Math.cos(midAngle);
+                const textY = cy + textR * Math.sin(midAngle);
+                const displayText = item.text.length > 8 ? item.text.substring(0, 8) + '..' : item.text;
+
+                svgContent += `<text x="${textX}" y="${textY}" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="12" font-weight="bold" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">${displayText}</text>`;
+
+                currentAngle += sliceAngle;
+            });
+
+            // 기존 transform 유지하면서 내용만 교체
+            const currentTransform = wheel.style.transform;
+            wheel.innerHTML = `<svg viewBox="0 0 300 300" width="100%" height="100%">${svgContent}</svg>`;
+            if (currentTransform) {
+                wheel.style.transform = currentTransform;
+            }
+        }
+
+        function spinRouletteWheel(degree, result, serverDuration) {
+            const wheel = document.getElementById('roulette-wheel');
+            const resultEl = document.getElementById('roulette-result');
+
+            if (!wheel) return;
+
+            // 서버에서 받은 애니메이션 시간 사용 (동기화)
+            const duration = serverDuration || 5000;
+            const durationSec = duration / 1000;
+
+            resultEl.classList.remove('show');
+
+            // 기존 트랜지션 초기화하고 0도로 리셋
+            wheel.style.transition = 'none';
+            wheel.style.transform = 'rotate(0deg)';
+
+            // 강제 리플로우 (브라우저가 0deg 상태를 인식하도록)
+            wheel.offsetHeight;
+
+            // 새 애니메이션 시작
+            wheel.style.transition = `transform ${durationSec}s cubic-bezier(0.17, 0.67, 0.12, 0.99)`;
+            wheel.style.transform = `rotate(${degree}deg)`;
+
+            // 애니메이션 종료 후 결과 표시
+            setTimeout(() => {
+                if (result) {
+                    resultEl.textContent = `🎉 ${result.text}`;
+                    resultEl.classList.add('show');
+                }
+
+                if (settings.showConfetti) {
+                    createConfetti();
+                }
+
+                if (settings.enableTTS && result) {
+                    speakWinners([result.text]);
+                }
+
+                // 5초 후 자동 숨김
+                setAutoHideTimer(5000);
+            }, duration + 100);
+        }
+
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            container.innerHTML = '';
+
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#00ff94'];
+
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = (Math.random() * 10 + 5) + 'px';
+                confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                container.appendChild(confetti);
+            }
+
+            // 5초 후 컨페티 제거
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function speakWinners(winners) {
+            if (!('speechSynthesis' in window)) return;
+
+            const text = winners.length === 1
+                ? `${winners[0]}님 축하합니다!`
+                : `${winners.join(', ')}님 축하합니다!`;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ko-KR';
+            utterance.volume = settings.ttsVolume / 100;
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+        }
+
+        // 슬롯머신 애니메이션으로 당첨자 표시 (서버에서 받은 duration 사용하여 동기화)
+        function showSlotMachineScreen(winners, serverDuration, allParticipants) {
+            if (!winners || winners.length === 0) return;
+
+            // 슬롯 화면 표시
+            showScreen('slot');
+
+            const reel = document.getElementById('slot-reel');
+            const status = document.getElementById('slot-status');
+            const resultDisplay = document.getElementById('slot-result-display');
+            const winnerName = document.getElementById('slot-winner-name');
+
+            // 초기화
+            resultDisplay.classList.remove('show');
+            status.textContent = '추첨이 진행 중입니다...';
+
+            // 참여자 목록 생성 (서버에서 받은 실제 참가자 목록 사용)
+            // 참가자가 없거나 적으면 당첨자만 사용
+            let allNames = allParticipants && allParticipants.length >= 3
+                ? [...allParticipants]
+                : [...winners, ...winners, ...winners]; // 최소 3개 필요
+
+            // 릴 아이템 생성 (여러 번 반복)
+            let reelHtml = '';
+            for (let i = 0; i < 5; i++) {
+                allNames.forEach(name => {
+                    reelHtml += `<div class="slot-item">${name}</div>`;
+                });
+            }
+            // 마지막에 당첨자 추가
+            winners.forEach(name => {
+                reelHtml += `<div class="slot-item">${name}</div>`;
+            });
+
+            reel.innerHTML = reelHtml;
+            reel.style.transition = 'none';
+            reel.style.transform = 'translateY(0)';
+
+            // 강제 리플로우
+            reel.offsetHeight;
+
+            // 서버에서 받은 애니메이션 시간 사용 (패널과 동기화)
+            const duration = serverDuration || 4000;
+            const itemHeight = 100;
+            const totalItems = allNames.length * 5 + winners.length;
+            const targetPosition = (totalItems - 1) * itemHeight;
+
+            reel.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.85, 0.35, 1.0)`;
+            reel.style.transform = `translateY(-${targetPosition}px)`;
+
+            // 애니메이션 완료 후 결과 표시
+            setTimeout(() => {
+                status.textContent = '';
+
+                if (winners.length === 1) {
+                    winnerName.textContent = winners[0];
+                } else {
+                    winnerName.textContent = winners.join(', ');
+                }
+
+                resultDisplay.classList.add('show');
+
+                // 컨페티 효과
+                if (settings.showConfetti) {
+                    createConfetti();
+                }
+
+                // TTS
+                if (settings.enableTTS) {
+                    speakWinners(winners);
+                }
+
+                // 자동 숨김 (설정값 또는 기본 5초)
+                setAutoHideTimer(settings.autoHideDelay || 5000);
+            }, duration + 500);
+        }
+
+        // 초기화
+        connectWebSocket();
+    </script>
+</body>
+</html>
