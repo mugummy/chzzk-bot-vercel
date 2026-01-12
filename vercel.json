@@ -1,10 +1,7 @@
 {
-  "framework": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://web-production-19eef.up.railway.app/api/$1" },
-    { "source": "/auth/(.*)", "destination": "https://web-production-19eef.up.railway.app/auth/$1" },
-    { "source": "/dashboard/(.*)", "destination": "/dashboard.html" },
-    { "source": "/(.*)\.(js|css|png|jpg|svg|ico)", "destination": "/$1.$2" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/:path*", "destination": "https://web-production-19eef.up.railway.app/api/:path*" },
+    { "source": "/auth/:path*", "destination": "https://web-production-19eef.up.railway.app/auth/:path*" },
+    { "source": "/dashboard/:path*", "destination": "/dashboard.html" }
   ]
 }
