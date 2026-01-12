@@ -158,9 +158,23 @@ function initWebSocket() {
         
         socket.onopen = () => {
             console.log('[WS] Connected');
+            
+            // 즉시 데이터 요청 (인증 대기하지 않음)
             setTimeout(() => {
-                socket.send(JSON.stringify({ type: 'requestData', dataType: 'all' }));
+                const requestMsg = { type: 'requestData', dataType: 'all' };
+                console.log('[WS] Sending initial request:', requestMsg);
+                socket.send(JSON.stringify(requestMsg));
+                
+                // 인증 정보가 이미 있다면 재전송
+                if (currentUser) {
+                     socket.send(JSON.stringify({
+                        type: 'connect',
+                        data: { channel: currentUser.channelId || currentUser.id }
+                    }));
+                }
             }, 500);
+            
+            // Auth 초기화는 별도로 진행
             setTimeout(initAuth, 300);
         };
         
@@ -303,35 +317,49 @@ function handleWebSocketMessage(data) {
 async function initAuth() {
     console.log('[Auth] Initializing...');
     
+    let sessionUser = null;
+    
     try {
-        // 서버에서 현재 세션 정보를 가져옵니다.
+        // 1. 서버 세션 시도
         const res = await fetch('/api/auth/session');
-        const session = await res.json();
-        
-        if (session && session.user) {
-            currentUser = session.user;
-            console.log('[Auth] Logged in as:', currentUser.name);
-            updateUserProfile(currentUser);
-            hideLoginScreen();
-            
-            // 봇 연결
-            setTimeout(() => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({
-                        type: 'connect',
-                        data: { 
-                            channel: currentUser.channelId,
-                            token: currentUser.accessToken // 필요시 사용
-                        }
-                    }));
-                }
-            }, 500);
-        } else {
-            console.log('[Auth] No session found');
-            showLoginScreen();
+        if (res.ok) {
+            const session = await res.json();
+            sessionUser = session.user;
         }
     } catch (e) {
-        console.error('[Auth] Error fetching session:', e);
+        console.error('[Auth] Session check failed:', e);
+    }
+    
+    // 2. 세션 없으면 로컬 스토리지 확인 (Fallback)
+    if (!sessionUser) {
+        const savedChannel = localStorage.getItem('chzzk_channel_info');
+        if (savedChannel) {
+            try {
+                sessionUser = JSON.parse(savedChannel);
+                console.log('[Auth] Loaded from localStorage:', sessionUser);
+            } catch (e) {}
+        }
+    }
+
+    if (sessionUser) {
+        currentUser = sessionUser;
+        updateUserProfile(currentUser);
+        hideLoginScreen();
+        
+        // 봇 연결
+        setTimeout(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'connect',
+                    data: { 
+                        channel: currentUser.channelId || currentUser.id,
+                        token: currentUser.accessToken 
+                    }
+                }));
+            }
+        }, 500);
+    } else {
+        console.log('[Auth] No session found, showing login');
         showLoginScreen();
     }
 }
