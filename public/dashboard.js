@@ -1,5 +1,5 @@
 // ============================================
-// Chzzk Bot Dashboard - Final Fixed Version
+// Chzzk Bot Dashboard - Secured Dynamic URL & Tab Routing
 // ============================================
 
 let socket = null;
@@ -8,21 +8,17 @@ let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Dashboard] Initializing...');
+    await checkSession();
     
-    // 1. Session Check
-    try {
-        await checkSession();
-    } catch (e) {
-        console.error('Session check failed:', e);
-        // Do nothing, landing page is default
-    }
-
-    // 2. UI Setup (Bind original buttons)
+    // 세션 체크 후 UI 설정 및 초기 탭 로드
     setupUI();
-    
-    // 3. Init Legacy Components
     if (typeof initTabs === 'function') initTabs();
-    if (typeof initDraggableChat === 'function') initDraggableChat();
+    
+    // URL 기반 초기 탭 설정
+    handleInitialTab();
+    
+    // 뒤로가기/앞으로가기 처리
+    window.addEventListener('popstate', handlePopState);
 });
 
 async function checkSession() {
@@ -30,23 +26,81 @@ async function checkSession() {
         const res = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'include' });
         const data = await res.json();
         
+        // 현재 경로 분석
+        const path = window.location.pathname;
+        const parts = path.split('/').filter(p => p); // 빈 문자열 제거
+        const isDashboardPath = parts[0] === 'dashboard';
+        
         if (data.authenticated && data.user) {
             console.log('[Auth] Logged in:', data.user.channelName);
             currentUser = data.user;
             
-            // Hide Landing Layer & Show Dashboard
-            if(window.hideLanding) window.hideLanding();
-            updateProfileUI(data.user);
-            
-            // Connect WS
+            // 권한 검사 (URL의 채널명과 내 채널명이 다르면 내 걸로 강제 이동)
+            if (isDashboardPath && parts[1] && decodeURIComponent(parts[1]) !== currentUser.channelName) {
+                alert('본인의 대시보드만 접근할 수 있습니다.');
+                const tab = parts[2] || 'dashboard';
+                window.location.href = `/dashboard/${currentUser.channelName}/${tab}`;
+                return;
+            }
+
+            // 대시보드 표시
+            showDashboard();
+            updateProfileUI(currentUser);
             initWebSocket();
+            
+            // 루트나 이상한 경로로 왔으면 기본 대시보드로 이동
+            if (!isDashboardPath) {
+                const newUrl = `/dashboard/${currentUser.channelName}/dashboard`;
+                history.replaceState(null, '', newUrl);
+            }
         } else {
             console.log('[Auth] No session');
-            // Landing page remains visible
+            // 대시보드 경로로 접근했지만 비로그인 상태면 홈으로
+            if (isDashboardPath) {
+                window.location.href = '/';
+            } else {
+                showLanding();
+            }
         }
     } catch (e) {
         console.error('[Auth] Error:', e);
+        showLanding();
     }
+}
+
+function handleInitialTab() {
+    const path = window.location.pathname;
+    const parts = path.split('/').filter(p => p);
+    
+    // /dashboard/{channelName}/{tabName} 구조라고 가정
+    if (parts.length >= 3) {
+        const tabName = parts[2];
+        if (document.getElementById(`${tabName}-tab`)) {
+            switchTab(tabName, false); // false = history push 안 함 (이미 URL에 있으니까)
+        }
+    }
+}
+
+function handlePopState() {
+    // 뒤로가기 시 URL에 맞춰 탭 변경
+    const path = window.location.pathname;
+    const parts = path.split('/').filter(p => p);
+    if (parts.length >= 3) {
+        switchTab(parts[2], false);
+    } else {
+        switchTab('dashboard', false);
+    }
+}
+
+function showLanding() {
+    document.getElementById('landing-layer').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+}
+
+function showDashboard() {
+    document.getElementById('landing-layer').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('app-container').style.display = 'flex';
 }
 
 function updateProfileUI(user) {
@@ -128,37 +182,48 @@ function updateBotStatus(connected) {
     if (txt) txt.textContent = connected ? '연결됨' : '미연결';
 }
 
-// UI Setup
+// UI Setup & Tab Switching
 function setupUI() {
-    // Tabs
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const tabId = item.dataset.tab;
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`)?.classList.add('active');
-            item.classList.add('active');
+            switchTab(tabId, true); // true = URL 변경 함
         });
     });
 
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
-    // Bind buttons (Using Safe Bind)
+    // Button Bindings
     const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
     
     bind('add-command-btn', () => showModal('add-command-modal'));
     bind('add-macro-btn', () => showModal('add-macro-modal'));
     bind('add-counter-btn', () => showModal('add-counter-modal'));
-    
     bind('save-song-settings', saveSongSettings);
     bind('play-pause-btn', togglePlayPause);
     bind('skip-btn', skipSong);
     bind('stop-song-btn', stopSong);
-    
     bind('toggle-participation-btn', toggleParticipation);
     bind('clear-participation-btn', clearParticipation);
-    
     bind('save-points-settings', savePointsSettings);
+}
+
+function switchTab(tabId, updateHistory = true) {
+    // 탭 UI 업데이트
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    const targetTab = document.getElementById(`${tabId}-tab`);
+    const targetNav = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+    
+    if (targetTab) targetTab.classList.add('active');
+    if (targetNav) targetNav.classList.add('active');
+    
+    // URL 업데이트
+    if (updateHistory && currentUser) {
+        const newUrl = `/dashboard/${currentUser.channelName}/${tabId}`;
+        history.pushState({ tab: tabId }, '', newUrl);
+    }
 }
 
 async function handleLogout() {
@@ -168,7 +233,7 @@ async function handleLogout() {
     }
 }
 
-// Helpers & Renderers (Original Style)
+// Helpers & Renderers
 function updateList(id, items, render) {
     const el = document.getElementById(id);
     if(el) el.innerHTML = (items && items.length) ? items.map(render).join('') : '<div class="empty-state">데이터 없음</div>';
@@ -275,4 +340,4 @@ function addChatMessage(c) {
 function showModal(id) { document.getElementById(id)?.classList.add('show'); }
 function hideModal(id) { document.getElementById(id)?.classList.remove('show'); }
 window.hideModal = hideModal;
-window.showModal = showModal;
+window.handleLogout = handleLogout;
