@@ -165,13 +165,12 @@ function initWebSocket() {
         socket.onopen = () => {
             console.log('[WS] Connected');
             
-            // 즉시 데이터 요청 (인증 대기하지 않음)
+            // 즉시 데이터 요청
             setTimeout(() => {
                 const requestMsg = { type: 'requestData', dataType: 'all' };
                 console.log('[WS] Sending initial request:', requestMsg);
                 socket.send(JSON.stringify(requestMsg));
                 
-                // 인증 정보가 이미 있다면 재전송
                 if (currentUser) {
                      socket.send(JSON.stringify({
                         type: 'connect',
@@ -179,9 +178,6 @@ function initWebSocket() {
                     }));
                 }
             }, 500);
-            
-            // Auth 초기화는 별도로 진행
-            setTimeout(initAuth, 300);
         };
         
         socket.onclose = () => {
@@ -3105,79 +3101,28 @@ function initButtonListeners() {
 // ============================================
 // Final Initialization
 // ============================================
-function initDashboard() {
+async function initDashboard() {
     console.log('[Dashboard] Initializing...');
     
-    // WebSocket 연결
+    // 1. 인증 확인 (URL에서 토큰 추출 및 저장 최우선)
+    await initAuth();
+    
+    // 2. WebSocket 연결 (이제 최신 토큰을 사용함)
     initWebSocket();
     
-    // 인증 확인
-    initAuth();
-    
-    // 탭 네비게이션
+    // 3. 탭 네비게이션 및 기타 UI 초기화
     initTabs();
-    
-    // 투표 서브탭
     initVoteSubtabs();
-    
-    // 플로팅 채팅
     initFloatingChat();
-    
-    // 버튼 이벤트 리스너
     initButtonListeners();
-    
-    // 오버레이 URL 초기화
     initOverlayUrl();
     
     // 모달 외부 클릭 닫기
-    document.querySelectorAll('.modal').forEach(modal => {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 closeModal(modal.id);
             }
-        });
-    });
-    
-    // 키보드 단축키
-    document.addEventListener('keydown', (e) => {
-        // ESC로 모달 닫기
-        if (e.key === 'Escape') {
-            document.querySelectorAll('.modal.show').forEach(modal => {
-                closeModal(modal.id);
-            });
-        }
-    });
-    
-    // Enter 키로 투표 항목 추가
-    const voteContainer = document.getElementById('vote-options-container');
-    if (voteContainer) {
-        voteContainer.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-                addVoteOption();
-                e.preventDefault();
-            }
-        });
-    }
-    
-    // Enter 키로 룰렛 항목 추가
-    const newRouletteItem = document.getElementById('new-roulette-item');
-    if (newRouletteItem) {
-        newRouletteItem.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addRouletteItem();
-                e.preventDefault();
-            }
-        });
-    }
-
-    // Modern UI Mouse Effect
-    document.addEventListener('mousemove', (e) => {
-        document.querySelectorAll('.card').forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty('--mouse-x', `${x}px`);
-            card.style.setProperty('--mouse-y', `${y}px`);
         });
     });
     
