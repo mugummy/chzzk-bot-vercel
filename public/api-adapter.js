@@ -15,8 +15,14 @@
             
             // API나 Auth 요청은 Next.js Rewrite를 타도록 URL 변경 안 함 (쿠키 보존)
             if (isApiOrAuth) {
-                // 쿠키 포함 강제 (옵션 병합)
-                const newOptions = { ...options, credentials: 'include' };
+                // 토큰 헤더 추가 (로컬 스토리지에서 가져옴)
+                const token = localStorage.getItem('chzzk_session_token');
+                const headers = options.headers ? new Headers(options.headers) : new Headers();
+                if (token) {
+                    headers.set('Authorization', `Bearer ${token}`);
+                }
+                
+                const newOptions = { ...options, headers, credentials: 'include' };
                 return originalFetch(url, newOptions);
             }
 

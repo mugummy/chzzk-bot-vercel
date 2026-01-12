@@ -327,62 +327,76 @@ function handleWebSocketMessage(data) {
 }
 
 // ============================================
-// Authentication
+// Authentication (Token Based)
 // ============================================
+const SESSION_KEY = 'chzzk_session_token';
+
 async function initAuth() {
     console.log('[Auth] Initializing...');
     
+    // 1. URL 파라미터에서 토큰 확인 (로그인 직후 리다이렉트)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSession = urlParams.get('session');
+    
+    if (urlSession) {
+        console.log('[Auth] Found session in URL, saving...');
+        localStorage.setItem(SESSION_KEY, urlSession);
+        // URL 깨끗하게 정리
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    // 2. 저장된 토큰 가져오기
+    const token = localStorage.getItem(SESSION_KEY);
     let sessionUser = null;
     
-    try {
-        // 1. 서버 세션 시도 (쿠키 포함 필수!)
-        const res = await fetch('/api/auth/session', { credentials: 'include' });
-        if (res.ok) {
-            const session = await res.json();
-            sessionUser = session.user;
+    if (token) {
+        try {
+            // 토큰 헤더 인증
+            const res = await fetch('/api/auth/session', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    sessionUser = data.user;
+                } else {
+                    console.log('[Auth] Token invalid or expired');
+                    localStorage.removeItem(SESSION_KEY); // 만료된 토큰 삭제
+                }
+            }
+        } catch (e) {
+            console.error('[Auth] Session check failed:', e);
         }
-    } catch (e) {
-        console.error('[Auth] Session check failed:', e);
     }
     
-    // 2. 세션 없으면 로컬 스토리지 확인 (Fallback)
-    if (!sessionUser) {
-        const savedChannel = localStorage.getItem('chzzk_channel_info');
-        if (savedChannel) {
-            try {
-                sessionUser = JSON.parse(savedChannel);
-                console.log('[Auth] Loaded from localStorage:', sessionUser);
-            } catch (e) {}
-        }
-    }
-
     if (sessionUser) {
         currentUser = sessionUser;
         updateUserProfile(currentUser);
-        // 봇 연결 (정식 세션 정보 사용)
-        connectToBot(currentUser.channelId || currentUser.id);
+        // 봇 연결 (토큰 포함)
+        connectToBot(currentUser.channelId, token);
     } else {
-        console.log('[Auth] No session found. Features requiring auth will be disabled.');
-        // 수동 입력(Prompt) 삭제 - 보안 강화
+        console.log('[Auth] No valid session found.');
         showNotification('로그인이 필요합니다. 일부 기능이 제한됩니다.', 'warning');
     }
 }
 
-function connectToBot(channelId) {
+function connectToBot(channelId, token) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         console.log('[Auth] Connecting to bot with channel:', channelId);
         socket.send(JSON.stringify({
             type: 'connect',
-            data: { channel: channelId }
+            data: { 
+                channel: channelId,
+                token: token // 소켓 연결 시에도 토큰 전송
+            }
         }));
         
-        // 연결 후 데이터 요청 한 번 더
         setTimeout(() => {
             socket.send(JSON.stringify({ type: 'requestData', dataType: 'all' }));
         }, 1000);
     } else {
-        console.log('[Auth] Socket not ready, retrying in 1s...');
-        setTimeout(() => connectToBot(channelId), 1000);
+        setTimeout(() => connectToBot(channelId, token), 1000);
     }
 }
 
@@ -1266,19 +1280,43 @@ function updateSettings(settings) {
     }
     
     // Song settings
-    const modeSelect = document.getElementById('song-request-mode');
-    if (modeSelect) modeSelect.value = settings.songRequestMode || 'off';
+    const modeSelect = document.querySelector(`input[name="songRequestMode"][value="${settings.songRequestMode}"]`);
+    if (modeSelect) modeSelect.checked = true;
     
+    updateSongSettingsUI(settings.songRequestMode); // UI 상태 업데이트
+
     const cooldownInput = document.getElementById('song-cooldown');
-    if (cooldownInput) cooldownInput.value = settings.songRequestCooldown || 60;
+    const minDonationInput = document.getElementById('song-min-donation');
     
-    const maxLengthInput = document.getElementById('max-song-length');
-    if (maxLengthInput) maxLengthInput.value = settings.maxSongLength || 10;
+    if (cooldownInput && settings.songRequestCooldown !== undefined) {
+        cooldownInput.value = settings.songRequestCooldown;
+    }
+    if (minDonationInput && settings.minDonationAmount !== undefined) {
+        minDonationInput.value = settings.minDonationAmount;
+    }
+}
+
+// UI 상태 업데이트 함수 (비활성화 처리)
+function updateSongSettingsUI(mode) {
+    const cooldownGroup = document.getElementById('song-cooldown')?.closest('.setting-item');
+    const donationGroup = document.getElementById('song-min-donation')?.closest('.setting-item');
     
-    const maxQueueInput = document.getElementById('max-queue-size');
-    if (maxQueueInput) maxQueueInput.value = settings.maxQueueSize || 50;
+    if (cooldownGroup) {
+        if (mode === 'off' || mode === 'donation') {
+            cooldownGroup.classList.add('disabled-group');
+        } else {
+            cooldownGroup.classList.remove('disabled-group');
+        }
+    }
     
-    // Points settings
+    if (donationGroup) {
+        if (mode === 'off' || mode === 'cooldown' || mode === 'all') {
+            donationGroup.classList.add('disabled-group');
+        } else {
+            donationGroup.classList.remove('disabled-group');
+        }
+    }
+}
     const pointsPerChat = document.getElementById('points-per-chat');
     if (pointsPerChat) pointsPerChat.value = settings.pointsPerChat || 1;
     
@@ -2963,6 +3001,13 @@ function initButtonListeners() {
     // Songs
     safeAddListener('save-song-settings', 'click', saveSongSettings);
     
+    // Song Mode Radio Change
+    document.querySelectorAll('input[name="songRequestMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            updateSongSettingsUI(e.target.value);
+        });
+    });
+    
     // Vote
     safeAddListener('add-vote-option-btn', 'click', addVoteOption);
     safeAddListener('create-vote-btn', 'click', createVote);
@@ -2971,15 +3016,15 @@ function initButtonListeners() {
     safeAddListener('reset-vote-btn', 'click', resetVote);
     
     // Draw
-    safeAddListener('draw-start-btn', 'click', toggleDraw);
-    safeAddListener('draw-perform-btn', 'click', performDraw);
-    safeAddListener('draw-reset-btn', 'click', resetDraw);
-    safeAddListener('draw-save-keyword-btn', 'click', saveDrawKeyword);
+    safeAddListener('start-draw-btn', 'click', toggleDraw);
+    safeAddListener('execute-draw-btn', 'click', performDraw);
+    safeAddListener('reset-draw-btn', 'click', resetDraw);
+    // safeAddListener('draw-save-keyword-btn', 'click', saveDrawKeyword); // HTML에 없음 (자동 저장됨)
     
     // Roulette
     safeAddListener('add-roulette-item-btn', 'click', addRouletteItem);
-    safeAddListener('roulette-spin-btn', 'click', spinRoulette);
-    safeAddListener('roulette-reset-btn', 'click', resetRoulette);
+    safeAddListener('spin-roulette-btn', 'click', spinRoulette);
+    safeAddListener('reset-roulette-btn', 'click', resetRoulette);
     
     // Participation
     safeAddListener('toggle-participation-btn', 'click', toggleParticipation);
