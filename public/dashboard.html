@@ -18,6 +18,14 @@
     <link rel="stylesheet" href="/toggle.css">
 </head>
 <body>
+    <!-- Background Elements -->
+    <div class="background-wrapper">
+        <div class="blob"></div>
+        <div class="blob"></div>
+        <div class="blob"></div>
+    </div>
+    <div class="noise-overlay"></div>
+
     <!-- Header -->
     <header class="header">
         <div class="header-left">
@@ -722,8 +730,8 @@
     <!-- Notification Container -->
     <div id="notification-container"></div>
 
-    <!-- Scripts (경로 수정됨) -->
-    <script src="/vote-system.js"></script>
+    <!-- Scripts (순서 중요: dashboard -> vote-system) -->
     <script src="/dashboard.js"></script>
+    <script src="/vote-system.js"></script>
 </body>
 </html>

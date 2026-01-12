@@ -2993,23 +2993,13 @@ function initButtonListeners() {
     safeAddListener('bot-chat-toggle', 'change', (e) => {
         const isEnabled = e.target.checked;
         
-        // 1. 설정 저장
+        // 1. 설정 저장 (서버가 알아서 알림 채팅 보냄)
         sendWebSocket({
             type: 'updateSettings',
             data: { chatEnabled: isEnabled }
         });
         
-        // 2. 채팅 알림 (입장/퇴장)
-        if (currentUser) {
-            const msg = isEnabled ? '🤖 봇이 활성화되었습니다!' : '👋 봇이 비활성화되었습니다.';
-            sendWebSocket({
-                type: 'command',
-                command: 'chat',
-                data: msg
-            });
-        }
-        
-        // 3. UI 상태 즉시 반영
+        // 2. UI 상태 즉시 반영
         updateBotStatusUI(isEnabled);
         
         showNotification(isEnabled ? '봇이 활성화되었습니다.' : '봇이 비활성화되었습니다.', isEnabled ? 'success' : 'warning');

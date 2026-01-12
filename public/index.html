@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/modern-ui.css">
     <style>
-        /* Landing Page Specific Styles */
+        /* Landing Page Specific Overrides */
         body {
             display: flex;
             flex-direction: column;
@@ -25,120 +25,99 @@
 
         .hero-container {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 80px;
             position: relative;
             z-index: 1;
+            animation: fade-in 1s ease-out;
         }
 
-        .hero-title {
-            font-size: 4rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #fff 0%, #00ff94 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-            letter-spacing: -2px;
-            text-shadow: 0 10px 30px rgba(0, 255, 148, 0.2);
-        }
-
-        .hero-subtitle {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 2rem;
-            font-weight: 500;
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .login-card-wrapper {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            margin: 0 auto;
             perspective: 1000px;
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
             width: 100%;
-            max-width: 1000px;
-            margin-top: 60px;
+            max-width: 1100px;
+            margin-top: 40px;
+            z-index: 1;
         }
 
         .feature-card {
-            padding: 30px;
+            padding: 40px 30px;
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            background: rgba(30, 30, 35, 0.4) !important; /* Slightly more transparent */
         }
 
         .feature-icon {
-            font-size: 2.5rem;
-            color: #00ff94;
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, #00ff9d 0%, #00ccff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
-            filter: drop-shadow(0 0 10px rgba(0, 255, 148, 0.4));
+            filter: drop-shadow(0 0 15px rgba(0, 255, 157, 0.3));
         }
 
         .feature-title {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 700;
             color: #fff;
+            margin: 0;
         }
 
         .feature-desc {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.6);
-            line-height: 1.5;
+            font-size: 0.95rem;
+            color: #a1a1aa;
+            line-height: 1.6;
+            margin: 0;
         }
 
-        .login-btn-lg {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            background: #03C75A;
-            color: white;
-            text-decoration: none;
-            padding: 16px 32px;
-            border-radius: 16px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px -10px rgba(3, 199, 90, 0.5);
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .login-btn-lg:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 20px 40px -10px rgba(3, 199, 90, 0.7);
-            background: #04d663;
-        }
-
-        .login-btn-lg:active {
-            transform: translateY(-1px) scale(0.98);
-        }
-
-        /* Mouse effect for landing */
-        .landing-card {
-            background: rgba(20, 20, 25, 0.4) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        footer {
+            margin-top: 80px;
+            color: rgba(255,255,255,0.3);
+            font-size: 0.85rem;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
+    <!-- Background Elements -->
+    <div class="background-wrapper">
+        <div class="blob"></div>
+        <div class="blob"></div>
+        <div class="blob"></div>
+    </div>
+    <div class="noise-overlay"></div>
+
     <!-- Hero Section -->
     <div class="hero-container">
         <h1 class="hero-title">CHZZK BOT</h1>
-        <p class="hero-subtitle">방송을 더 쉽고 재미있게 관리하세요</p>
+        <p class="hero-subtitle">
+            방송 관리의 새로운 기준.<br>
+            더 쉽고, 더 강력하고, 더 아름답게.
+        </p>
         
         <div class="login-card-wrapper">
-            <div class="card login-card" style="padding: 40px; background: rgba(30, 30, 35, 0.8) !important;">
-                <h2 style="margin-bottom: 20px; font-size: 1.5rem;">시작하기</h2>
-                <p style="color: #aaa; margin-bottom: 30px;">치지직 계정으로 로그인하여 봇을 연결하세요.</p>
+            <div class="card login-card" style="padding: 50px 40px;">
+                <h2 style="margin-bottom: 10px; font-size: 1.8rem; font-weight: 800;">Welcome back</h2>
+                <p style="color: #a1a1aa; margin-bottom: 35px; font-size: 0.95rem;">치지직 계정으로 간편하게 시작하세요.</p>
+                
                 <a href="/auth/login" class="login-btn-lg">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
+                    <svg viewBox="0 0 24 24" width="24" height="24" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
                         <path fill="currentColor" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
                     </svg>
                     <span>네이버로 로그인</span>
@@ -149,46 +128,46 @@
 
     <!-- Features Grid -->
     <div class="features-grid">
-        <div class="card feature-card landing-card">
+        <div class="card feature-card">
             <i class="fas fa-terminal feature-icon"></i>
-            <h3 class="feature-title">강력한 명령어 시스템</h3>
+            <h3 class="feature-title">스마트 명령어</h3>
             <p class="feature-desc">
-                채팅 한 번으로 다양한 동작을 실행하세요.<br>
-                자동 응답부터 게임까지, 무엇이든 가능합니다.
+                단순 반복 응답은 이제 그만.<br>
+                변수와 로직이 포함된 강력한 명령어.
             </p>
         </div>
-        <div class="card feature-card landing-card">
+        <div class="card feature-card">
             <i class="fas fa-music feature-icon"></i>
-            <h3 class="feature-title">스마트 신청곡 관리</h3>
+            <h3 class="feature-title">신청곡 관리</h3>
             <p class="feature-desc">
-                유튜브 링크만 있으면 OK.<br>
-                중복 방지, 쿨타임 설정으로 쾌적한 음악 방송!
+                유튜브 링크 자동 감지 및 대기열 생성.<br>
+                후원 연동으로 수익 창출까지.
             </p>
         </div>
-        <div class="card feature-card landing-card">
-            <i class="fas fa-poll feature-icon"></i>
-            <h3 class="feature-title">실시간 시청자 참여</h3>
+        <div class="card feature-card">
+            <i class="fas fa-users feature-icon"></i>
+            <h3 class="feature-title">시청자 참여</h3>
             <p class="feature-desc">
-                투표, 추첨, 룰렛으로 시청자와 소통하세요.<br>
-                결과는 화려한 오버레이로 송출됩니다.
+                투표, 추첨, 룰렛 등 다양한 기능으로<br>
+                시청자와 실시간으로 소통하세요.
             </p>
         </div>
-        <div class="card feature-card landing-card">
-            <i class="fas fa-chart-line feature-icon"></i>
-            <h3 class="feature-title">직관적인 대시보드</h3>
+        <div class="card feature-card">
+            <i class="fas fa-bolt feature-icon"></i>
+            <h3 class="feature-title">실시간 대시보드</h3>
             <p class="feature-desc">
-                방송 중에도 클릭 한 번으로 제어.<br>
-                모든 상태를 한눈에 파악하고 관리하세요.
+                방송 중 모든 상황을 한눈에.<br>
+                클릭 한 번으로 봇을 제어하세요.
             </p>
         </div>
     </div>
 
-    <footer style="margin-top: 60px; color: rgba(255,255,255,0.3); font-size: 0.8rem;">
-        &copy; 2026 Chzzk Bot. All rights reserved.
+    <footer>
+        &copy; 2026 Chzzk Bot. Designed for Streamers.
     </footer>
 
     <script>
-        // 마우스 효과 스크립트 (모던 UI)
+        // Mouse Spotlight Effect
         document.addEventListener('mousemove', (e) => {
             document.querySelectorAll('.card').forEach(card => {
                 const rect = card.getBoundingClientRect();
@@ -199,10 +178,10 @@
             });
         });
 
-        // 이미 로그인된 경우 대시보드로 자동 이동 (선택 사항)
+        // Auto-redirect if logged in (Optional)
         const token = localStorage.getItem('chzzk_session_token');
         if (token) {
-            // 토큰 유효성 검사는 생략하고 일단 이동 (대시보드에서 검사함)
+            // console.log("Auto-redirecting to dashboard...");
             // window.location.href = '/dashboard.html';
         }
     </script>
