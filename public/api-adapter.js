@@ -53,7 +53,14 @@
                          path = new URL(url).pathname;
                      } catch (e) { path = url; }
                  }
-                 const newUrl = wsBase + (path.startsWith('/') ? path : '/' + path);
+                 
+                 // 토큰 쿼리 파라미터 추가
+                 const token = localStorage.getItem('chzzk_session_token');
+                 const separator = path.includes('?') ? '&' : '?';
+                 const tokenQuery = token ? `${separator}token=${token}` : '';
+                 
+                 const newUrl = wsBase + (path.startsWith('/') ? path : '/' + path) + tokenQuery;
+                 
                  console.log(`[Adapter] WS Proxy: ${url} -> ${newUrl}`);
                  return new originalWebSocket(newUrl, protocols);
              }
