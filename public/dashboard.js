@@ -1,5 +1,5 @@
 // ============================================
-// Chzzk Bot Dashboard - Restored & Secured
+// Chzzk Bot Dashboard - Final Fixed Version
 // ============================================
 
 let socket = null;
@@ -14,14 +14,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         await checkSession();
     } catch (e) {
         console.error('Session check failed:', e);
-        if(window.showLanding) window.showLanding();
+        // Do nothing, landing page is default
     }
 
-    // 2. UI Setup (Original listeners)
+    // 2. UI Setup (Bind original buttons)
     setupUI();
     
-    // 3. Legacy Tab Init
+    // 3. Init Legacy Components
     if (typeof initTabs === 'function') initTabs();
+    if (typeof initDraggableChat === 'function') initDraggableChat();
 });
 
 async function checkSession() {
@@ -41,11 +42,10 @@ async function checkSession() {
             initWebSocket();
         } else {
             console.log('[Auth] No session');
-            if(window.showLanding) window.showLanding();
+            // Landing page remains visible
         }
     } catch (e) {
         console.error('[Auth] Error:', e);
-        if(window.showLanding) window.showLanding();
     }
 }
 
@@ -55,8 +55,8 @@ function updateProfileUI(user) {
         headerName: 'header-username',
         sidebarAvatar: 'sidebar-avatar',
         sidebarName: 'sidebar-name',
-        cardAvatar: 'channel-avatar-lg', // Fixed ID for main card
-        cardName: 'channel-name-lg'      // Fixed ID for main card
+        cardAvatar: 'channel-avatar-lg',
+        cardName: 'channel-name-lg'
     };
 
     const setBg = (id, url) => { const el = document.getElementById(id); if(el) el.style.backgroundImage = `url(${url})`; };
@@ -72,7 +72,7 @@ function updateProfileUI(user) {
     setText(ids.cardName, user.channelName);
 }
 
-// ... (WebSocket Logic remains same as previous working version)
+// WebSocket Logic
 function initWebSocket() {
     if (socket) return;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -115,7 +115,7 @@ function handleMessage(msg) {
         case 'connectResult': 
             if(msg.success && msg.channelInfo) {
                 const el = document.getElementById('follower-count');
-                if(el) el.innerHTML = `<i class="fas fa-heart"></i> ${msg.channelInfo.followerCount.toLocaleString()} 팔로워`;
+                if(el) el.innerHTML = `<i class="fas fa-heart" style="color:#fa5252"></i> ${msg.channelInfo.followerCount.toLocaleString()} 팔로워`;
             }
             break;
     }
@@ -133,18 +133,18 @@ function setupUI() {
     // Tabs
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
+            const tabId = item.dataset.tab;
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`${item.dataset.tab}-tab`)?.classList.add('active');
+            document.getElementById(`${tabId}-tab`)?.classList.add('active');
             item.classList.add('active');
         });
     });
 
-    // Logout
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
-    // Button Bindings (Original IDs)
-    const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
+    // Bind buttons (Using Safe Bind)
+    const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
     
     bind('add-command-btn', () => showModal('add-command-modal'));
     bind('add-macro-btn', () => showModal('add-macro-modal'));
@@ -220,10 +220,10 @@ function updateSongState(s) {
     const list = document.getElementById('song-queue-list');
     if(list) list.innerHTML = s.queue.map(q => `<div class="item-card"><span>${q.title}</span><button class="btn-icon" onclick="removeSong('${q.id}')"><i class="fas fa-times"></i></button></div>`).join('');
 }
-window.removeSong = (id) => { if(socket) socket.send(JSON.stringify({type:'controlMusic', action:'removeFromQueue', payload:id})); };
-function togglePlayPause() { if(socket) socket.send(JSON.stringify({type:'controlMusic', action:'togglePlayPause'})); }
-function skipSong() { if(socket) socket.send(JSON.stringify({type:'controlMusic', action:'skip'})); }
-function stopSong() { if(socket) socket.send(JSON.stringify({type:'controlMusic', action:'deleteCurrent'})); }
+window.removeSong = (id) => { send('controlMusic', {action:'removeFromQueue', payload:id}); };
+function togglePlayPause() { send('controlMusic', {action:'togglePlayPause'}); }
+function skipSong() { send('controlMusic', {action:'skip'}); }
+function stopSong() { send('controlMusic', {action:'deleteCurrent'}); }
 function saveSongSettings() {
     const cd = document.getElementById('song-cooldown').value;
     const min = document.getElementById('song-min-donation').value;
@@ -275,3 +275,4 @@ function addChatMessage(c) {
 function showModal(id) { document.getElementById(id)?.classList.add('show'); }
 function hideModal(id) { document.getElementById(id)?.classList.remove('show'); }
 window.hideModal = hideModal;
+window.showModal = showModal;
