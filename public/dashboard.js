@@ -1,5 +1,5 @@
 // ============================================
-// Chzzk Bot Dashboard - Secured Dynamic URL & Tab Routing
+// Chzzk Bot Dashboard - Main
 // ============================================
 
 let socket = null;
@@ -8,17 +8,20 @@ let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Dashboard] Initializing...');
+    
+    // URL 기반 초기 탭 설정 (히스토리 처리)
+    window.addEventListener('popstate', handlePopState);
+    
+    // 세션 체크 (가장 먼저)
     await checkSession();
     
-    // 세션 체크 후 UI 설정 및 초기 탭 로드
+    // UI 초기화
     setupUI();
-    if (typeof initTabs === 'function') initTabs();
+    if(typeof initTabs === 'function') initTabs();
     
-    // URL 기반 초기 탭 설정
-    handleInitialTab();
-    
-    // 뒤로가기/앞으로가기 처리
-    window.addEventListener('popstate', handlePopState);
+    // 초기 탭 로드
+    const path = window.location.pathname.split('/').filter(p=>p);
+    if(path.length >= 3) switchTab(path[2], false); // /dashboard/user/tabName
 });
 
 async function checkSession() {
@@ -26,81 +29,40 @@ async function checkSession() {
         const res = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'include' });
         const data = await res.json();
         
-        // 현재 경로 분석
-        const path = window.location.pathname;
-        const parts = path.split('/').filter(p => p); // 빈 문자열 제거
-        const isDashboardPath = parts[0] === 'dashboard';
-        
         if (data.authenticated && data.user) {
             console.log('[Auth] Logged in:', data.user.channelName);
             currentUser = data.user;
             
-            // 권한 검사 (URL의 채널명과 내 채널명이 다르면 내 걸로 강제 이동)
-            if (isDashboardPath && parts[1] && decodeURIComponent(parts[1]) !== currentUser.channelName) {
-                alert('본인의 대시보드만 접근할 수 있습니다.');
-                const tab = parts[2] || 'dashboard';
-                window.location.href = `/dashboard/${currentUser.channelName}/${tab}`;
-                return;
-            }
-
-            // 대시보드 표시
-            showDashboard();
-            updateProfileUI(currentUser);
+            // 로그인 성공: 랜딩 페이지 숨김 + 대시보드 표시
+            if(window.hideLanding) window.hideLanding();
+            
+            // 프로필 업데이트
+            updateProfileUI(data.user);
+            
+            // 소켓 연결
             initWebSocket();
             
-            // 루트나 이상한 경로로 왔으면 기본 대시보드로 이동
-            if (!isDashboardPath) {
-                const newUrl = `/dashboard/${currentUser.channelName}/dashboard`;
-                history.replaceState(null, '', newUrl);
+            // URL 검증 (다른 사람 대시보드 접근 방지)
+            const path = window.location.pathname.split('/').filter(p=>p);
+            if(path[0] === 'dashboard' && path[1] && decodeURIComponent(path[1]) !== currentUser.channelName) {
+                // 내 대시보드로 이동
+                const tab = path[2] || 'dashboard';
+                history.replaceState(null, '', `/dashboard/${currentUser.channelName}/${tab}`);
             }
         } else {
             console.log('[Auth] No session');
-            // 대시보드 경로로 접근했지만 비로그인 상태면 홈으로
-            if (isDashboardPath) {
-                window.location.href = '/';
-            } else {
-                showLanding();
+            // 로그인 실패: 랜딩 페이지 표시
+            if(window.showLanding) window.showLanding();
+            
+            // 대시보드 경로로 직접 들어왔다면 루트로 리셋 (선택사항)
+            if(window.location.pathname.startsWith('/dashboard')) {
+                history.replaceState(null, '', '/');
             }
         }
     } catch (e) {
-        console.error('[Auth] Error:', e);
-        showLanding();
+        console.error('[Auth] Check failed:', e);
+        if(window.showLanding) window.showLanding();
     }
-}
-
-function handleInitialTab() {
-    const path = window.location.pathname;
-    const parts = path.split('/').filter(p => p);
-    
-    // /dashboard/{channelName}/{tabName} 구조라고 가정
-    if (parts.length >= 3) {
-        const tabName = parts[2];
-        if (document.getElementById(`${tabName}-tab`)) {
-            switchTab(tabName, false); // false = history push 안 함 (이미 URL에 있으니까)
-        }
-    }
-}
-
-function handlePopState() {
-    // 뒤로가기 시 URL에 맞춰 탭 변경
-    const path = window.location.pathname;
-    const parts = path.split('/').filter(p => p);
-    if (parts.length >= 3) {
-        switchTab(parts[2], false);
-    } else {
-        switchTab('dashboard', false);
-    }
-}
-
-function showLanding() {
-    document.getElementById('landing-layer').classList.remove('hidden');
-    document.getElementById('app-container').classList.add('hidden');
-}
-
-function showDashboard() {
-    document.getElementById('landing-layer').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-    document.getElementById('app-container').style.display = 'flex';
 }
 
 function updateProfileUI(user) {
@@ -112,7 +74,6 @@ function updateProfileUI(user) {
         cardAvatar: 'channel-avatar-lg',
         cardName: 'channel-name-lg'
     };
-
     const setBg = (id, url) => { const el = document.getElementById(id); if(el) el.style.backgroundImage = `url(${url})`; };
     const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.textContent = txt; };
 
@@ -126,12 +87,19 @@ function updateProfileUI(user) {
     setText(ids.cardName, user.channelName);
 }
 
-// WebSocket Logic
 function initWebSocket() {
     if (socket) return;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let wsUrl = window.getServerWebSocketUrl ? window.getServerWebSocketUrl() : `${wsProtocol}//${window.location.host}`;
+    // config.js가 없거나 로드 안 됐을 때를 대비한 폴백
+    let wsUrl;
+    if (typeof window.getServerWebSocketUrl === 'function') {
+        wsUrl = window.getServerWebSocketUrl();
+    } else {
+        // api-adapter.js의 기본값이나 현재 호스트 사용
+        wsUrl = `${wsProtocol}//${window.location.host}`;
+    }
     
+    console.log('[WS] Connecting to:', wsUrl);
     socket = new WebSocket(wsUrl);
     window.socket = socket;
 
@@ -182,34 +150,37 @@ function updateBotStatus(connected) {
     if (txt) txt.textContent = connected ? '연결됨' : '미연결';
 }
 
-// UI Setup & Tab Switching
 function setupUI() {
+    // 탭 클릭 처리 (URL 변경 포함)
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const tabId = item.dataset.tab;
-            switchTab(tabId, true); // true = URL 변경 함
+            switchTab(tabId, true);
         });
     });
 
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
-    // Button Bindings
-    const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+    // 버튼 바인딩 (안전하게)
+    const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
     
     bind('add-command-btn', () => showModal('add-command-modal'));
     bind('add-macro-btn', () => showModal('add-macro-modal'));
     bind('add-counter-btn', () => showModal('add-counter-modal'));
+    
     bind('save-song-settings', saveSongSettings);
     bind('play-pause-btn', togglePlayPause);
     bind('skip-btn', skipSong);
     bind('stop-song-btn', stopSong);
+    
     bind('toggle-participation-btn', toggleParticipation);
     bind('clear-participation-btn', clearParticipation);
+    
     bind('save-points-settings', savePointsSettings);
 }
 
 function switchTab(tabId, updateHistory = true) {
-    // 탭 UI 업데이트
+    // UI 변경
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     
@@ -226,14 +197,27 @@ function switchTab(tabId, updateHistory = true) {
     }
 }
 
+function handlePopState(event) {
+    if (event.state && event.state.tab) {
+        switchTab(event.state.tab, false);
+    } else {
+        // URL에서 탭 추출 시도
+        const parts = window.location.pathname.split('/').filter(p=>p);
+        if (parts.length >= 3) switchTab(parts[2], false);
+        else switchTab('dashboard', false);
+    }
+}
+
 async function handleLogout() {
     if (confirm('로그아웃 하시겠습니까?')) {
         try { await fetch('/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+        currentUser = null;
+        if (socket) socket.close();
         window.location.href = '/'; 
     }
 }
 
-// Helpers & Renderers
+// Helpers & Renderers (Original Style)
 function updateList(id, items, render) {
     const el = document.getElementById(id);
     if(el) el.innerHTML = (items && items.length) ? items.map(render).join('') : '<div class="empty-state">데이터 없음</div>';
@@ -255,9 +239,9 @@ function renderCounterItem(c) {
 // Global Actions (Socket send)
 function send(type, data) { if(socket && socket.readyState === 1) socket.send(JSON.stringify({ type, data })); }
 
-window.deleteCommand = (trigger) => { if(confirm('삭제?')) send('removeCommand', { trigger }); };
+window.deleteCommand = (t) => { if(confirm('삭제?')) send('removeCommand', { trigger: t }); };
 window.deleteMacro = (id) => { if(confirm('삭제?')) send('removeMacro', { id }); };
-window.deleteCounter = (trigger) => { if(confirm('삭제?')) send('removeCounter', { trigger }); };
+window.deleteCounter = (t) => { if(confirm('삭제?')) send('removeCounter', { trigger: t }); };
 
 window.addCommand = () => {
     const t = document.getElementById('new-command-trigger').value;
