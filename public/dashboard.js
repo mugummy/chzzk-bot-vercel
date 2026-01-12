@@ -1283,7 +1283,7 @@ function updateSettings(settings) {
     const modeSelect = document.querySelector(`input[name="songRequestMode"][value="${settings.songRequestMode}"]`);
     if (modeSelect) modeSelect.checked = true;
     
-    updateSongSettingsUI(settings.songRequestMode); // UI 상태 업데이트
+    updateSongSettingsUI(settings.songRequestMode);
 
     const cooldownInput = document.getElementById('song-cooldown');
     const minDonationInput = document.getElementById('song-min-donation');
@@ -1294,6 +1294,13 @@ function updateSettings(settings) {
     if (minDonationInput && settings.minDonationAmount !== undefined) {
         minDonationInput.value = settings.minDonationAmount;
     }
+
+    // Points settings
+    const pointsPerChat = document.getElementById('points-per-chat');
+    if (pointsPerChat) pointsPerChat.value = settings.pointsPerChat || 1;
+    
+    const pointsCooldown = document.getElementById('points-cooldown');
+    if (pointsCooldown) pointsCooldown.value = settings.pointsCooldown || 60;
 }
 
 // UI 상태 업데이트 함수 (비활성화 처리)
@@ -1316,12 +1323,6 @@ function updateSongSettingsUI(mode) {
             donationGroup.classList.remove('disabled-group');
         }
     }
-}
-    const pointsPerChat = document.getElementById('points-per-chat');
-    if (pointsPerChat) pointsPerChat.value = settings.pointsPerChat || 1;
-    
-    const pointsCooldown = document.getElementById('points-cooldown');
-    if (pointsCooldown) pointsCooldown.value = settings.pointsCooldown || 60;
 }
 
 function updatePointsData(pointsData) {
