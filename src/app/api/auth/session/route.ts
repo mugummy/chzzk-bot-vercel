@@ -11,10 +11,10 @@ export async function GET() {
 
   return NextResponse.json({
     user: {
-      id: session.userId,
+      userId: session.userId,
       channelId: session.channelId,
-      name: session.channelName,
-      image: session.channelImageUrl,
+      channelName: session.channelName,
+      channelImageUrl: session.channelImageUrl,
     },
   });
 }
