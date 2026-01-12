@@ -7,13 +7,13 @@
     <script src="config.js"></script>
     <script src="api-adapter.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Original Dashboard Style -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vote-ui-enhanced.css">
-
-    <!-- Landing Page Specific Style (Isolated) -->
+    
+    <!-- Landing Page Style -->
     <style>
         #landing-page {
             position: fixed;
@@ -24,14 +24,10 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            font-family: 'Inter', sans-serif;
             transition: opacity 0.5s ease, visibility 0.5s ease;
         }
-        #landing-page.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
+        #landing-page.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .aurora-bg { position: absolute; inset: 0; z-index: -1; }
         .blob { position: absolute; filter: blur(80px); opacity: 0.4; animation: floatBlob 15s infinite alternate; }
         .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7047eb; }
@@ -39,298 +35,203 @@
         @keyframes floatBlob { from { transform: translate(0,0) scale(1); } to { transform: translate(100px,100px) scale(1.2); } }
         
         .premium-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 30px;
-            padding: 60px 40px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            max-width: 450px;
-            width: 90%;
+            background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 30px; padding: 60px 40px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 90%; max-width: 450px;
         }
         .landing-logo { font-size: 60px; margin-bottom: 20px; background: linear-gradient(135deg, #00ff94, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .landing-title { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 10px; }
-        .landing-subtitle { color: rgba(255,255,255,0.6); margin-bottom: 40px; line-height: 1.5; }
+        .landing-subtitle { color: rgba(255,255,255,0.6); margin-bottom: 40px; }
+        .btn-start { padding: 15px 50px; font-size: 18px; font-weight: 700; background: #00ff94; color: #000; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; }
+        .btn-start:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(0, 255, 148, 0.5); }
         
-        .btn-start {
-            padding: 15px 50px;
-            font-size: 18px;
-            font-weight: 700;
-            background: #00ff94;
-            color: #000;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 20px rgba(0, 255, 148, 0.3);
-        }
-        .btn-start:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(0, 255, 148, 0.5); background: #fff; }
-
-        .btn-chzzk-login {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            padding: 16px;
-            background: #7047eb; /* Chzzk Purple */
-            color: white;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 18px;
-            margin-bottom: 10px;
-            transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(112, 71, 235, 0.3);
-        }
-        .btn-chzzk-login:hover { background: #5a36c7; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(112, 71, 235, 0.4); }
-        .btn-back { background: transparent; color: #888; border: none; cursor: pointer; text-decoration: underline; margin-top: 10px; font-size: 14px; }
-
-        #home-section, #auth-section { transition: opacity 0.3s ease; }
         #auth-section { display: none; }
+        .btn-chzzk-login { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; background: #03C75A; color: white; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <!-- 🌟 Landing & Login Container -->
+    <!-- 🌟 Landing Page -->
     <div id="landing-page">
         <div class="aurora-bg">
             <div class="blob blob-1"></div>
             <div class="blob blob-2"></div>
         </div>
         <div class="premium-card">
-            <!-- Home State -->
             <div id="home-section">
                 <i class="fas fa-robot landing-logo"></i>
                 <h1 class="landing-title">CHZZK BOT</h1>
-                <p class="landing-subtitle">치지직 방송을 위한 올인원 솔루션</p>
-                <button class="btn-start" onclick="window.goToLogin()">시작하기</button>
+                <p class="landing-subtitle">방송 관리를 위한 올인원 솔루션</p>
+                <button class="btn-start" onclick="window.showLoginSection()">시작하기</button>
             </div>
-            <!-- Login State -->
             <div id="auth-section">
-                <h2 style="color:white; margin-bottom:10px;">로그인</h2>
-                <p style="color:#888; margin-bottom:30px; font-size:14px;">봇 연결을 위해 치지직 계정으로 로그인하세요.</p>
+                <h2 style="color:white; margin-bottom:20px;">로그인</h2>
                 <a href="/auth/login" class="btn-chzzk-login">
-                    <i class="fas fa-bolt"></i>
+                    <img src="https://ssl.pstatic.net/static/nid/login/m_sp_01_login_008d54.png" width="20" alt="N">
                     치지직으로 로그인
                 </a>
-                <button class="btn-back" onclick="window.goToHome()">뒤로가기</button>
+                <button onclick="window.showHomeSection()" style="background:transparent; border:none; color:#888; margin-top:10px; cursor:pointer; text-decoration:underline;">뒤로가기</button>
             </div>
         </div>
     </div>
 
-    <!-- 🖥️ App Container (Original Features Restored) -->
-    <div id="app-container" class="app-container hidden">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <i class="fas fa-robot" style="margin-right: 10px;"></i> CHZZK BOT
+    <!-- 🖥️ Original Dashboard Structure -->
+    <div id="app-container" style="display:none;">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="header-title" id="header-title">대시보드</h1>
             </div>
-            
-            <!-- 채널 정보 영역 (프로필 사진, 닉네임) -->
-            <div class="sidebar-profile" id="sidebar-profile">
-                <div id="sidebar-avatar" class="sidebar-avatar"></div>
-                <div id="sidebar-name" style="font-weight: bold; color: #fff;">-</div>
-            </div>
-
-            <nav class="sidebar-nav">
-                <div class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i> 대시보드</div>
-                <div class="nav-item" data-tab="commands"><i class="fas fa-terminal"></i> 명령어</div>
-                <div class="nav-item" data-tab="macros"><i class="fas fa-clock"></i> 매크로</div>
-                <div class="nav-item" data-tab="counters"><i class="fas fa-calculator"></i> 카운터</div>
-                <div class="nav-item" data-tab="songs"><i class="fas fa-music"></i> 신청곡</div>
-                <div class="nav-item" data-tab="votes"><i class="fas fa-poll"></i> 투표/추첨</div>
-                <div class="nav-item" data-tab="participation"><i class="fas fa-users"></i> 시청자 참여</div>
-                <div class="nav-item" data-tab="points"><i class="fas fa-coins"></i> 포인트</div>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <div class="bot-status">
-                    <div id="bot-status-indicator" class="status-indicator"></div>
-                    <span id="bot-status-text">연결 대기</span>
+            <div class="header-right" id="header-profile" style="display: none;">
+                <div class="header-profile-info">
+                    <div class="header-avatar" id="header-avatar"></div>
+                    <span class="header-username" id="header-username"></span>
                 </div>
-                <button id="logout-btn" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">로그아웃</button>
+                <button class="header-logout" id="logout-btn" title="로그아웃">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
+        </header>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
+                    <div class="sidebar-avatar" id="sidebar-avatar"></div>
+                    <div class="sidebar-info">
+                        <div class="sidebar-name" id="sidebar-name"></div>
+                        <div class="sidebar-status">
+                            <span class="status-dot online"></span>
+                            <span id="sidebar-status-text">연결됨</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bot-status">
+                    <div class="status-indicator" id="bot-status-indicator"></div>
+                    <span id="bot-status-text">봇 미연결</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-list">
+                    <li class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i><span>대시보드</span></li>
+                    <li class="nav-item" data-tab="commands"><i class="fas fa-terminal"></i><span>명령어</span></li>
+                    <li class="nav-item" data-tab="macros"><i class="fas fa-clock"></i><span>매크로</span></li>
+                    <li class="nav-item" data-tab="counters"><i class="fas fa-calculator"></i><span>카운터</span></li>
+                    <li class="nav-item" data-tab="songs"><i class="fas fa-music"></i><span>신청곡</span></li>
+                    <li class="nav-item" data-tab="votes"><i class="fas fa-poll"></i><span>투표</span></li>
+                    <li class="nav-item" data-tab="participation"><i class="fas fa-users"></i><span>참여</span></li>
+                    <li class="nav-item" data-tab="points"><i class="fas fa-coins"></i><span>포인트</span></li>
+                </ul>
+            </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <header class="header">
-                <div class="header-title" id="header-title">대시보드</div>
-                <div class="header-profile-info">
-                    <div id="header-avatar" class="header-avatar"></div>
-                    <span id="header-username" style="font-weight: bold;">-</span>
+            <div id="dashboard-tab" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card channel-card">
+                        <div class="channel-info">
+                            <div class="channel-avatar" id="channel-avatar-lg"></div>
+                            <div class="channel-details">
+                                <h2 class="channel-name" id="channel-name-lg">채널명</h2>
+                                <div class="channel-stats"><span class="follower-count" id="follower-count">0 팔로워</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card chat-card" style="grid-column: span 2;">
+                        <h3 class="card-title"><i class="fas fa-comments"></i> 실시간 채팅</h3>
+                        <div class="chat-messages" id="chat-messages"></div>
+                    </div>
                 </div>
-            </header>
+            </div>
 
-            <div class="content-area">
-                <!-- 탭별 카드들은 dashboard.js에서 원본 버튼들과 함께 로드됩니다 -->
-                <!-- Dashboard Tab -->
-                <div id="dashboard-tab" class="tab-content active">
-                    <div class="dashboard-grid">
-                        <div class="card channel-card">
-                            <div class="card-title"><i class="fas fa-user-circle"></i> 채널 정보</div>
-                            <div class="channel-info">
-                                <div id="channel-avatar-lg" style="width: 80px; height: 80px; border-radius: 50%; background-color: #333; background-size: cover; border: 2px solid #00ff94;"></div>
-                                <div style="margin-left: 20px;">
-                                    <h2 id="channel-name-lg" style="margin: 0; font-size: 24px;">-</h2>
-                                    <p id="follower-count" style="color: #aaa; margin-top: 5px;">팔로워: -</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 현황 카드 -->
-                        <div class="card stats-card">
-                            <div class="card-title"><i class="fas fa-chart-bar"></i> 현황</div>
-                            <div class="stats-grid">
-                                <div class="stat-item"><div class="stat-value" id="stat-commands">0</div><div class="stat-label">명령어</div></div>
-                                <div class="stat-item"><div class="stat-value" id="stat-songs">0</div><div class="stat-label">신청곡</div></div>
-                                <div class="stat-item"><div class="stat-value" id="stat-votes">0</div><div class="stat-label">투표</div></div>
-                                <div class="stat-item"><div class="stat-value" id="stat-participants">0</div><div class="stat-label">참여자</div></div>
-                            </div>
-                        </div>
-                        
-                        <!-- 실시간 채팅 -->
-                        <div class="card chat-card" style="grid-column: span 2;">
-                            <div class="card-title"><span><i class="fas fa-comments"></i> 실시간 채팅</span></div>
-                            <div id="chat-messages" class="chat-container">
-                                <div style="text-align: center; color: #666; padding-top: 100px;">채팅 대기 중...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Commands -->
+            <div id="commands-tab" class="tab-content">
+                <div class="tab-header"><h2>명령어 관리</h2><button class="btn btn-primary" id="add-command-btn"><i class="fas fa-plus"></i> 추가</button></div>
+                <div class="card"><div class="item-list" id="commands-list"></div></div>
+            </div>
 
-                <!-- Commands Tab -->
-                <div id="commands-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-title">
-                            명령어 관리
-                            <button class="btn btn-primary" onclick="showModal('add-command-modal')">추가</button>
-                        </div>
-                        <div id="commands-list" class="item-list"></div>
-                    </div>
-                </div>
+            <!-- Macros -->
+            <div id="macros-tab" class="tab-content">
+                <div class="tab-header"><h2>매크로 관리</h2><button class="btn btn-primary" id="add-macro-btn"><i class="fas fa-plus"></i> 추가</button></div>
+                <div class="card"><div class="item-list" id="macros-list"></div></div>
+            </div>
 
-                <!-- Macros Tab -->
-                <div id="macros-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-title">
-                            매크로 관리
-                            <button class="btn btn-primary" onclick="showModal('add-macro-modal')">추가</button>
-                        </div>
-                        <div id="macros-list" class="item-list"></div>
-                    </div>
-                </div>
+            <!-- Counters -->
+            <div id="counters-tab" class="tab-content">
+                <div class="tab-header"><h2>카운터 관리</h2><button class="btn btn-primary" id="add-counter-btn"><i class="fas fa-plus"></i> 추가</button></div>
+                <div class="card"><div class="item-list" id="counters-list"></div></div>
+            </div>
 
-                <!-- Counters Tab -->
-                <div id="counters-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-title">
-                            카운터 관리
-                            <button class="btn btn-primary" onclick="showModal('add-counter-modal')">추가</button>
-                        </div>
-                        <div id="counters-list" class="item-list"></div>
+            <!-- Songs -->
+            <div id="songs-tab" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-play-circle"></i> 현재 재생</h3>
+                    <div class="current-song" id="current-song">재생 중인 곡 없음</div>
+                    <div class="player-controls">
+                        <button class="btn btn-primary" id="play-pause-btn"><i class="fas fa-play"></i></button>
+                        <button class="btn btn-secondary" id="skip-btn"><i class="fas fa-forward"></i></button>
+                        <button class="btn btn-danger" id="stop-song-btn"><i class="fas fa-stop"></i></button>
                     </div>
                 </div>
-                
-                <!-- Songs Tab -->
-                <div id="songs-tab" class="tab-content">
-                    <div class="dashboard-grid">
-                        <div class="card">
-                            <div class="card-title">현재 재생</div>
-                            <div id="current-song" style="text-align: center; padding: 20px; font-size: 18px;">재생 중인 곡 없음</div>
-                            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
-                                <button id="play-pause-btn" class="btn btn-primary"><i class="fas fa-play"></i></button>
-                                <button id="skip-btn" class="btn btn-secondary"><i class="fas fa-forward"></i></button>
-                                <button id="stop-song-btn" class="btn btn-danger"><i class="fas fa-stop"></i></button>
-                            </div>
-                            <!-- 원본 설정 버튼들 추가 -->
-                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
-                                <h4 style="margin-bottom: 15px;">신청곡 설정</h4>
-                                <div class="form-group"><label>쿨타임(초)</label><input type="number" id="song-cooldown" class="form-input" value="30"></div>
-                                <div class="form-group"><label>최소 후원금</label><input type="number" id="song-min-donation" class="form-input" value="1000"></div>
-                                <button id="save-song-settings" class="btn btn-primary" style="width: 100%;">설정 저장</button>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="card-title">대기열 (<span id="queue-count">0</span>)</div>
-                            <div id="song-queue-list" class="item-list"></div>
-                        </div>
-                    </div>
+                <div class="card">
+                    <h3 class="card-title">대기열 (<span id="queue-count">0</span>)</h3>
+                    <div class="queue-list" id="song-queue-list"></div>
                 </div>
+                <div class="card">
+                    <h3 class="card-title">설정</h3>
+                    <div class="form-group"><label>쿨타임</label><input type="number" id="song-cooldown" class="form-input"></div>
+                    <div class="form-group"><label>최소 후원</label><input type="number" id="song-min-donation" class="form-input"></div>
+                    <button class="btn btn-primary" id="save-song-settings">저장</button>
+                </div>
+            </div>
 
-                <!-- Votes & Draw Tab -->
-                <div id="votes-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-title">투표 및 추첨 설정</div>
-                        <p style="color:#888;">vote-system.js를 통해 원본 기능이 로드됩니다.</p>
-                    </div>
+            <!-- Placeholders for JS injected content -->
+            <div id="votes-tab" class="tab-content"></div>
+            <div id="participation-tab" class="tab-content"></div>
+            <div id="points-tab" class="tab-content">
+                <div class="card">
+                    <h3 class="card-title">포인트 설정</h3>
+                    <div class="form-group"><label>지급량</label><input type="number" id="points-per-chat" class="form-input"></div>
+                    <button class="btn btn-primary" id="save-points-settings">저장</button>
                 </div>
-
-                <!-- Participation Tab -->
-                <div id="participation-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-title">
-                            시청자 참여 관리
-                            <div>
-                                <button id="toggle-participation-btn" class="btn btn-primary">시작</button>
-                                <button id="clear-participation-btn" class="btn btn-secondary">초기화</button>
-                            </div>
-                        </div>
-                        <div class="dashboard-grid" style="margin-top: 20px;">
-                            <div>
-                                <h4>대기열 (<span id="waiting-count">0</span>)</h4>
-                                <div id="waiting-queue" class="item-list" style="min-height: 200px; background: rgba(255,255,255,0.05);"></div>
-                            </div>
-                            <div>
-                                <h4>참여중 (<span id="active-count">0</span>)</h4>
-                                <div id="active-participants" class="item-list" style="min-height: 200px; background: rgba(255,255,255,0.05);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Points Tab -->
-                <div id="points-tab" class="tab-content">
-                    <div class="dashboard-grid">
-                        <div class="card">
-                            <div class="card-title">포인트 설정</div>
-                            <div class="form-group"><label>지급량</label><input type="number" id="points-per-chat" class="form-input" value="10"></div>
-                            <div class="form-group"><label>쿨타임</label><input type="number" id="points-cooldown" class="form-input" value="60"></div>
-                            <button id="save-points-settings" class="btn btn-primary" style="width: 100%;">저장</button>
-                        </div>
-                        <div class="card">
-                            <div class="card-title">랭킹</div>
-                            <div id="points-ranking" class="item-list"></div>
-                        </div>
-                    </div>
+                <div class="card">
+                    <h3 class="card-title">랭킹</h3>
+                    <div id="points-ranking" class="item-list"></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Modals -->
+    <!-- Modals (Original) -->
     <div id="add-command-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header"><h2>명령어 추가</h2><button class="modal-close" onclick="hideModal('add-command-modal')">×</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>명령어</label><input type="text" id="new-command-trigger" class="form-input" placeholder="!명령어"></div>
+                <div class="form-group"><label>명령어</label><input type="text" id="new-command-trigger" class="form-input"></div>
                 <div class="form-group"><label>응답</label><textarea id="new-command-response" class="form-textarea"></textarea></div>
             </div>
             <div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-command-modal')">취소</button><button class="btn btn-primary" onclick="addCommand()">저장</button></div>
         </div>
     </div>
-    <!-- ... (Add Macro/Counter Modals similarly) -->
+    <!-- Add other modals similarly -->
+    <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 추가</h2><button class="modal-close" onclick="hideModal('add-macro-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-macro-modal')">취소</button><button class="btn btn-primary" onclick="addMacro()">저장</button></div></div></div>
+    <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 추가</h2><button class="modal-close" onclick="hideModal('add-counter-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>명령어</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-counter-modal')">취소</button><button class="btn btn-primary" onclick="addCounter()">저장</button></div></div></div>
 
     <script>
-        // UI Transitions
-        window.goToLogin = function() {
+        // Landing Page Transitions
+        window.showLoginSection = function() {
+            // "시작하기"를 누르면 로그인 섹션만 보여줌 (대시보드 X)
             document.getElementById('home-section').style.display = 'none';
             document.getElementById('auth-section').style.display = 'block';
         };
+        
         window.goToHome = function() {
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('home-section').style.display = 'block';
+        };
+
+        // 대시보드 진입 함수 (JS에서 호출)
+        window.enterDashboard = function() {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('app-container').style.display = 'flex';
         };
     </script>
     <script src="dashboard.js"></script>
