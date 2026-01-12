@@ -1,5 +1,5 @@
 // ============================================
-// Chzzk Bot Dashboard - Main JavaScript (FULL RESTORED)
+// Chzzk Bot Dashboard - Main JavaScript (Optimized)
 // ============================================
 
 // ============================================
@@ -17,28 +17,13 @@ let commands = [];
 let macros = [];
 let counters = [];
 let songQueue = [];
-let currentVote = null;
-let participantQueue = [];
-let activeParticipants = [];
-let maxParticipants = 10;
-let currentChannelData = null;
-let isParticipationActive = false;
-
-// Draw/Roulette State
-let draw = {
-    isActive: false,
-    keyword: '!참여',
+let participationState = {
+    isParticipationActive: false,
+    queue: [],
     participants: [],
-    previousWinners: []
+    maxParticipants: 10,
+    userParticipationHistory: {}
 };
-let roulette = {
-    items: [],
-    isSpinning: false,
-    previousResults: []
-};
-let rouletteItems = [];
-let rouletteCreated = false;
-let isRouletteSpinning = false;
 
 // Constants
 const STORAGE_KEY = 'chzzk_bot_channel';
@@ -60,9 +45,6 @@ function formatNumber(num) {
     return num.toString();
 }
 
-// ============================================
-// Notification System
-// ============================================
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container');
     if (!container) return;
@@ -85,6 +67,7 @@ function showNotification(message, type = 'info') {
     `;
     
     container.appendChild(notification);
+    
     requestAnimationFrame(() => notification.classList.add('show'));
     setTimeout(() => {
         notification.classList.add('hide');
@@ -108,27 +91,22 @@ function hideModal(modalId) {
     if (modal) {
         modal.classList.remove('show');
         document.body.style.overflow = '';
+        resetModalContent(modalId);
     }
 }
 
-function openModal(modalId) { showModal(modalId); }
 function closeModal(modalId) { hideModal(modalId); }
+function openModal(modalId) { showModal(modalId); }
 
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-        e.target.classList.remove('show');
-        document.body.style.overflow = '';
-    }
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay.show').forEach(modal => {
-            modal.classList.remove('show');
-        });
-        document.body.style.overflow = '';
-    }
-});
+function resetModalContent(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(input => {
+        if (input.id === 'new-macro-interval') input.value = '5';
+        else if (!input.readOnly) input.value = '';
+    });
+    modal.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+}
 
 // ============================================
 // WebSocket Connection
@@ -146,10 +124,14 @@ function initWebSocket() {
         
         socket.onopen = () => {
             console.log('[WS] Connected');
+            updateBotStatus(true);
+            // 여러 사용자를 위해 현재 로그인한 사용자의 channelId를 전송
+            if (currentUser && currentUser.channelId) {
+                socket.send(JSON.stringify({ type: 'connect', data: { channel: currentUser.channelId } }));
+            }
             setTimeout(() => {
                 socket.send(JSON.stringify({ type: 'requestData', dataType: 'all' }));
             }, 500);
-            setTimeout(initAuth, 300);
         };
         
         socket.onclose = () => {
@@ -177,12 +159,12 @@ function initWebSocket() {
 function sendWebSocket(data) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(data));
+    } else {
+        showNotification('서버와 연결이 끊어졌습니다', 'error');
     }
 }
 
 function handleWebSocketMessage(data) {
-    console.log('[WS] Message:', data.type);
-    
     switch (data.type) {
         case 'authStatus': handleAuthStatus(data); break;
         case 'error':
@@ -206,40 +188,49 @@ function handleWebSocketMessage(data) {
             clearAllData();
             break;
         case 'botStatus': updateBotStatus(data.payload?.connected || false); break;
+        
         case 'commands':
         case 'commandsUpdate': updateCommands(data.data || data.payload || []); break;
+        
         case 'macros':
         case 'macrosUpdate': updateMacros(data.data || data.payload || []); break;
+        
         case 'counters':
         case 'countersUpdate': updateCounters(data.data || data.payload || []); break;
+        
         case 'settingsUpdate': updateSettings(data.payload || {}); break;
         case 'pointsUpdate': updatePointsData(data.payload || {}); break;
+        
         case 'songStateUpdate': updateSongState(data.payload); break;
         case 'participationStateUpdate': updateParticipationState(data.payload); break;
-        case 'voteStateUpdate': updateVoteState(data.payload); break;
-        case 'drawStateUpdate': updateDrawState(data.payload); break;
+        
+        // 투표 관련은 vote-system.js로 위임
+        case 'voteStateUpdate':
+            if (window.updateVoteUI) window.updateVoteUI(data.payload);
+            break;
+        case 'drawStateUpdate':
+            if (window.updateDrawUI) window.updateDrawUI(data.payload);
+            break;
+        case 'rouletteStateUpdate':
+            if (window.updateRouletteUI) window.updateRouletteUI(data.payload);
+            break;
+        
         case 'newChat': addChatMessage(data.payload); break;
+        
         case 'commandResult':
         case 'macroResult':
         case 'counterResult':
         case 'songSettingResult':
-        case 'voteResult':
         case 'participationResult':
-            showNotification(data.message, data.success ? 'success' : 'error');
-            break;
-        case 'drawResult':
-            if (data.success && data.payload?.winners) displayDrawWinners(data.payload.winners);
             showNotification(data.message, data.success ? 'success' : 'error');
             break;
     }
 }
 
 // ============================================
-// Authentication
+// Auth & Channel Info
 // ============================================
 async function initAuth() {
-    console.log('[Auth] Initializing...');
-    
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     if (error) {
@@ -248,31 +239,16 @@ async function initAuth() {
     }
     
     try {
-        const res = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'include' });
-        const data = await res.json();
-        
-        if (data.authenticated && data.user) {
-            handleAuthStatus(data);
-            return;
-        }
-
-        const configRes = await fetch('/api/auth/config');
-        const config = await configRes.json();
+        const res = await fetch('/api/auth/config');
+        const config = await res.json();
         isOAuthConfigured = config.configured;
         
         if (!isOAuthConfigured) {
             isLegacyMode = true;
             showLegacyLoginScreen();
             checkSavedLogin();
-        } else {
-            if (window.location.pathname.startsWith('/dashboard')) {
-                window.location.href = '/';
-            } else {
-                showOAuthLoginScreen();
-            }
         }
     } catch (e) {
-        console.error('[Auth] Error:', e);
         isLegacyMode = true;
         showLegacyLoginScreen();
     }
@@ -287,145 +263,91 @@ function handleAuthStatus(data) {
             currentUser = data.user;
             updateUserProfile(data.user);
             hideLoginScreen();
-            
             setTimeout(() => {
                 if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({
-                        type: 'connect',
-                        data: { channel: currentUser.channelId }
-                    }));
+                    socket.send(JSON.stringify({ type: 'connect', data: { channel: currentUser.channelId } }));
                 }
             }, 500);
         }
     } else {
-        if (window.location.pathname.startsWith('/dashboard')) {
-            window.location.href = '/';
-        } else {
-            showLoginScreen();
-        }
+        showLoginScreen();
     }
 }
 
 function showLoginScreen() { isLegacyMode ? showLegacyLoginScreen() : showOAuthLoginScreen(); }
-
 function showOAuthLoginScreen() {
-    const overlay = document.getElementById('login-overlay');
-    const oauth = document.getElementById('login-oauth-state');
-    const legacy = document.getElementById('login-legacy-state');
-    if (overlay) overlay.classList.remove('hidden');
-    if (oauth) oauth.style.display = 'block';
-    if (legacy) legacy.style.display = 'none';
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('login-oauth-state').style.display = 'block';
+    document.getElementById('login-legacy-state').style.display = 'none';
+    document.getElementById('login-success-state').style.display = 'none';
 }
-
 function showLegacyLoginScreen() {
-    const overlay = document.getElementById('login-overlay');
-    const oauth = document.getElementById('login-oauth-state');
-    const legacy = document.getElementById('login-legacy-state');
-    if (overlay) overlay.classList.remove('hidden');
-    if (oauth) oauth.style.display = 'none';
-    if (legacy) legacy.style.display = 'block';
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('login-oauth-state').style.display = 'none';
+    document.getElementById('login-legacy-state').style.display = 'block';
+    document.getElementById('login-success-state').style.display = 'none';
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        const input = document.getElementById('login-channel-input');
-        if (input) input.value = saved;
-    }
+    if (saved) document.getElementById('login-channel-input').value = saved;
 }
-
-function hideLoginScreen() {
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.classList.add('hidden');
-}
-
+function hideLoginScreen() { document.getElementById('login-overlay').classList.add('hidden'); }
 function showLoginSuccess(channelName) {
-    const oauth = document.getElementById('login-oauth-state');
-    const legacy = document.getElementById('login-legacy-state');
-    const success = document.getElementById('login-success-state');
-    const name = document.getElementById('success-channel-name');
-    if (oauth) oauth.style.display = 'none';
-    if (legacy) legacy.style.display = 'none';
-    if (success) success.style.display = 'block';
-    if (name) name.textContent = `${channelName} 연결됨`;
-    setTimeout(() => {
-        hideLoginScreen();
-        setTimeout(() => {
-            if (isLegacyMode && legacy) legacy.style.display = 'block';
-            if (!isLegacyMode && oauth) oauth.style.display = 'block';
-            if (success) success.style.display = 'none';
-        }, 500);
-    }, 1500);
+    document.getElementById('login-oauth-state').style.display = 'none';
+    document.getElementById('login-legacy-state').style.display = 'none';
+    document.getElementById('login-success-state').style.display = 'block';
+    document.getElementById('success-channel-name').textContent = `${channelName} 연결됨`;
+    setTimeout(() => { hideLoginScreen(); }, 1500);
 }
-
 function showLoginError(message) {
     const errorEl = isLegacyMode ? document.getElementById('login-error-legacy') : document.getElementById('login-error');
     const errorText = isLegacyMode ? document.getElementById('login-error-text-legacy') : document.getElementById('login-error-text');
-    const btn = document.getElementById('login-btn');
     if (errorEl) { errorEl.style.display = 'flex'; errorEl.classList.add('show'); }
     if (errorText) errorText.textContent = message;
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plug"></i><span>연결</span>'; }
     setTimeout(() => { if (errorEl) errorEl.style.display = 'none'; }, 5000);
 }
-
 function handleLegacyLogin() {
-    const input = document.getElementById('login-channel-input');
-    const remember = document.getElementById('login-remember');
-    const btn = document.getElementById('login-btn');
-    const channel = input?.value.trim();
-    if (!channel) { showLoginError('채널명을 입력해주세요'); return; }
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>연결 중...</span>'; }
-    if (remember?.checked ?? true) { localStorage.setItem(STORAGE_KEY, channel); localStorage.setItem(REMEMBER_KEY, 'true'); }
-    else { localStorage.removeItem(STORAGE_KEY); localStorage.setItem(REMEMBER_KEY, 'false'); }
+    const channel = document.getElementById('login-channel-input')?.value.trim();
+    if (!channel) return showLoginError('채널명을 입력해주세요');
+    localStorage.setItem(STORAGE_KEY, channel);
     connectToChannel(channel, true);
 }
-
 function checkSavedLogin() {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const shouldRemember = localStorage.getItem(REMEMBER_KEY) !== 'false';
-    if (saved && shouldRemember) autoConnectWithChannel(saved);
+    if (saved) autoConnectWithChannel(saved);
     else showLegacyLoginScreen();
 }
-
 function autoConnectWithChannel(channel) {
-    const overlay = document.getElementById('login-overlay');
-    const input = document.getElementById('login-channel-input');
-    const btn = document.getElementById('login-btn');
-    if (overlay) overlay.classList.remove('hidden');
-    if (input) input.value = channel;
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>연결 중...</span>'; }
+    document.getElementById('login-overlay').classList.remove('hidden');
+    document.getElementById('login-channel-input').value = channel;
     waitForWebSocket(() => connectToChannel(channel, true));
 }
-
 function waitForWebSocket(callback, maxAttempts = 20) {
     let attempts = 0;
     const check = () => {
-        attempts++;
         if (socket && socket.readyState === WebSocket.OPEN) callback();
-        else if (attempts < maxAttempts) setTimeout(check, 250);
+        else if (attempts++ < maxAttempts) setTimeout(check, 250);
         else showLoginError('서버 연결 실패');
     };
     check();
 }
-
 function connectToChannel(channel, isFromLogin = false) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'connect', data: { channel } }));
         if (isFromLogin) showLoginSuccess(channel);
     } else showLoginError('서버 미연결');
 }
-
 async function handleLogout() {
     if (confirm('로그아웃 하시겠습니까?')) {
-        try { await fetch('/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
+        try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
         localStorage.removeItem(STORAGE_KEY);
         currentUser = null;
-        if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'disconnect' }));
+        if (socket) socket.send(JSON.stringify({ type: 'disconnect' }));
         updateBotStatus(false);
         clearAllData();
-        window.location.href = '/';
+        showLoginScreen();
     }
 }
 
 function updateUserProfile(user) {
-    if (!user) return;
     const headerProfile = document.getElementById('header-profile');
     const headerAvatar = document.getElementById('header-avatar');
     const headerUsername = document.getElementById('header-username');
@@ -439,64 +361,70 @@ function updateUserProfile(user) {
     if (sidebarProfile) sidebarProfile.style.display = 'flex';
     if (sidebarAvatar && user.channelImageUrl) sidebarAvatar.style.backgroundImage = `url(${user.channelImageUrl})`;
     if (sidebarName) sidebarName.textContent = user.channelName || '';
-}
-
-function updateStreamerInfo(channel, live) {
-    currentChannelData = { channel, live };
-    const avatar = document.getElementById('channel-avatar');
-    if (avatar && channel?.channelImageUrl) avatar.style.backgroundImage = `url(${channel.channelImageUrl})`;
-    const name = document.getElementById('channel-name');
-    if (name) name.textContent = channel?.channelName || '채널명';
-    const followers = document.getElementById('follower-count');
-    if (followers && channel) followers.innerHTML = `<i class="fas fa-heart"></i><span>${formatNumber(channel.followerCount || 0)} 팔로워</span>`;
     
-    const status = document.getElementById('stream-status');
-    if (status) {
-        const isLive = live?.status === 'OPEN';
-        const badge = status.querySelector('.status-badge');
-        const viewer = status.querySelector('.viewer-count');
-        if (badge) {
-            badge.className = `status-badge ${isLive ? 'live' : 'offline'}`;
-            badge.textContent = isLive ? '라이브' : '오프라인';
-        }
-        if (viewer) viewer.textContent = isLive ? `${formatNumber(live.concurrentUserCount || 0)}명` : '';
-    }
-    const title = document.getElementById('stream-title');
-    if (title) title.textContent = live?.liveTitle || '방송 제목';
-    const category = document.getElementById('stream-category');
-    if (category) category.innerHTML = `<i class="fas fa-gamepad"></i><span>${live?.category || '카테고리'}</span>`;
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.style.display = 'flex';
 }
 
 function updateBotStatus(connected) {
     botConnected = connected;
-    const ind = document.getElementById('bot-status-indicator');
-    const txt = document.getElementById('bot-status-text');
-    if (ind) ind.classList.toggle('online', connected);
-    if (txt) txt.textContent = connected ? '봇 연결됨' : '봇 미연결';
+    const indicator = document.getElementById('bot-status-indicator');
+    const text = document.getElementById('bot-status-text');
+    if (indicator) indicator.classList.toggle('online', connected);
+    if (text) text.textContent = connected ? '봇 연결됨' : '봇 미연결';
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.style.display = connected ? 'flex' : 'none';
+}
+
+function updateStreamerInfo(channel, live) {
+    currentChannelData = { channel, live };
+    const channelAvatar = document.getElementById('channel-avatar');
+    if (channelAvatar && channel?.channelImageUrl) channelAvatar.style.backgroundImage = `url(${channel.channelImageUrl})`;
+    const channelName = document.getElementById('channel-name');
+    if (channelName) channelName.textContent = channel?.channelName || '채널명';
+    const followerCount = document.getElementById('follower-count');
+    if (followerCount && channel) followerCount.innerHTML = `<i class="fas fa-heart"></i><span>${formatNumber(channel.followerCount || 0)} 팔로워</span>`;
+    
+    const streamStatus = document.getElementById('stream-status');
+    if (streamStatus) {
+        const isLive = live?.status === 'OPEN';
+        const badge = streamStatus.querySelector('.status-badge');
+        const viewerCount = streamStatus.querySelector('.viewer-count');
+        if (badge) {
+            badge.className = `status-badge ${isLive ? 'live' : 'offline'}`;
+            badge.textContent = isLive ? '라이브' : '오프라인';
+        }
+        if (viewerCount) viewerCount.textContent = isLive ? `${formatNumber(live.concurrentUserCount || 0)}명` : '';
+    }
+    const streamTitle = document.getElementById('stream-title');
+    if (streamTitle) streamTitle.textContent = live?.liveTitle || '방송 제목';
+    const streamCategory = document.getElementById('stream-category');
+    if (streamCategory) streamCategory.innerHTML = `<i class="fas fa-gamepad"></i><span>${live?.category || '카테고리'}</span>`;
 }
 
 function clearAllData() {
-    commands = []; macros = []; counters = []; songQueue = []; currentVote = null; currentChannelData = null;
+    commands = []; macros = []; counters = []; songQueue = [];
     updateCommands([]); updateMacros([]); updateCounters([]);
-    updateSongState(null); updateVoteState(null); updateStreamerInfo(null, null);
+    updateSongState(null); updateParticipationState(null);
 }
 
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    const selectedTab = document.getElementById(tabName + '-tab');
-    if (selectedTab) selectedTab.classList.add('active');
-    
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    const selectedNav = document.querySelector(`[data-tab="${tabName}"]`);
-    if (selectedNav) selectedNav.classList.add('active');
-    
-    const titles = {
-        'dashboard': '대시보드', 'commands': '명령어 관리', 'macros': '매크로 관리',
-        'counters': '카운터 관리', 'songs': '신청곡 관리', 'votes': '투표',
-        'participation': '시청자 참여', 'points': '포인트 관리'
-    };
-    const headerTitle = document.getElementById('header-title');
-    if (headerTitle) headerTitle.textContent = titles[tabName] || tabName;
+// ============================================
+// Commands / Macros / Counters
+// ============================================
+function previewText(text, isCounter = false) {
+    if (!text) return '';
+    let preview = text;
+    preview = preview.replace(/\{user\}/gi, '<span class="fn-highlight">테스트유저</span>');
+    preview = preview.replace(/\{count\}/gi, '<span class="fn-highlight">42</span>');
+    preview = preview.replace(/\{channel\}/gi, '<span class="fn-highlight">테스트채널</span>');
+    preview = preview.replace(/\{uptime\}/gi, '<span class="fn-highlight">1시간 23분</span>');
+    preview = preview.replace(/\{viewers\}/gi, '<span class="fn-highlight">1,234</span>');
+    preview = preview.replace(/\{followers\}/gi, '<span class="fn-highlight">5,678</span>');
+    preview = preview.replace(/\{game\}/gi, '<span class="fn-highlight">Just Chatting</span>');
+    preview = preview.replace(/\{title\}/gi, '<span class="fn-highlight">오늘의 방송!</span>');
+    preview = preview.replace(/\{date\}/gi, '<span class="fn-highlight">2026-01-01</span>');
+    preview = preview.replace(/\{time\}/gi, '<span class="fn-highlight">12:34:56</span>');
+    return preview;
 }
 
 function updateCommands(list) {
@@ -511,231 +439,256 @@ function updateCommands(list) {
     }
     container.innerHTML = commands.map((cmd, index) => {
         const triggers = cmd.triggers || (cmd.trigger ? [cmd.trigger] : []);
+        const isEnabled = cmd.enabled !== false;
         return `
-            <div class="item-card ${cmd.enabled ? '' : 'disabled'}">
+            <div class="item-card ${isEnabled ? '' : 'disabled'}">
                 <div class="item-info">
-                    <span class="item-trigger">${escapeHTML(triggers.join(', ')) || '없음'}</span>
-                    <span class="item-response">${escapeHTML(cmd.response || '')}</span>
+                    <span class="item-trigger">${escapeHTML(triggers.join(', '))}</span>
+                    <span class="item-response">${escapeHTML(cmd.response)}</span>
                 </div>
                 <div class="item-actions">
-                    <div class="item-toggle ${cmd.enabled ? 'active' : ''}" onclick="toggleCommand(${index})"></div>
-                    <button class="btn-icon" onclick="editCommand(${index})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon btn-danger" onclick="deleteCommand(${index})"><i class="fas fa-trash"></i></button>
+                    <label class="toggle-switch" title="${isEnabled ? '비활성화' : '활성화'}">
+                        <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleCommand(${index}, this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <button class="btn-icon" onclick="editCommand(${index})" title="수정"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-danger" onclick="deleteCommand(${index})" title="삭제"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
+function toggleCommand(index, enabled) {
+    const cmd = commands[index];
+    if (!cmd) return;
+    const triggers = cmd.triggers || (cmd.trigger ? [cmd.trigger] : []);
+    sendWebSocket({
+        type: 'updateCommand',
+        data: {
+            oldTrigger: triggers[0],
+            newTrigger: triggers[0],
+            response: cmd.response,
+            enabled: enabled
+        }
+    });
+}
 function addCommand() {
     const trigger = document.getElementById('new-command-trigger')?.value.trim();
     const response = document.getElementById('new-command-response')?.value.trim();
-    if (!trigger || !response) return;
+    if (!trigger || !response) return showNotification('내용을 입력해주세요', 'error');
     sendWebSocket({ type: 'addCommand', data: { trigger, response } });
     hideModal('add-command-modal');
 }
-
-function toggleCommand(index) {
-    const cmd = commands[index];
-    if (!cmd) return;
-    const triggers = cmd.triggers || [cmd.trigger];
-    sendWebSocket({ type: 'updateCommand', data: { oldTrigger: triggers[0], newTrigger: triggers.join('/'), response: cmd.response, enabled: !cmd.enabled } });
-}
-
 function editCommand(index) {
     const cmd = commands[index];
     if (!cmd) return;
-    const triggers = cmd.triggers || [cmd.trigger];
+    const triggers = cmd.triggers || (cmd.trigger ? [cmd.trigger] : []);
     document.getElementById('edit-command-trigger').value = triggers.join('/');
-    document.getElementById('edit-command-response').value = cmd.response || '';
+    document.getElementById('edit-command-response').value = cmd.response;
     window.editingCommandIndex = index;
     showModal('edit-command-modal');
 }
-
 function updateCommand() {
     const index = window.editingCommandIndex;
     const cmd = commands[index];
-    const newTrigger = document.getElementById('edit-command-trigger')?.value.trim();
-    const newResponse = document.getElementById('edit-command-response')?.value.trim();
-    if (!newTrigger || !newResponse) return;
-    const triggers = cmd.triggers || [cmd.trigger];
+    const newTrigger = document.getElementById('edit-command-trigger').value.trim();
+    const newResponse = document.getElementById('edit-command-response').value.trim();
+    const triggers = cmd.triggers || (cmd.trigger ? [cmd.trigger] : []);
     sendWebSocket({ type: 'updateCommand', data: { oldTrigger: triggers[0], newTrigger, response: newResponse, enabled: cmd.enabled } });
     hideModal('edit-command-modal');
 }
-
 function deleteCommand(index) {
     const cmd = commands[index];
-    const triggers = cmd.triggers || [cmd.trigger];
-    if (confirm(`"${triggers[0]}" 명령어를 삭제하시겠습니까?`)) {
-        sendWebSocket({ type: 'removeCommand', data: { trigger: triggers[0] } });
-    }
+    const triggers = cmd.triggers || (cmd.trigger ? [cmd.trigger] : []);
+    if (confirm('삭제하시겠습니까?')) sendWebSocket({ type: 'removeCommand', data: { trigger: triggers[0] } });
+}
+function updateCommandPreview() {
+    const val = document.getElementById('new-command-response').value;
+    document.getElementById('command-preview').innerHTML = val ? previewText(val) : '';
+}
+function updateEditCommandPreview() {
+    const val = document.getElementById('edit-command-response').value;
+    document.getElementById('edit-command-preview').innerHTML = val ? previewText(val) : '';
 }
 
 function updateMacros(list) {
     macros = list || [];
     const container = document.getElementById('macros-list');
-    if (!container) return;
+    if(!container) return;
     if (macros.length === 0) {
-        container.innerHTML = `<div class="empty-state"><i class="fas fa-clock"></i><p>등록된 매크로가 없습니다</p></div>`;
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-clock"></i><p>매크로가 없습니다</p></div>`;
         return;
     }
-    container.innerHTML = macros.map((m, i) => `
-        <div class="item-card ${m.enabled ? '' : 'disabled'}">
-            <div class="item-info">
-                <span class="item-interval">${m.interval || 5}분</span>
-                <span class="item-response">${escapeHTML(m.message || '')}</span>
-            </div>
-            <div class="item-actions">
-                <div class="item-toggle ${m.enabled ? 'active' : ''}" onclick="toggleMacro(${i})"></div>
-                <button class="btn-icon" onclick="editMacro(${i})"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon btn-danger" onclick="deleteMacro(${i})"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function addMacro() {
-    const interval = parseInt(document.getElementById('new-macro-interval')?.value) || 5;
-    const message = document.getElementById('new-macro-message')?.value.trim();
-    if (!message) return;
-    sendWebSocket({ type: 'addMacro', data: { interval, message } });
-    hideModal('add-macro-modal');
-}
-
-function toggleMacro(i) {
-    const m = macros[i];
-    if(!m) return;
-    sendWebSocket({ type: 'updateMacro', data: { id: m.id, interval: m.interval, message: m.message, enabled: !m.enabled } });
-}
-
-function editMacro(i) {
-    const m = macros[i];
-    document.getElementById('edit-macro-interval').value = m.interval || 5;
-    document.getElementById('edit-macro-message').value = m.message || '';
-    window.editingMacroIndex = i;
-    showModal('edit-macro-modal');
-}
-
-function updateMacro() {
-    const i = window.editingMacroIndex;
-    const m = macros[i];
-    const newI = parseInt(document.getElementById('edit-macro-interval')?.value) || 5;
-    const newM = document.getElementById('edit-macro-message')?.value.trim();
-    if(!newM) return;
-    sendWebSocket({ type: 'updateMacro', data: { id: m.id, interval: newI, message: newM, enabled: m.enabled } });
-    hideModal('edit-macro-modal');
-}
-
-function deleteMacro(i) {
-    if (confirm('이 매크로를 삭제하시겠습니까?')) {
-        sendWebSocket({ type: 'removeMacro', data: { id: macros[i].id } });
-    }
-}
-
-function updateCounters(list) {
-    counters = list || [];
-    const container = document.getElementById('counters-list');
-    if (!container) return;
-    if (counters.length === 0) {
-        container.innerHTML = `<div class="empty-state"><i class="fas fa-calculator"></i><p>등록된 카운터가 없습니다</p></div>`;
-        return;
-    }
-    container.innerHTML = counters.map((c, i) => {
-        const triggers = c.triggers || [c.trigger];
+    container.innerHTML = macros.map((m, i) => {
+        const isEnabled = m.enabled !== false;
         return `
-            <div class="item-card ${c.enabled ? '' : 'disabled'}">
-                <div class="item-info">
-                    <span class="item-trigger">${escapeHTML(triggers.join(', '))}</span>
-                    <span class="item-response">${escapeHTML(c.response || '')}</span>
-                    <span class="item-count">#${c.state?.totalCount || 0}</span>
-                </div>
+            <div class="item-card ${isEnabled ? '' : 'disabled'}">
+                <div class="item-info"><span class="item-interval">${m.interval}분</span><span class="item-response">${escapeHTML(m.message)}</span></div>
                 <div class="item-actions">
-                    <div class="item-toggle ${c.enabled ? 'active' : ''}" onclick="toggleCounter(${i})"></div>
-                    <button class="btn-icon" onclick="editCounter(${i})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon btn-danger" onclick="deleteCounter(${i})"><i class="fas fa-trash"></i></button>
+                    <label class="toggle-switch" title="${isEnabled ? '비활성화' : '활성화'}">
+                        <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleMacro(${i}, this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <button class="btn-icon" onclick="editMacro(${i})" title="수정"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-danger" onclick="deleteMacro(${i})" title="삭제"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
+function toggleMacro(index, enabled) {
+    const m = macros[index];
+    if (!m) return;
+    sendWebSocket({
+        type: 'updateMacro',
+        data: {
+            id: m.id,
+            message: m.message,
+            interval: m.interval,
+            enabled: enabled
+        }
+    });
+}
+function addMacro() {
+    const interval = document.getElementById('new-macro-interval').value;
+    const message = document.getElementById('new-macro-message').value;
+    sendWebSocket({ type: 'addMacro', data: { interval: parseInt(interval), message } });
+    hideModal('add-macro-modal');
+}
+function editMacro(i) {
+    const m = macros[i];
+    document.getElementById('edit-macro-interval').value = m.interval;
+    document.getElementById('edit-macro-message').value = m.message;
+    window.editingMacroIndex = i;
+    showModal('edit-macro-modal');
+}
+function updateMacro() {
+    const i = window.editingMacroIndex;
+    const m = macros[i];
+    const interval = document.getElementById('edit-macro-interval').value;
+    const message = document.getElementById('edit-macro-message').value;
+    sendWebSocket({ type: 'updateMacro', data: { id: m.id, interval: parseInt(interval), message, enabled: m.enabled } });
+    hideModal('edit-macro-modal');
+}
+function deleteMacro(i) {
+    if(confirm('삭제?')) sendWebSocket({ type: 'removeMacro', data: { id: macros[i].id } });
+}
+function updateMacroPreview() {
+    const val = document.getElementById('new-macro-message').value;
+    document.getElementById('macro-preview').innerHTML = val ? previewText(val) : '';
+}
+function updateEditMacroPreview() {
+    const val = document.getElementById('edit-macro-message').value;
+    document.getElementById('edit-macro-preview').innerHTML = val ? previewText(val) : '';
+}
+
+function updateCounters(list) {
+    counters = list || [];
+    const container = document.getElementById('counters-list');
+    if(!container) return;
+    if (counters.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-calculator"></i><p>카운터가 없습니다</p></div>`;
+        return;
+    }
+    container.innerHTML = counters.map((c, i) => {
+        const isEnabled = c.enabled !== false;
+        return `
+            <div class="item-card ${isEnabled ? '' : 'disabled'}">
+                <div class="item-info"><span class="item-trigger">${escapeHTML(c.trigger)}</span><span class="item-response">${escapeHTML(c.response)}</span><span class="item-count">#${c.count || 0}</span></div>
+                <div class="item-actions">
+                    <label class="toggle-switch" title="${isEnabled ? '비활성화' : '활성화'}">
+                        <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleCounter(${i}, this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <button class="btn-icon" onclick="editCounter(${i})" title="수정"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-danger" onclick="deleteCounter(${i})" title="삭제"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleCounter(index, enabled) {
+    const c = counters[index];
+    if (!c) return;
+    sendWebSocket({
+        type: 'updateCounter',
+        data: {
+            oldTrigger: c.trigger,
+            newTrigger: c.trigger,
+            response: c.response,
+            enabled: enabled
+        }
+    });
+}
 function addCounter() {
-    const trigger = document.getElementById('new-counter-trigger')?.value.trim();
-    const response = document.getElementById('new-counter-response')?.value.trim();
-    if (!trigger || !response) return;
+    const trigger = document.getElementById('new-counter-trigger').value;
+    const response = document.getElementById('new-counter-response').value;
     sendWebSocket({ type: 'addCounter', data: { trigger, response } });
     hideModal('add-counter-modal');
 }
-
-function toggleCounter(i) {
-    const c = counters[i];
-    if(!c) return;
-    const triggers = c.triggers || [c.trigger];
-    sendWebSocket({ type: 'updateCounter', data: { oldTrigger: triggers[0], newTrigger: triggers.join('/'), response: c.response, enabled: !c.enabled, count: c.state?.totalCount || 0 } });
-}
-
 function editCounter(i) {
     const c = counters[i];
-    const triggers = c.triggers || [c.trigger];
-    document.getElementById('edit-counter-trigger').value = triggers.join('/');
-    document.getElementById('edit-counter-response').value = c.response || '';
-    document.getElementById('edit-counter-count').value = c.state?.totalCount || 0;
+    document.getElementById('edit-counter-trigger').value = c.trigger;
+    document.getElementById('edit-counter-response').value = c.response;
+    document.getElementById('edit-counter-count').value = c.count || 0;
     window.editingCounterIndex = i;
     showModal('edit-counter-modal');
 }
-
 function updateCounter() {
     const i = window.editingCounterIndex;
     const c = counters[i];
-    const newT = document.getElementById('edit-counter-trigger')?.value.trim();
-    const newR = document.getElementById('edit-counter-response')?.value.trim();
-    const newC = parseInt(document.getElementById('edit-counter-count')?.value) || 0;
-    if (!newT || !newR) return;
-    const triggers = c.triggers || [c.trigger];
-    sendWebSocket({ type: 'updateCounter', data: { oldTrigger: triggers[0], newTrigger: newT, response: newR, enabled: c.enabled, count: newC } });
+    const newTrig = document.getElementById('edit-counter-trigger').value;
+    const newResp = document.getElementById('edit-counter-response').value;
+    const newCount = document.getElementById('edit-counter-count').value;
+    sendWebSocket({ type: 'updateCounter', data: { oldTrigger: c.trigger, newTrigger: newTrig, response: newResp, enabled: c.enabled, count: parseInt(newCount) } });
     hideModal('edit-counter-modal');
 }
-
 function deleteCounter(i) {
-    const triggers = counters[i].triggers || [counters[i].trigger];
-    if (confirm(`"${triggers[0]}" 카운터를 삭제하시겠습니까?`)) {
-        sendWebSocket({ type: 'removeCounter', data: { trigger: triggers[0] } });
-    }
+    if(confirm('삭제?')) sendWebSocket({ type: 'removeCounter', data: { trigger: counters[i].trigger } });
+}
+function updateCounterPreview() {
+    const val = document.getElementById('new-counter-response').value;
+    document.getElementById('counter-preview').innerHTML = val ? previewText(val, true) : '';
+}
+function updateEditCounterPreview() {
+    const val = document.getElementById('edit-counter-response').value;
+    document.getElementById('edit-counter-preview').innerHTML = val ? previewText(val, true) : '';
 }
 
+// ============================================
+// Songs & Points
+// ============================================
 function updateSongState(state) {
-    if (!state) {
-        document.getElementById('current-song').innerHTML = '<div class="no-song">재생 중인 곡이 없습니다</div>';
-        document.getElementById('song-queue-list').innerHTML = '<div class="empty-state">대기열이 비어있습니다</div>';
-        document.getElementById('queue-count').textContent = '0';
-        document.getElementById('stat-songs').textContent = '0';
-        return;
+    const current = document.getElementById('current-song');
+    const queue = document.getElementById('song-queue-list');
+    const count = document.getElementById('queue-count');
+    const stat = document.getElementById('stat-songs');
+    if (!state) return;
+    
+    if(count) count.textContent = state.queue.length;
+    if(stat) stat.textContent = state.queue.length;
+    if(current) {
+        if(state.currentSong) current.innerHTML = `<div class="song-title">${escapeHTML(state.currentSong.title)}</div><div class="song-requester">${escapeHTML(state.currentSong.requester)}</div>`;
+        else current.innerHTML = '<div class="no-song">재생 중인 곡이 없습니다</div>';
     }
-    const { queue, currentSong, isPlaying, settings } = state;
-    document.getElementById('queue-count').textContent = queue?.length || 0;
-    document.getElementById('stat-songs').textContent = queue?.length || 0;
-    const curEl = document.getElementById('current-song');
-    if (currentSong) curEl.innerHTML = `<div class="song-title">${escapeHTML(currentSong.title)}</div><div class="song-requester">신청자: ${escapeHTML(currentSong.requester)}</div>`;
-    else curEl.innerHTML = '<div class="no-song">재생 중인 곡이 없습니다</div>';
     const playBtn = document.getElementById('play-pause-btn');
-    if (playBtn) { playBtn.disabled = !currentSong; playBtn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'; }
-    const qList = document.getElementById('song-queue-list');
-    if (queue && queue.length > 0) {
-        qList.innerHTML = queue.map(s => `
-            <div class="queue-item">
-                <div class="song-info"><div class="song-title">${escapeHTML(s.title)}</div><div class="song-requester">신청자: ${escapeHTML(s.requester)}</div></div>
-                <div class="item-actions">
-                    <button class="btn-icon" onclick="playSongFromQueue('${s.id}')"><i class="fas fa-play"></i></button>
-                    <button class="btn-icon btn-danger" onclick="removeSongFromQueue('${s.id}')"><i class="fas fa-times"></i></button>
+    if(playBtn) playBtn.innerHTML = state.isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    
+    if(queue) {
+        if(state.queue.length > 0) {
+            queue.innerHTML = state.queue.map(s => `
+                <div class="queue-item">
+                    <div class="song-info"><div class="song-title">${escapeHTML(s.title)}</div><div class="song-requester">${escapeHTML(s.requester)}</div></div>
+                    <div class="item-actions">
+                        <button class="btn-icon" onclick="playSongFromQueue('${s.id}')"><i class="fas fa-play"></i></button>
+                        <button class="btn-icon btn-danger" onclick="removeSongFromQueue('${s.id}')"><i class="fas fa-times"></i></button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
-    } else qList.innerHTML = '<div class="empty-state">대기열이 비어있습니다</div>';
-    if (settings) {
-        document.getElementById('song-cooldown').value = settings.cooldown;
-        document.getElementById('song-min-donation').value = settings.minDonation;
-        const radio = document.querySelector(`input[name="songRequestMode"][value="${settings.mode || 'all'}"]`);
-        if(radio) radio.checked = true;
+            `).join('');
+        } else queue.innerHTML = '<div class="empty-state">대기열 없음</div>';
     }
 }
 function playSongFromQueue(id) { sendWebSocket({ type: 'controlMusic', action: 'playFromQueue', payload: id }); }
@@ -744,14 +697,27 @@ function skipSong() { sendWebSocket({ type: 'controlMusic', action: 'skip' }); }
 function stopSong() { sendWebSocket({ type: 'controlMusic', action: 'deleteCurrent' }); }
 function togglePlayPause() { sendWebSocket({ type: 'controlMusic', action: 'togglePlayPause' }); }
 function saveSongSettings() {
-    const cd = parseInt(document.getElementById('song-cooldown')?.value) || 30;
-    const min = parseInt(document.getElementById('song-min-donation')?.value) || 0;
+    const cd = document.getElementById('song-cooldown').value;
+    const md = document.getElementById('song-min-donation').value;
     const mode = document.querySelector('input[name="songRequestMode"]:checked')?.value || 'all';
-    sendWebSocket({ type: 'updateSongSettings', data: { cooldown: cd, minDonation: min, mode: mode } });
+    
+    sendWebSocket({ type: 'updateSongSetting', data: { setting: 'songRequestCooldown', value: parseInt(cd) } });
+    sendWebSocket({ type: 'updateSongSetting', data: { setting: 'songMinDonation', value: parseInt(md) } });
+    sendWebSocket({ type: 'updateSongSetting', data: { setting: 'songRequestMode', value: mode } });
+    
+    showNotification('설정이 저장되었습니다', 'success');
 }
 function openPlayer() { window.open('/player.html', '_blank'); }
 
 function updateSettings(s) {
+    if(s.songRequestCooldown) document.getElementById('song-cooldown').value = s.songRequestCooldown;
+    if(s.songMinDonation !== undefined) document.getElementById('song-min-donation').value = s.songMinDonation;
+    if(s.songRequestMode) {
+        const radio = document.querySelector(`input[name="songRequestMode"][value="${s.songRequestMode}"]`);
+        if(radio) radio.checked = true;
+    }
+    
+    // Points settings
     if(s.pointsPerChat !== undefined) document.getElementById('points-per-chat').value = s.pointsPerChat;
     if(s.pointCooldown !== undefined) document.getElementById('points-cooldown').value = s.pointCooldown;
     if(s.pointsUnit !== undefined) document.getElementById('points-unit').value = s.pointsUnit;
@@ -760,133 +726,314 @@ function updatePointsData(d) {
     const list = document.getElementById('points-ranking');
     if(!list || !d.leaderboard) return;
     if(d.leaderboard.length === 0) { list.innerHTML = '<div class="empty-state">데이터가 없습니다</div>'; return; }
-    list.innerHTML = d.leaderboard.slice(0, 10).map((u, i) => `
-        <div class="ranking-item">
-            <span class="ranking-position ${i < 3 ? (i===0?'gold':i===1?'silver':'bronze') : ''}">${i + 1}</span>
-            <span class="ranking-name">${escapeHTML(u.nickname || '익명')}</span>
-            <span class="ranking-points">${(u.points || 0).toLocaleString()} P</span>
-        </div>
-    `).join('');
+    list.innerHTML = d.leaderboard.slice(0, 10).map((u, i) => {
+        const nickname = u && u.nickname ? u.nickname : '알 수 없음';
+        const points = u && typeof u.points === 'number' ? u.points.toLocaleString() : '0';
+        return `
+            <div class="ranking-item">
+                <span class="ranking-position">${i+1}</span>
+                <span class="ranking-name">${escapeHTML(nickname)}</span>
+                <span class="ranking-points">${points}P</span>
+            </div>
+        `;
+    }).join('');
 }
 function savePointsSettings() {
-    const p = parseInt(document.getElementById('points-per-chat')?.value) || 1;
-    const c = parseInt(document.getElementById('points-cooldown')?.value) || 60;
-    const u = document.getElementById('points-unit')?.value || '포인트';
-    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointsPerChat', value: p } });
-    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointCooldown', value: c } });
-    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointsUnit', value: u } });
+    const perChat = document.getElementById('points-per-chat').value;
+    const cooldown = document.getElementById('points-cooldown').value;
+    const unit = document.getElementById('points-unit').value;
+    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointsPerChat', value: parseInt(perChat) } });
+    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointCooldown', value: parseInt(cooldown) } }); // pointCooldown matches backend
+    sendWebSocket({ type: 'updateSetting', data: { setting: 'pointsUnit', value: unit } });
+    showNotification('포인트 설정 저장됨', 'success');
 }
+
+// ============================================
+// Participation
+// ============================================
+let rankingDisplayCount = 5;  // 처음에 5명만 표시
 
 function updateParticipationState(state) {
     if (!state) return;
     participationState = state;
-    document.getElementById('active-count').textContent = state.participants.length;
+    document.getElementById('active-count').textContent = `${state.participants.length} / ${state.maxParticipants}`;
     document.getElementById('waiting-count').textContent = state.queue.length;
     document.getElementById('max-participants').value = state.maxParticipants;
     document.getElementById('max-participants-slider').value = state.maxParticipants;
+
     const btn = document.getElementById('toggle-participation-btn');
-    if(state.isParticipationActive) { btn.innerHTML = '<i class="fas fa-stop"></i> 참여 마감'; btn.className = 'btn btn-danger'; }
-    else { btn.innerHTML = '<i class="fas fa-play"></i> 참여 시작'; btn.className = 'btn btn-primary'; }
+    if(state.isParticipationActive) {
+        btn.innerHTML = '<i class="fas fa-stop"></i> 참여 마감';
+        btn.className = 'btn btn-danger';
+        btn.onclick = () => sendWebSocket({ type: 'stopParticipation' });
+    } else {
+        btn.innerHTML = '<i class="fas fa-play"></i> 참여 시작';
+        btn.className = 'btn btn-primary';
+        btn.onclick = () => sendWebSocket({ type: 'startParticipation' });
+    }
+
     renderPartList('waiting-queue', state.queue, true);
     renderPartList('active-participants', state.participants, false);
+
+    // 현재 세션 참여 랭킹 표시
     renderSessionRanking(state.sessionRanking || []);
+
+    // 전체 누적 참여왕 랭킹 표시
     renderTotalRanking(state.totalRanking || []);
-    const stat = document.getElementById('stat-participants');
-    if(stat) stat.textContent = state.participants.length;
+}
+
+function renderSessionRanking(ranking) {
+    const list = document.getElementById('session-ranking-list');
+    const countBadge = document.getElementById('session-ranking-count');
+    if (!list) return;
+
+    if (countBadge) countBadge.textContent = ranking.length;
+
+    if (ranking.length === 0) {
+        list.innerHTML = '<div class="empty-state">참여 기록이 없습니다</div>';
+        return;
+    }
+
+    list.innerHTML = ranking.map((r, i) => `
+        <div class="ranking-item">
+            <span class="ranking-position">${i + 1}</span>
+            <span class="ranking-name">${escapeHTML(r.nickname)}</span>
+            <span class="ranking-points">${r.count}회</span>
+        </div>
+    `).join('');
+}
+
+function renderTotalRanking(ranking) {
+    const list = document.getElementById('total-ranking-list');
+    const countBadge = document.getElementById('total-ranking-count');
+    const loadMoreBtn = document.getElementById('load-more-ranking');
+    if (!list) return;
+
+    if (countBadge) countBadge.textContent = ranking.length;
+
+    if (ranking.length === 0) {
+        list.innerHTML = '<div class="empty-state">참여 기록이 없습니다</div>';
+        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        return;
+    }
+
+    const displayList = ranking.slice(0, rankingDisplayCount);
+    list.innerHTML = displayList.map((r, i) => `
+        <div class="ranking-item ${i < 3 ? 'top-' + (i + 1) : ''}">
+            <span class="ranking-position">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</span>
+            <span class="ranking-name">${escapeHTML(r.nickname)}</span>
+            <span class="ranking-points">${r.count}회</span>
+        </div>
+    `).join('');
+
+    // 더보기 버튼 표시 여부
+    if (loadMoreBtn) {
+        if (ranking.length > rankingDisplayCount) {
+            loadMoreBtn.style.display = 'block';
+            loadMoreBtn.textContent = `더보기 (${ranking.length - rankingDisplayCount}명 더)`;
+        } else {
+            loadMoreBtn.style.display = 'none';
+        }
+    }
+}
+
+function loadMoreRanking() {
+    rankingDisplayCount += 5;
+    if (participationState && participationState.totalRanking) {
+        renderTotalRanking(participationState.totalRanking);
+    }
 }
 function renderPartList(id, list, isQueue) {
     const el = document.getElementById(id);
     if(!el) return;
     if(list.length === 0) { el.innerHTML = '<div class="empty-state">없음</div>'; return; }
-    el.innerHTML = list.map(p => `
+    el.innerHTML = list.map((p, i) => `
         <div class="participant-item">
-            <span class="participant-name">${escapeHTML(p.nickname)}</span>
+            <div class="participant-info">
+                <span class="participant-number">#${i+1}</span>
+                <span class="participant-name">${escapeHTML(p.nickname)}</span>
+                ${p.participationCount > 0 ? `<span class="badge"><i class="fas fa-history"></i> ${p.participationCount}회</span>` : ''}
+            </div>
             <div class="participant-actions">
-                ${isQueue ? `<button class="btn-icon btn-success" onclick="moveFromQueue('${p.userIdHash}')"><i class="fas fa-arrow-right"></i></button>` : ''}
-                <button class="btn-icon btn-danger" onclick="removeFromParticipation('${p.userIdHash}')"><i class="fas fa-times"></i></button>
+                ${isQueue ? `<button class="btn-icon btn-success" onclick="moveFromQueue('${p.userIdHash}')"><i class="fas fa-arrow-right"></i></button>` : `<button class="btn-icon btn-success" onclick="finishParticipation('${p.userIdHash}')"><i class="fas fa-check"></i></button>`}
+                <button class="btn-icon btn-danger" onclick="${isQueue ? 'removeFromQueue' : 'finishParticipation'}('${p.userIdHash}')"><i class="fas fa-times"></i></button>
             </div>
         </div>
     `).join('');
 }
 function moveFromQueue(id) { sendWebSocket({ type: 'moveToParticipants', data: { userIdHash: id } }); }
-function removeFromParticipation(id) { sendWebSocket({ type: 'removeFromQueue', data: { userIdHash: id } }); }
-function toggleParticipation() { sendWebSocket({ type: participationState.isParticipationActive ? 'stopParticipation' : 'startParticipation' }); }
-function clearParticipants() { if(confirm('전체 초기화?')) sendWebSocket({ type: 'clearAllParticipation' }); }
+function removeFromQueue(id) { sendWebSocket({ type: 'removeFromQueue', data: { userIdHash: id } }); }
+function finishParticipation(id) { sendWebSocket({ type: 'finishParticipation', data: { userIdHash: id } }); }
+function clearAllParticipation() { if(confirm('전체 초기화?')) sendWebSocket({ type: 'clearAllParticipation' }); }
 function updateMaxParticipants(val) { sendWebSocket({ type: 'updateMaxParticipants', data: { max: parseInt(val) } }); }
-
-function renderSessionRanking(ranking) {
-    const list = document.getElementById('session-ranking-list');
-    if (!list) return;
-    if (ranking.length === 0) { list.innerHTML = '<div class="empty-state">기록 없음</div>'; return; }
-    list.innerHTML = ranking.map((r, i) => `<div class="ranking-item"><span>${i+1}. ${escapeHTML(r.nickname)}</span><span>${r.count}회</span></div>`).join('');
-}
-function renderTotalRanking(ranking) {
-    const list = document.getElementById('total-ranking-list');
-    if (!list) return;
-    if (ranking.length === 0) { list.innerHTML = '<div class="empty-state">기록 없음</div>'; return; }
-    list.innerHTML = ranking.slice(0, 10).map((r, i) => `<div class="ranking-item"><span>${i+1}. ${escapeHTML(r.nickname)}</span><span>${r.count}회</span></div>`).join('');
+function toggleParticipation() {
+    if (participationState && participationState.isParticipationActive) {
+        sendWebSocket({ type: 'stopParticipation' });
+    } else {
+        sendWebSocket({ type: 'startParticipation' });
+    }
 }
 
-function updateVoteState(payload) { if(window.updateVoteUI) window.updateVoteUI(payload); }
-function updateDrawState(payload) { if(window.updateDrawUI) window.updateDrawUI(payload); }
-function displayDrawWinners(winners) { if(window.showDrawWinners) window.showDrawWinners(winners); }
-function handleRouletteResult(res) { if(window.spinRouletteAnimation) window.spinRouletteAnimation(res.spinDegree, res.result); }
-
+// ============================================
+// Chat & Overlay & Misc
+// ============================================
 function addChatMessage(data) {
     const c = document.getElementById('chat-messages');
     if(!c) return;
-    const empty = c.querySelector('.chat-empty');
-    if(empty) empty.remove();
     const div = document.createElement('div');
     div.className = 'chat-message';
-    div.innerHTML = `<span class="chat-nickname">${escapeHTML(data.profile?.nickname)}</span>: <span class="chat-content">${escapeHTML(data.message)}</span>`;
+    div.innerHTML = `<span class="chat-nickname">${escapeHTML(data.profile?.nickname)}</span> <span class="chat-content">${escapeHTML(data.message)}</span>`;
     c.prepend(div);
     if(c.children.length > 50) c.lastChild.remove();
 }
+function initOverlayUrl() { document.getElementById('overlay-url').value = `${window.location.origin}/overlay/vote`; }
+function copyOverlayUrl() {
+    const url = document.getElementById('overlay-url');
+    url.select(); document.execCommand('copy'); showNotification('복사됨', 'success');
+}
+function saveOverlaySettings() {
+    // vote-system.js handles this logic mostly, but if button is in dashboard:
+    const op = document.getElementById('overlay-opacity').value;
+    const col = document.getElementById('overlay-color').value;
+    const anim = document.getElementById('overlay-animation').checked;
+    const conf = document.getElementById('overlay-confetti').checked;
+    sendWebSocket({ type: 'updateOverlaySettings', payload: { backgroundOpacity: parseInt(op), themeColor: col, showAnimation: anim, showConfetti: conf } });
+    showNotification('오버레이 설정 저장됨', 'success');
+}
+function clearVoteHistory() {
+    if(confirm('투표 기록 전체 삭제?')) sendWebSocket({ type: 'clearVoteHistory' });
+}
 
+// Function Chips
 function initFunctionChips() {
     document.querySelectorAll('.fn-chip').forEach(chip => {
-        chip.onclick = () => {
+        chip.onclick = (e) => {
+            e.preventDefault();
+            const fn = chip.dataset.fn;
             const modal = chip.closest('.modal');
-            const input = modal.querySelector('textarea, input[type=text]');
-            if(input) { input.value += chip.dataset.fn; input.focus(); }
+            if(!modal) return;
+            let input = modal.querySelector('textarea:not([readonly])') || modal.querySelector('input[type=text]:not([readonly])');
+            if(input) {
+                const start = input.selectionStart || 0;
+                const end = input.selectionEnd || 0;
+                input.value = input.value.substring(0, start) + fn + input.value.substring(end);
+                input.focus();
+                input.selectionStart = input.selectionEnd = start + fn.length;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         };
     });
 }
 
+// Draggable Chat
+function initDraggableChat() {
+    const chat = document.getElementById('floating-chat');
+    const header = document.getElementById('floating-chat-header');
+    if(!chat || !header) return;
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initLeft = 0, initTop = 0;
+
+    header.addEventListener('mousedown', (e) => {
+        // 버튼 클릭 시 드래그 방지
+        if(e.target.closest('button')) return;
+
+        e.preventDefault();
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        // 현재 위치 계산 (right/bottom에서 left/top으로 변환)
+        const rect = chat.getBoundingClientRect();
+        initLeft = rect.left;
+        initTop = rect.top;
+
+        // 드래그 시작 시 right/bottom을 auto로 설정하고 left/top 사용
+        chat.style.left = initLeft + 'px';
+        chat.style.top = initTop + 'px';
+        chat.style.right = 'auto';
+        chat.style.bottom = 'auto';
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        chat.style.left = (initLeft + deltaX) + 'px';
+        chat.style.top = (initTop + deltaY) + 'px';
+    }
+
+    function onMouseUp() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+}
+function toggleFloatingChat() {
+    const c = document.getElementById('floating-chat');
+    c.style.display = c.style.display === 'none' ? 'flex' : 'none';
+}
+function minimizeFloatingChat() { document.getElementById('floating-chat').classList.toggle('minimized'); }
+function closeFloatingChat() { document.getElementById('floating-chat').style.display = 'none'; }
+
 function initButtonListeners() {
-    document.getElementById('sidebar-toggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
     document.getElementById('add-command-btn')?.addEventListener('click', () => showModal('add-command-modal'));
     document.getElementById('add-macro-btn')?.addEventListener('click', () => showModal('add-macro-modal'));
     document.getElementById('add-counter-btn')?.addEventListener('click', () => showModal('add-counter-modal'));
     document.getElementById('save-song-settings')?.addEventListener('click', saveSongSettings);
-    document.getElementById('play-pause-btn')?.addEventListener('click', togglePlayPause);
     document.getElementById('skip-song-btn')?.addEventListener('click', skipSong);
     document.getElementById('stop-song-btn')?.addEventListener('click', stopSong);
-    document.getElementById('toggle-participation-btn')?.addEventListener('click', toggleParticipation);
-    document.getElementById('clear-participation-btn')?.addEventListener('click', clearParticipants);
+    document.getElementById('play-pause-btn')?.addEventListener('click', togglePlayPause);
     document.getElementById('save-points-settings')?.addEventListener('click', savePointsSettings);
+    document.getElementById('toggle-participation-btn')?.addEventListener('click', toggleParticipation);
+    document.getElementById('clear-participation-btn')?.addEventListener('click', clearAllParticipation);
+    document.getElementById('clear-vote-history-btn')?.addEventListener('click', clearVoteHistory);
     
+    // Sliders
     const maxSlider = document.getElementById('max-participants-slider');
     const maxInput = document.getElementById('max-participants');
     if(maxSlider && maxInput) {
-        maxSlider.oninput = () => { maxInput.value = maxSlider.value; updateMaxParticipants(maxSlider.value); };
+        maxSlider.oninput = () => { maxInput.value = maxSlider.value; };
+        maxSlider.onchange = () => { updateMaxParticipants(maxSlider.value); };
         maxInput.onchange = () => { maxSlider.value = maxInput.value; updateMaxParticipants(maxInput.value); };
     }
 }
 
+// Tab Navigation
+function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(tab + '-tab')?.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
+}
+function initTabs() {
+    document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => switchTab(n.dataset.tab));
+    document.querySelectorAll('.quick-btn').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+}
+
+// Init
 function initDashboard() {
     console.log('[Dashboard] Init');
     initWebSocket();
+    initTabs();
     initButtonListeners();
     initFunctionChips();
+    initDraggableChat();
     initOverlayUrl();
-    document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => switchTab(n.dataset.tab));
-}
+    // Vote Subtabs are handled by vote-system.js
 
-function initOverlayUrl() { 
-    const input = document.getElementById('overlay-url');
-    if(input) input.value = `${window.location.origin}/overlay/vote`;
+    // 참여왕 랭킹 더보기 버튼
+    const loadMoreBtn = document.getElementById('load-more-ranking');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', loadMoreRanking);
+    }
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDashboard);
