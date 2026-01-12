@@ -4,398 +4,1141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chzzk Bot Dashboard</title>
+    <!-- Vercel/Railway 연동을 위한 필수 스크립트 추가 -->
     <script src="config.js"></script>
     <script src="api-adapter.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="vote-ui-enhanced.css">
-    <style>
-        /* =========================================
-           ✨ Ultra Premium Landing Page (Scoped)
-           ========================================= */
-        #landing-layer {
-            position: fixed;
-            inset: 0;
-            background: #05050a;
-            z-index: 99999; /* Always on top */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            font-family: 'Inter', 'Noto Sans KR', sans-serif;
-            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
-        }
-
-        #landing-layer.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-
-        /* Aurora Background */
-        .aurora-bg { position: absolute; inset: 0; z-index: -1; }
-        .blob { position: absolute; filter: blur(100px); opacity: 0.4; animation: floatBlob 15s infinite alternate; }
-        .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #7047eb; }
-        .blob-2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: #00ff94; animation-delay: -7s; }
-        @keyframes floatBlob { from { transform: translate(0, 0) scale(1); } to { transform: translate(100px, 100px) scale(1.2); } }
-
-        /* Glass Card */
-        .premium-card {
-            position: relative;
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 40px;
-            padding: 80px 40px;
-            width: 90%;
-            max-width: 500px;
-            text-align: center;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
-            transform-style: preserve-3d;
-            perspective: 1000px;
-        }
-
-        .landing-logo {
-            font-size: 80px;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, #00ff94, #00d4ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px rgba(0, 255, 148, 0.4));
-        }
-
-        .landing-title {
-            font-size: 48px;
-            font-weight: 900;
-            color: #fff;
-            letter-spacing: -2px;
-            margin-bottom: 15px;
-        }
-
-        .landing-subtitle {
-            font-size: 18px;
-            color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 50px;
-            line-height: 1.6;
-        }
-
-        /* Buttons */
-        .btn-start {
-            padding: 18px 60px;
-            font-size: 20px;
-            font-weight: 800;
-            background: #00ff94;
-            color: #000;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 10px 30px rgba(0, 255, 148, 0.3);
-        }
-        .btn-start:hover {
-            transform: scale(1.05) translateY(-5px);
-            box-shadow: 0 20px 50px rgba(0, 255, 148, 0.5);
-            background: #fff;
-        }
-
-        .btn-chzzk {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            padding: 16px;
-            background: #00ff94; /* Chzzk Greenish */
-            color: #000;
-            border-radius: 15px;
-            text-decoration: none;
-            font-weight: 800;
-            font-size: 18px;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-chzzk:hover { background: #fff; transform: translateY(-3px); }
-        
-        .btn-back {
-            background: transparent;
-            color: #888;
-            border: none;
-            cursor: pointer;
-            text-decoration: underline;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        /* State Management */
-        #home-section, #auth-section { transition: opacity 0.3s ease; }
-        #auth-section { display: none; }
-        #auth-section.active { display: block; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
 <body>
-    <!-- 🌟 Landing Layer (Overlay) -->
-    <div id="landing-layer">
-        <div class="aurora-bg">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
+    <!-- (이하 내용은 원본과 100% 동일) -->
+    <!-- Login Overlay -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-bg-animation"></div>
+        <div class="login-particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
         </div>
-
-        <div class="premium-card" id="tilt-card">
-            <!-- 1. Home Section -->
-            <div id="home-section">
-                <i class="fas fa-robot landing-logo"></i>
-                <h1 class="landing-title">CHZZK BOT</h1>
-                <p class="landing-subtitle">방송 관리를 위한 최고의 파트너<br>명령어 · 투표 · 룰렛 · 포인트</p>
-                <button class="btn-start" onclick="window.showAuth()">시작하기</button>
-            </div>
-
-            <!-- 2. Auth Section -->
-            <div id="auth-section">
-                <h2 style="color:white; margin-bottom:10px; font-size: 32px; font-weight:800;">로그인</h2>
-                <p style="color:#888; margin-bottom:30px; font-size:16px;">치지직 계정으로 봇을 연결합니다.</p>
+        
+        <div class="login-container">
+            <div class="login-card" id="login-card">
+                <!-- OAuth Login State -->
+                <div id="login-oauth-state">
+                    <div class="login-header">
+                        <div class="login-logo">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h1 class="login-title">치지직 봇</h1>
+                        <p class="login-subtitle">채팅봇을 설정하세요</p>
+                    </div>
+                    
+                    <div class="login-error" id="login-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span id="login-error-text">연결에 실패했습니다</span>
+                    </div>
+                    
+                    <div class="login-form">
+                        <a href="/auth/login" class="login-btn oauth-btn">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+                            </svg>
+                            <span>치지직으로 로그인</span>
+                        </a>
+                    </div>
+                </div>
                 
-                <a href="/auth/login" class="btn-chzzk">
-                    <img src="https://ssl.pstatic.net/static/nid/login/m_sp_01_login_008d54.png" width="24" height="24" alt="N">
-                    치지직으로 로그인
-                </a>
+                <!-- Legacy Login State (Hidden) -->
+                <div id="login-legacy-state" style="display: none;">
+                    <!-- ... -->
+                </div>
                 
-                <button class="btn-back" onclick="window.showHome()">뒤로가기</button>
+                <!-- Success State -->
+                <div id="login-success-state" style="display: none;">
+                    <div class="login-success">
+                        <div class="success-icon"><i class="fas fa-check"></i></div>
+                        <h2>연결 성공!</h2>
+                        <p id="success-channel-name"></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 🖥️ Original Dashboard Content (Hidden initially) -->
-    <div id="app-container" style="display:none;">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="sidebar-toggle" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
-                <h1 class="header-title" id="header-title">대시보드</h1>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="sidebar-toggle" id="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="header-title" id="header-title">대시보드</h1>
+        </div>
+        <div class="header-right" id="header-profile" style="display: none;">
+            <div class="header-profile-info">
+                <div class="header-avatar" id="header-avatar"></div>
+                <span class="header-username" id="header-username"></span>
             </div>
-            <div class="header-right" id="header-profile" style="display: none;">
-                <div class="header-profile-info">
-                    <div class="header-avatar" id="header-avatar"></div>
-                    <span class="header-username" id="header-username"></span>
-                </div>
-                <button class="header-logout" id="logout-btn" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-        </header>
+            <button class="header-logout" onclick="handleLogout()" title="로그아웃">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
 
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                CHZZK BOT
-            </div>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
             <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
                 <div class="sidebar-avatar" id="sidebar-avatar"></div>
                 <div class="sidebar-info">
                     <div class="sidebar-name" id="sidebar-name"></div>
                     <div class="sidebar-status">
-                        <span class="status-indicator online"></span>
-                        <span id="sidebar-status-text">연결됨</span>
+                        <span class="status-dot" id="sidebar-status-dot"></span>
+                        <span id="sidebar-status-text">오프라인</span>
                     </div>
                 </div>
             </div>
-            
-            <nav class="sidebar-nav">
-                <div class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i> 대시보드</div>
-                <div class="nav-item" data-tab="commands"><i class="fas fa-terminal"></i> 명령어</div>
-                <div class="nav-item" data-tab="macros"><i class="fas fa-clock"></i> 매크로</div>
-                <div class="nav-item" data-tab="counters"><i class="fas fa-calculator"></i> 카운터</div>
-                <div class="nav-item" data-tab="songs"><i class="fas fa-music"></i> 신청곡</div>
-                <div class="nav-item" data-tab="votes"><i class="fas fa-poll"></i> 투표</div>
-                <div class="nav-item" data-tab="participation"><i class="fas fa-users"></i> 참여</div>
-                <div class="nav-item" data-tab="points"><i class="fas fa-coins"></i> 포인트</div>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <div class="bot-status" style="margin-bottom:10px;">
-                    <div class="status-indicator" id="bot-status-indicator"></div>
-                    <span id="bot-status-text">미연결</span>
-                </div>
+            <div class="bot-status">
+                <div class="status-indicator" id="bot-status-indicator"></div>
+                <span id="bot-status-text">봇 미연결</span>
             </div>
-        </aside>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item active" data-tab="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </li>
+                <li class="nav-item" data-tab="commands">
+                    <i class="fas fa-terminal"></i>
+                    <span>명령어</span>
+                </li>
+                <li class="nav-item" data-tab="macros">
+                    <i class="fas fa-clock"></i>
+                    <span>매크로</span>
+                </li>
+                <li class="nav-item" data-tab="counters">
+                    <i class="fas fa-calculator"></i>
+                    <span>카운터</span>
+                </li>
+                <li class="nav-item" data-tab="songs">
+                    <i class="fas fa-music"></i>
+                    <span>신청곡</span>
+                </li>
+                <li class="nav-item" data-tab="votes">
+                    <i class="fas fa-poll"></i>
+                    <span>투표</span>
+                </li>
+                <li class="nav-item" data-tab="participation">
+                    <i class="fas fa-users"></i>
+                    <span>시청자 참여</span>
+                </li>
+                <li class="nav-item" data-tab="points">
+                    <i class="fas fa-coins"></i>
+                    <span>포인트</span>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logout-btn" onclick="handleLogout()" style="display: none;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>로그아웃</span>
+            </button>
+        </div>
+    </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Dashboard Tab -->
-            <div id="dashboard-tab" class="tab-content active">
-                <div class="dashboard-grid">
-                    <div class="card channel-card">
-                        <div class="card-title"><i class="fas fa-user-circle"></i> 채널 정보</div>
-                        <div class="channel-info">
-                            <div class="channel-avatar" id="channel-avatar-lg" style="width:80px;height:80px;background:#333;border-radius:50%;"></div>
-                            <div class="channel-details" style="margin-left:20px;">
-                                <h2 class="channel-name" id="channel-name-lg" style="margin:0;font-size:24px;">-</h2>
-                                <p class="channel-stats" id="follower-count" style="color:#aaa;margin-top:5px;">팔로워: -</p>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content active">
+            <div class="dashboard-grid">
+                <!-- Channel Info Card -->
+                <div class="card channel-card">
+                    <div class="channel-info">
+                        <div class="channel-avatar" id="channel-avatar"></div>
+                        <div class="channel-details">
+                            <h2 class="channel-name" id="channel-name">채널명</h2>
+                            <div class="channel-stats">
+                                <span class="follower-count" id="follower-count">
+                                    <i class="fas fa-heart"></i>
+                                    <span>0 팔로워</span>
+                                </span>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="card chat-card" style="grid-column: span 2;">
-                        <div class="card-title"><span><i class="fas fa-comments"></i> 실시간 채팅</span></div>
-                        <div class="chat-container" id="chat-messages" style="height:300px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:10px;">
-                            <div class="chat-empty" style="text-align:center;padding-top:100px;color:#666;">채팅 대기 중...</div>
+                    <div class="stream-info" id="stream-info">
+                        <div class="stream-status" id="stream-status">
+                            <span class="status-badge offline">오프라인</span>
+                            <span class="viewer-count" id="viewer-count">0명</span>
+                        </div>
+                        <div class="stream-title" id="stream-title">방송 제목</div>
+                        <div class="stream-category" id="stream-category">
+                            <i class="fas fa-gamepad"></i>
+                            <span>카테고리</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="card stats-card">
+                    <h3 class="card-title"><i class="fas fa-chart-line"></i> 봇 현황</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-commands">0</div>
+                            <div class="stat-label">명령어</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-songs">0</div>
+                            <div class="stat-label">신청곡</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-votes">0</div>
+                            <div class="stat-label">투표</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-participants">0</div>
+                            <div class="stat-label">참여자</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Nav -->
+                <div class="card quick-nav-card">
+                    <h3 class="card-title"><i class="fas fa-rocket"></i> 빠른 접근</h3>
+                    <div class="quick-nav-grid">
+                        <button class="quick-btn" data-tab="commands">
+                            <i class="fas fa-terminal"></i>
+                            <span>명령어</span>
+                        </button>
+                        <button class="quick-btn" data-tab="songs">
+                            <i class="fas fa-music"></i>
+                            <span>신청곡</span>
+                        </button>
+                        <button class="quick-btn" data-tab="votes">
+                            <i class="fas fa-poll"></i>
+                            <span>투표</span>
+                        </button>
+                        <button class="quick-btn" data-tab="participation">
+                            <i class="fas fa-users"></i>
+                            <span>참여</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Chat -->
+                <div class="card chat-card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-comments"></i> 실시간 채팅</h3>
+                        <button class="expand-btn" id="expand-chat-btn" title="팝업">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-empty">
+                            <i class="fas fa-comments"></i>
+                            <p>채팅이 없습니다</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Commands Tab -->
-            <div id="commands-tab" class="tab-content">
+        <!-- Commands Tab -->
+        <div id="commands-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>명령어 관리</h2>
+                <button class="btn btn-primary" id="add-command-btn">
+                    <i class="fas fa-plus"></i> 추가
+                </button>
+            </div>
+            <div class="card">
+                <div class="item-list" id="commands-list">
+                    <div class="empty-state">
+                        <i class="fas fa-terminal"></i>
+                        <p>등록된 명령어가 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Macros Tab -->
+        <div id="macros-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>매크로 관리</h2>
+                <button class="btn btn-primary" id="add-macro-btn">
+                    <i class="fas fa-plus"></i> 추가
+                </button>
+            </div>
+            <div class="notice-banner">
+                <i class="fas fa-info-circle"></i>
+                방송 중에만 매크로가 작동합니다
+            </div>
+            <div class="card">
+                <div class="item-list" id="macros-list">
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <p>등록된 매크로가 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Counters Tab -->
+        <div id="counters-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>카운터 관리</h2>
+                <button class="btn btn-primary" id="add-counter-btn">
+                    <i class="fas fa-plus"></i> 추가
+                </button>
+            </div>
+            <div class="card">
+                <div class="item-list" id="counters-list">
+                    <div class="empty-state">
+                        <i class="fas fa-calculator"></i>
+                        <p>등록된 카운터가 없습니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Songs Tab -->
+        <div id="songs-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>신청곡 관리</h2>
+            </div>
+            <div class="songs-grid">
                 <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        명령어 목록
-                        <button class="btn btn-primary" id="add-command-btn">추가</button>
+                    <h3 class="card-title"><i class="fas fa-play-circle"></i> 현재 재생</h3>
+                    <div class="current-song" id="current-song">
+                        <div class="no-song">재생 중인 곡이 없습니다</div>
                     </div>
-                    <div class="item-list" id="commands-list"></div>
+                    <div class="player-controls">
+                        <button class="btn btn-secondary" id="prev-song-btn" disabled>
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button class="btn btn-primary" id="play-pause-btn" disabled>
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="btn btn-secondary" id="skip-song-btn">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                        <button class="btn btn-danger" id="stop-song-btn">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Macros Tab -->
-            <div id="macros-tab" class="tab-content">
                 <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        매크로 목록
-                        <button class="btn btn-primary" id="add-macro-btn">추가</button>
+                    <h3 class="card-title">
+                        <i class="fas fa-list"></i> 대기열
+                        <span class="badge" id="queue-count">0</span>
+                    </h3>
+                    <div class="queue-list" id="song-queue-list">
+                        <div class="empty-state">대기열이 비어있습니다</div>
                     </div>
-                    <div class="item-list" id="macros-list"></div>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 20px;">
+                <h3 class="card-title"><i class="fas fa-cog"></i> 신청곡 설정</h3>
+                <div class="settings-grid">
+                    <div class="setting-item" style="grid-column: span 3;">
+                        <label>신청 모드</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="songRequestMode" value="all" checked>
+                                <span>전체 허용</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="songRequestMode" value="cooldown">
+                                <span>쿨타임 적용</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="songRequestMode" value="donation">
+                                <span>후원시 가능</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="songRequestMode" value="off">
+                                <span>기능 끄기</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>쿨타임 (초)</label>
+                        <input type="number" class="form-input" id="song-cooldown" value="30" min="0">
+                    </div>
+                    <div class="setting-item" id="min-donation-group">
+                        <label>최소 후원금 (원)</label>
+                        <input type="number" class="form-input" id="song-min-donation" value="0" min="0">
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-song-settings" style="margin-top: 16px;">
+                    <i class="fas fa-save"></i> 저장
+                </button>
+                <button class="btn btn-secondary" onclick="openPlayer()" style="margin-top: 16px; margin-left: 8px;">
+                    <i class="fas fa-external-link-alt"></i> 플레이어 열기
+                </button>
+            </div>
+        </div>
+
+        <!-- Votes Tab -->
+        <div id="votes-tab" class="tab-content">
+            <div class="vote-tabs">
+                <button class="vote-sub-tab active" data-vote-subtab="draw">
+                    <i class="fas fa-users"></i> 시청자 추첨
+                </button>
+                <button class="vote-sub-tab" data-vote-subtab="vote">
+                    <i class="fas fa-poll"></i> 숫자 투표
+                </button>
+                <button class="vote-sub-tab" data-vote-subtab="roulette">
+                    <i class="fas fa-dharmachakra"></i> 룰렛
+                </button>
+                <button class="vote-sub-tab" data-vote-subtab="settings">
+                    <i class="fas fa-cog"></i> 설정
+                </button>
+            </div>
+
+            <!-- Draw Subtab -->
+            <div id="draw-subtab" class="vote-subtab active">
+                <div class="vote-grid">
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-cog"></i> 추첨 설정</h3>
+                        <div class="form-group">
+                            <label>참여 키워드</label>
+                            <input type="text" class="form-input" id="draw-keyword" value="!참여">
+                        </div>
+                        <div class="form-group">
+                            <label>당첨자 수</label>
+                            <input type="number" class="form-input" id="draw-winner-count" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="draw-subscriber-only">
+                                <span>구독자만 참여</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="draw-exclude-previous" checked>
+                                <span>이전 당첨자 제외</span>
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="start-draw-btn">
+                                <i class="fas fa-play"></i> 시작
+                            </button>
+                            <button class="btn btn-warning" id="stop-draw-btn" style="display:none;">
+                                <i class="fas fa-stop"></i> 마감
+                            </button>
+                            <button class="btn btn-success" id="execute-draw-btn" style="display:none;">
+                                <i class="fas fa-trophy"></i> 추첨
+                            </button>
+                            <button class="btn btn-secondary" id="reset-draw-btn">
+                                <i class="fas fa-redo"></i> 초기화
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">
+                            <i class="fas fa-user-friends"></i> 참여자
+                            <span class="badge" id="draw-participant-count">0</span>
+                        </h3>
+                        <div class="draw-status">
+                            <span class="status-badge" id="draw-status">대기 중</span>
+                        </div>
+                        <div class="participant-list" id="draw-participants">
+                            <div class="empty-state">참여자가 없습니다</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card winner-card" id="winner-card" style="display:none;">
+                    <div class="winner-display">
+                        <div class="winner-icon">🎉</div>
+                        <h2>당첨자!</h2>
+                        <div class="winner-list" id="winner-list"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Counters Tab -->
-            <div id="counters-tab" class="tab-content">
+            <!-- Vote Subtab -->
+            <div id="vote-subtab" class="vote-subtab">
+                <div class="vote-grid">
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-plus-circle"></i> 투표 생성</h3>
+                        <div class="form-group">
+                            <label>투표 제목</label>
+                            <input type="text" class="form-input" id="vote-question" placeholder="어떤 게임을 할까요?">
+                        </div>
+                        <div class="form-group">
+                            <label>투표 시간 (초)</label>
+                            <input type="number" class="form-input" id="vote-duration" value="60" min="10">
+                        </div>
+                        <div class="form-group">
+                            <label>투표 항목</label>
+                            <div id="vote-options-container">
+                                <div class="vote-option-item">
+                                    <span class="option-number">1</span>
+                                    <input type="text" class="form-input" placeholder="항목 1">
+                                    <button class="btn-icon btn-danger" onclick="removeVoteOption(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="vote-option-item">
+                                    <span class="option-number">2</span>
+                                    <input type="text" class="form-input" placeholder="항목 2">
+                                    <button class="btn-icon btn-danger" onclick="removeVoteOption(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" id="add-vote-option-btn" style="margin-top:8px;">
+                                <i class="fas fa-plus"></i> 항목 추가
+                            </button>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="create-vote-btn">
+                                <i class="fas fa-check"></i> 생성
+                            </button>
+                            <button class="btn btn-secondary" id="reset-vote-btn">
+                                <i class="fas fa-redo"></i> 초기화
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-chart-bar"></i> 현재 투표</h3>
+                        <div id="current-vote-display">
+                            <div class="empty-state">진행 중인 투표가 없습니다</div>
+                        </div>
+                        <div id="vote-controls" class="vote-control-btns" style="display:none;">
+                            <button class="btn btn-primary" id="start-vote-btn">
+                                <i class="fas fa-play"></i> 시작
+                            </button>
+                            <button class="btn btn-danger" id="end-vote-btn" style="display:none;">
+                                <i class="fas fa-stop"></i> 종료
+                            </button>
+                            <button class="btn btn-info" id="show-voters-btn" style="display:none;">
+                                <i class="fas fa-users"></i> 투표자 보기
+                            </button>
+                            <button class="btn btn-success" id="draw-vote-btn" style="display:none;">
+                                <i class="fas fa-trophy"></i> 추첨
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:20px;">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history"></i> 투표 기록</h3>
+                        <button class="btn btn-sm btn-danger" id="clear-vote-history-btn">
+                            <i class="fas fa-trash"></i> 전체 삭제
+                        </button>
+                    </div>
+                    <div id="vote-history" class="vote-history-container">
+                        <div class="empty-state">기록이 없습니다</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roulette Subtab -->
+            <div id="roulette-subtab" class="vote-subtab">
+                <div class="vote-grid">
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-list"></i> 룰렛 항목</h3>
+                        <div id="roulette-items-container">
+                            <div class="roulette-item">
+                                <input type="text" class="form-input" placeholder="항목 이름">
+                                <input type="number" class="form-input weight-input" value="1" min="1" placeholder="가중치">
+                                <button class="btn-icon btn-danger" onclick="removeRouletteItem(this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="btn-group" style="margin-top:12px;">
+                            <button class="btn btn-secondary btn-sm" id="add-roulette-item-btn">
+                                <i class="fas fa-plus"></i> 항목 추가
+                            </button>
+                            <button class="btn btn-purple btn-sm" id="import-vote-btn">
+                                <i class="fas fa-download"></i> 투표 가져오기
+                            </button>
+                        </div>
+                        <div class="btn-group" style="margin-top:16px;">
+                            <button class="btn btn-primary" id="create-roulette-btn">
+                                <i class="fas fa-check"></i> 룰렛 생성
+                            </button>
+                            <button class="btn btn-secondary" id="reset-roulette-btn">
+                                <i class="fas fa-redo"></i> 초기화
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-dharmachakra"></i> 룰렛</h3>
+                        <div class="roulette-container" id="roulette-container">
+                            <div class="empty-state">룰렛을 생성하세요</div>
+                        </div>
+                        <div id="roulette-controls" style="display:none; text-align:center; margin-top:16px;">
+                            <button class="btn btn-primary btn-lg" id="spin-roulette-btn">
+                                <i class="fas fa-play"></i> 돌리기!
+                            </button>
+                        </div>
+                        <div class="roulette-result" id="roulette-result" style="display:none;">
+                            <span class="result-label">🎉 결과:</span>
+                            <span class="result-value" id="roulette-result-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Subtab -->
+            <div id="settings-subtab" class="vote-subtab">
+                <div class="vote-grid">
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-link"></i> OBS 오버레이</h3>
+                        <div class="form-group">
+                            <label>오버레이 URL</label>
+                            <div class="input-group">
+                                <input type="text" class="form-input" id="overlay-url" readonly>
+                                <button class="btn btn-primary" id="copy-overlay-url">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <small class="form-help">OBS 브라우저 소스에 추가하세요 (권장: 800x600)</small>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title"><i class="fas fa-palette"></i> 오버레이 설정</h3>
+                        <div class="form-group">
+                            <label>배경 투명도</label>
+                            <div class="slider-group">
+                                <input type="range" class="form-slider" id="overlay-opacity" min="0" max="100" value="70">
+                                <span id="overlay-opacity-value">70%</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>테마 색상</label>
+                            <div class="color-group">
+                                <input type="color" class="form-color" id="overlay-color" value="#00ff94">
+                                <div class="color-presets">
+                                    <button class="color-preset" style="background:#00ff94" data-color="#00ff94"></button>
+                                    <button class="color-preset" style="background:#9966ff" data-color="#9966ff"></button>
+                                    <button class="color-preset" style="background:#00d4ff" data-color="#00d4ff"></button>
+                                    <button class="color-preset" style="background:#ff6b6b" data-color="#ff6b6b"></button>
+                                    <button class="color-preset" style="background:#ffd93d" data-color="#ffd93d"></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>결과 표시 시간</label>
+                            <div class="slider-group">
+                                <input type="range" class="form-slider" id="overlay-auto-hide" min="3" max="15" value="5">
+                                <span id="overlay-auto-hide-value">5초</span>
+                            </div>
+                            <small class="form-help">당첨자 발표 후 자동으로 사라지는 시간</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="overlay-animation" checked>
+                                <span>애니메이션 효과</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="overlay-confetti" checked>
+                                <span>팡파레 효과</span>
+                            </label>
+                        </div>
+                        <button class="btn btn-primary" id="save-overlay-settings">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Participation Tab -->
+        <div id="participation-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>시청자 참여</h2>
+                <div class="tab-actions">
+                    <button class="btn btn-primary" id="toggle-participation-btn">
+                        <i class="fas fa-play"></i> 참여 시작
+                    </button>
+                    <button class="btn btn-secondary" id="clear-participation-btn">
+                        <i class="fas fa-trash"></i> 전체 초기화
+                    </button>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:20px;">
+                <h3 class="card-title"><i class="fas fa-cog"></i> 설정</h3>
+                <div class="form-group">
+                    <label>참여 명령어</label>
+                    <input type="text" class="form-input" id="participation-command" value="!시참 참여" style="width:150px;">
+                </div>
+                <div class="form-group">
+                    <label>최대 참여자 수</label>
+                    <div class="slider-group">
+                        <input type="range" class="form-slider" id="max-participants-slider" min="1" max="50" value="10">
+                        <input type="number" class="form-input" id="max-participants" value="10" min="1" max="50" style="width:80px;">
+                    </div>
+                </div>
+            </div>
+            <div class="participation-grid">
                 <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        카운터 목록
-                        <button class="btn btn-primary" id="add-counter-btn">추가</button>
-                    </div>
-                    <div class="item-list" id="counters-list"></div>
-                </div>
-            </div>
-
-            <!-- Songs Tab -->
-            <div id="songs-tab" class="tab-content">
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">현재 재생</div>
-                        <div id="current-song" style="text-align:center;padding:20px;font-size:18px;">재생 중인 곡 없음</div>
-                        <div class="player-controls" style="margin-top:20px;display:flex;justify-content:center;gap:15px;">
-                            <button class="btn btn-primary" id="play-pause-btn"><i class="fas fa-play"></i></button>
-                            <button class="btn btn-secondary" id="skip-btn"><i class="fas fa-forward"></i></button>
-                            <button class="btn btn-danger" id="stop-song-btn"><i class="fas fa-stop"></i></button>
-                        </div>
-                        <div style="margin-top:20px;border-top:1px solid #333;padding-top:20px;">
-                            <div class="form-group"><label>쿨타임(초)</label><input type="number" id="song-cooldown" class="form-input" value="30"></div>
-                            <div class="form-group"><label>최소 후원금</label><input type="number" id="song-min-donation" class="form-input" value="1000"></div>
-                            <button class="btn btn-primary" id="save-song-settings" style="width:100%;">저장</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">대기열 (<span id="queue-count">0</span>)</div>
-                        <div class="item-list" id="song-queue-list" style="height:400px;overflow-y:auto;"></div>
+                    <h3 class="card-title">
+                        <i class="fas fa-clock"></i> 대기열
+                        <span class="badge" id="waiting-count">0</span>
+                    </h3>
+                    <div class="participant-list" id="waiting-queue">
+                        <div class="empty-state">대기자가 없습니다</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Votes Tab -->
-            <div id="votes-tab" class="tab-content">
-                <!-- Content injected by vote-system.js -->
-            </div>
-
-            <!-- Participation Tab -->
-            <div id="participation-tab" class="tab-content">
                 <div class="card">
-                    <div class="card-title" style="justify-content:space-between;">
-                        시청자 참여
-                        <div>
-                            <button class="btn btn-primary" id="toggle-participation-btn">시작</button>
-                            <button class="btn btn-secondary" id="clear-participation-btn">초기화</button>
-                        </div>
-                    </div>
-                    <div class="dashboard-grid" style="margin-top:20px;">
-                        <div>
-                            <h4>대기열 (<span id="waiting-count">0</span>)</h4>
-                            <div class="item-list" id="waiting-queue" style="min-height:200px;background:rgba(255,255,255,0.05);"></div>
-                        </div>
-                        <div>
-                            <h4>참여중 (<span id="active-count">0</span>)</h4>
-                            <div class="item-list" id="active-participants" style="min-height:200px;background:rgba(255,255,255,0.05);"></div>
-                        </div>
+                    <h3 class="card-title">
+                        <i class="fas fa-users"></i> 참여중
+                        <span class="badge" id="active-count">0</span>
+                    </h3>
+                    <div class="participant-list" id="active-participants">
+                        <div class="empty-state">참여자가 없습니다</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Points Tab -->
-            <div id="points-tab" class="tab-content">
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">포인트 설정</div>
-                        <div class="form-group"><label>지급량</label><input type="number" id="points-per-chat" class="form-input" value="10"></div>
-                        <div class="form-group"><label>쿨타임</label><input type="number" id="points-cooldown" class="form-input" value="60"></div>
-                        <button class="btn btn-primary" id="save-points-settings" style="width:100%;">저장</button>
+            <!-- 현재 세션 참여 랭킹 -->
+            <div class="card" style="margin-top: 20px;">
+                <h3 class="card-title">
+                    <i class="fas fa-star"></i> 현재 세션 참여 횟수
+                    <span class="badge badge-info" id="session-ranking-count">0</span>
+                </h3>
+                <div class="ranking-list" id="session-ranking-list">
+                    <div class="empty-state">참여 기록이 없습니다</div>
+                </div>
+            </div>
+
+            <!-- 전체 누적 참여왕 랭킹 -->
+            <div class="card" style="margin-top: 20px;">
+                <h3 class="card-title">
+                    <i class="fas fa-crown"></i> 참여왕 랭킹 (전체 누적)
+                    <span class="badge badge-warning" id="total-ranking-count">0</span>
+                </h3>
+                <div class="ranking-list scrollable-ranking" id="total-ranking-list" style="max-height: 300px; overflow-y: auto;">
+                    <div class="empty-state">참여 기록이 없습니다</div>
+                </div>
+                <button class="btn btn-secondary btn-block" id="load-more-ranking" style="margin-top: 10px; display: none;">
+                    <i class="fas fa-chevron-down"></i> 더보기
+                </button>
+            </div>
+        </div>
+
+        <!-- Points Tab -->
+        <div id="points-tab" class="tab-content">
+            <div class="tab-header">
+                <h2>포인트 관리</h2>
+            </div>
+            <div class="points-grid">
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-cog"></i> 포인트 설정</h3>
+                    <div class="form-group">
+                        <label>채팅당 포인트</label>
+                        <input type="number" class="form-input" id="points-per-chat" value="1" min="0">
                     </div>
-                    <div class="card">
-                        <div class="card-title">랭킹</div>
-                        <div class="item-list" id="points-ranking" style="height:400px;overflow-y:auto;"></div>
+                    <div class="form-group">
+                        <label>쿨다운 (초)</label>
+                        <input type="number" class="form-input" id="points-cooldown" value="60" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>포인트 단위</label>
+                        <input type="text" class="form-input" id="points-unit" value="포인트">
+                    </div>
+                    <button class="btn btn-primary" id="save-points-settings">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                </div>
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-trophy"></i> 포인트 랭킹</h3>
+                    <div class="ranking-list" id="points-ranking">
+                        <div class="empty-state">데이터가 없습니다</div>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Modals -->
+    <!-- Add Command Modal -->
     <div id="add-command-modal" class="modal-overlay">
         <div class="modal">
-            <div class="modal-header"><h2>명령어 추가</h2><button class="modal-close" onclick="hideModal('add-command-modal')">×</button></div>
-            <div class="modal-body">
-                <div class="form-group"><label>명령어</label><input type="text" id="new-command-trigger" class="form-input"></div>
-                <div class="form-group"><label>응답</label><textarea id="new-command-response" class="form-textarea"></textarea></div>
+            <div class="modal-header">
+                <h2>명령어 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-command-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-command-modal')">취소</button><button class="btn btn-primary" onclick="addCommand()">저장</button></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>명령어 <span class="hint">(!없이 입력하면 !없이 동작)</span></label>
+                    <input type="text" class="form-input" id="new-command-trigger" placeholder="명령어 또는 !명령어">
+                </div>
+                <div class="form-group">
+                    <label>응답</label>
+                    <textarea class="form-textarea" id="new-command-response" placeholder="응답 내용" oninput="updateCommandPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="사용자 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{category}" title="방송 카테고리 (구 game)">{category}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{viewers}" title="시청자 수">{viewers}</span>
+                        <span class="fn-chip" data-fn="{followers}" title="팔로워 수">{followers}</span>
+                        <span class="fn-chip" data-fn="{title}" title="방송 제목">{title}</span>
+                        <span class="fn-chip" data-fn="{random(1,100)}" title="1~100 사이 랜덤 숫자">{random}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간">{time}</span>
+                        <span class="fn-chip" data-fn="{since}" title="팔로우 기간 (일)">{since}</span>
+                        <span class="fn-chip" data-fn="{help}" title="명령어 리스트 링크">{help}</span>
+                        <span class="fn-chip" data-fn="{dday-2024-01-01}" title="D-Day 계산">{dday}</span>
+                        <span class="fn-chip" data-fn="{editor}" title="채팅으로 수정 가능한 변수">{editor}</span>
+                        <span class="fn-chip" data-fn="{any}" title="문장 내 어디든 포함되면 인식 (명령어 끝에 붙임)">{any}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="command-preview">
+                        <div class="preview-empty">응답 내용을 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-command-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addCommand()">추가</button>
+            </div>
         </div>
     </div>
-    
-    <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 추가</h2><button class="modal-close" onclick="hideModal('add-macro-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-macro-modal')">취소</button><button class="btn btn-primary" onclick="addMacro()">저장</button></div></div></div>
-    
-    <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 추가</h2><button class="modal-close" onclick="hideModal('add-counter-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>명령어</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="hideModal('add-counter-modal')">취소</button><button class="btn btn-primary" onclick="addCounter()">저장</button></div></div></div>
 
+    <!-- Edit Command Modal -->
+    <div id="edit-command-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>명령어 수정</h2>
+                <button class="modal-close" onclick="hideModal('edit-command-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>명령어 <span class="hint">(!없이 입력하면 !없이 동작)</span></label>
+                    <input type="text" class="form-input" id="edit-command-trigger">
+                </div>
+                <div class="form-group">
+                    <label>응답</label>
+                    <textarea class="form-textarea" id="edit-command-response" oninput="updateEditCommandPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>사용 가능한 함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="명령어를 사용한 사용자의 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="현재 채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시작 후 경과 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{viewers}" title="현재 시청자 수">{viewers}</span>
+                        <span class="fn-chip" data-fn="{followers}" title="현재 팔로워 수">{followers}</span>
+                        <span class="fn-chip" data-fn="{game}" title="현재 방송 카테고리">{game}</span>
+                        <span class="fn-chip" data-fn="{title}" title="현재 방송 제목">{title}</span>
+                        <span class="fn-chip" data-fn="{random(1,100)}" title="1~100 사이 랜덤 숫자">{random}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜 (YYYY-MM-DD)">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간 (HH:MM:SS)">{time}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="edit-command-preview">
+                        <div class="preview-empty">응답 내용을 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('edit-command-modal')">취소</button>
+                <button class="btn btn-primary" onclick="updateCommand()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Macro Modal -->
+    <div id="add-macro-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>매크로 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-macro-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>간격 (분)</label>
+                    <input type="number" class="form-input" id="new-macro-interval" value="5" min="1">
+                </div>
+                <div class="form-group">
+                    <label>메시지</label>
+                    <textarea class="form-textarea" id="new-macro-message" placeholder="자동 전송할 메시지" oninput="updateMacroPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>사용 가능한 함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="명령어를 사용한 사용자의 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="현재 채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시작 후 경과 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{viewers}" title="현재 시청자 수">{viewers}</span>
+                        <span class="fn-chip" data-fn="{followers}" title="현재 팔로워 수">{followers}</span>
+                        <span class="fn-chip" data-fn="{game}" title="현재 방송 카테고리">{game}</span>
+                        <span class="fn-chip" data-fn="{title}" title="현재 방송 제목">{title}</span>
+                        <span class="fn-chip" data-fn="{random(1,100)}" title="1~100 사이 랜덤 숫자">{random}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜 (YYYY-MM-DD)">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간 (HH:MM:SS)">{time}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="macro-preview">
+                        <div class="preview-empty">메시지를 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-macro-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addMacro()">추가</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Macro Modal -->
+    <div id="edit-macro-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>매크로 수정</h2>
+                <button class="modal-close" onclick="hideModal('edit-macro-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>간격 (분)</label>
+                    <input type="number" class="form-input" id="edit-macro-interval" min="1">
+                </div>
+                <div class="form-group">
+                    <label>메시지</label>
+                    <textarea class="form-textarea" id="edit-macro-message" oninput="updateEditMacroPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>사용 가능한 함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="명령어를 사용한 사용자의 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="현재 채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시작 후 경과 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{viewers}" title="현재 시청자 수">{viewers}</span>
+                        <span class="fn-chip" data-fn="{followers}" title="현재 팔로워 수">{followers}</span>
+                        <span class="fn-chip" data-fn="{game}" title="현재 방송 카테고리">{game}</span>
+                        <span class="fn-chip" data-fn="{title}" title="현재 방송 제목">{title}</span>
+                        <span class="fn-chip" data-fn="{random(1,100)}" title="1~100 사이 랜덤 숫자">{random}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜 (YYYY-MM-DD)">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간 (HH:MM:SS)">{time}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="edit-macro-preview">
+                        <div class="preview-empty">메시지를 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('edit-macro-modal')">취소</button>
+                <button class="btn btn-primary" onclick="updateMacro()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Counter Modal -->
+    <div id="add-counter-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>카운터 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-counter-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>명령어 <span class="hint">(!없이 입력하면 !없이 동작)</span></label>
+                    <input type="text" class="form-input" id="new-counter-trigger" placeholder="명령어 또는 !명령어">
+                </div>
+                <div class="form-group">
+                    <label>응답</label>
+                    <textarea class="form-textarea" id="new-counter-response" placeholder="응답 내용 (예: {user}님이 {count}번째로 사용했습니다!)" oninput="updateCounterPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="사용자 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{count}" title="현재 카운터 값">{count}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간">{time}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="counter-preview">
+                        <div class="preview-empty">응답 내용을 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-counter-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addCounter()">추가</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Counter Modal -->
+    <div id="edit-counter-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>카운터 수정</h2>
+                <button class="modal-close" onclick="hideModal('edit-counter-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>명령어 <span class="hint">(!없이 입력하면 !없이 동작)</span></label>
+                    <input type="text" class="form-input" id="edit-counter-trigger">
+                </div>
+                <div class="form-group">
+                    <label>응답</label>
+                    <textarea class="form-textarea" id="edit-counter-response" oninput="updateEditCounterPreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>현재 카운트</label>
+                    <input type="number" class="form-input" id="edit-counter-count" min="0">
+                </div>
+                <div class="form-group">
+                    <label>사용 가능한 함수</label>
+                    <div class="function-chips">
+                        <span class="fn-chip" data-fn="{user}" title="명령어를 사용한 사용자의 닉네임">{user}</span>
+                        <span class="fn-chip" data-fn="{count}" title="현재 카운터 값">{count}</span>
+                        <span class="fn-chip" data-fn="{channel}" title="현재 채널 이름">{channel}</span>
+                        <span class="fn-chip" data-fn="{uptime}" title="방송 시작 후 경과 시간">{uptime}</span>
+                        <span class="fn-chip" data-fn="{date}" title="현재 날짜 (YYYY-MM-DD)">{date}</span>
+                        <span class="fn-chip" data-fn="{time}" title="현재 시간 (HH:MM:SS)">{time}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>미리보기</label>
+                    <div class="preview-box" id="edit-counter-preview">
+                        <div class="preview-empty">응답 내용을 입력하면 미리보기가 표시됩니다</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('edit-counter-modal')">취소</button>
+                <button class="btn btn-primary" onclick="updateCounter()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voter Modal (투표자 보기) -->
+    <div id="voter-modal" class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2 id="voter-modal-title">투표자 목록</h2>
+                <button class="modal-close" onclick="hideModal('voter-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="voter-modal-content">
+                <div class="empty-state">투표자 정보를 불러오는 중...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('voter-modal')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat -->
+    <div id="floating-chat" class="floating-chat" style="display:none;">
+        <div class="floating-chat-header" id="floating-chat-header">
+            <span>실시간 채팅</span>
+            <div class="floating-chat-controls">
+                <button onclick="minimizeFloatingChat()"><i class="fas fa-minus"></i></button>
+                <button onclick="closeFloatingChat()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="floating-chat-body" id="floating-chat-messages"></div>
+        <div class="floating-chat-resize"></div>
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button id="chat-toggle-btn" class="chat-toggle-btn" onclick="toggleFloatingChat()">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <!-- Draw Result Modal -->
+    <div id="modal-draw-result" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>추첨 결과</h3>
+                <button class="modal-close" onclick="closeModal('modal-draw-result')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="draw-result-content">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('modal-draw-result')">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roulette Result Modal -->
+    <div id="modal-roulette-result" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>룰렛 결과</h3>
+                <button class="modal-close" onclick="closeModal('modal-roulette-result')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="roulette-result-content">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('modal-roulette-result')">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Preview Modal -->
+    <div id="modal-response-preview" class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>응답 미리보기</h3>
+                <button class="modal-close" onclick="closeModal('modal-response-preview')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="response-preview-content">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-response-preview')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
     <div id="notification-container"></div>
 
-    <script>
-        // Landing Page Transitions
-        window.showAuth = function() {
-            document.getElementById('home-section').style.display = 'none';
-            document.getElementById('auth-section').style.display = 'block';
-            document.getElementById('auth-section').classList.add('active');
-        };
-        window.goToHome = function() {
-            document.getElementById('auth-section').classList.remove('active');
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('home-section').style.display = 'block';
-        };
-        window.hideLanding = function() {
-            const landing = document.getElementById('landing-layer');
-            landing.style.opacity = '0';
-            setTimeout(() => {
-                landing.style.display = 'none';
-                document.getElementById('app-container').style.display = 'flex';
-            }, 500);
-        };
-        
-        // 3D Tilt Effect for Premium Card
-        const card = document.getElementById('tilt-card');
-        document.addEventListener('mousemove', (e) => {
-            if(document.getElementById('landing-layer').style.display === 'none') return;
-            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
-            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
-            card.style.transform = `perspective(1000px) rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-        });
-    </script>
-    <script src="dashboard.js"></script>
+    <!-- Scripts -->
     <script src="vote-system.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>
