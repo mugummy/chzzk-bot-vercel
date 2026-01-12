@@ -186,6 +186,33 @@ input:checked + .slider:before {
     filter: grayscale(80%);
     transition: 0.3s ease;
 }
+
+/* Sidebar Toggle Fix */
+.toggle-switch.small {
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
+.toggle-switch.small .slider:before {
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+}
+
+.toggle-switch.small input:checked + .slider:before {
+    transform: translateX(16px);
+}
+
+.toggle-switch.small .slider {
+    background-color: #555;
+}
+
+.toggle-switch.small input:checked + .slider {
+    background-color: #00ff94;
+}
 \
 /* Small Toggle for Sidebar */
 .toggle-switch.small { width: 36px; height: 20px; }
