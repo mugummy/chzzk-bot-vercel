@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/vote-ui-enhanced.css">
+    <link rel="stylesheet" href="/toggle.css">
 </head>
 <body>
     <!-- Header -->
@@ -223,7 +224,7 @@
         <div id="macros-tab" class="tab-content">
             <div class="tab-header">
                 <h2>매크로 관리</h2>
-                <button class="btn btn-primary" onclick="showModal('add-macro-modal')">
+                <button class="btn btn-primary" id="add-macro-btn">
                     <i class="fas fa-plus"></i> 추가
                 </button>
             </div>
@@ -245,7 +246,7 @@
         <div id="counters-tab" class="tab-content">
             <div class="tab-header">
                 <h2>카운터 관리</h2>
-                <button class="btn btn-primary" onclick="showModal('add-counter-modal')">
+                <button class="btn btn-primary" id="add-counter-btn">
                     <i class="fas fa-plus"></i> 추가
                 </button>
             </div>

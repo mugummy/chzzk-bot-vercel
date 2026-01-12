@@ -11,18 +11,21 @@
     window.fetch = function(url, options) {
         if (typeof url === 'string') {
             const isStaticAsset = /\.(html|js|css|png|jpg|svg|json)$/i.test(url);
-            const isAuthApi = url.startsWith('/api/auth'); // 인증 API 체크
+            const isApiOrAuth = url.startsWith('/api') || url.startsWith('/auth');
             
-            // 루트(/)로 시작하고 정적 파일이 아니며, 인증 API가 아닌 경우에만 인터셉트
-            if (url.startsWith('/') && !isStaticAsset && !isAuthApi) {
-                const newUrl = API_BASE + url;
-                return originalFetch(newUrl, options);
-            }
-            
-            // 인증 API인 경우 쿠키 강제 포함
-            if (isAuthApi) {
+            // API나 Auth 요청은 Next.js Rewrite를 타도록 URL 변경 안 함 (쿠키 보존)
+            if (isApiOrAuth) {
+                // 쿠키 포함 강제 (옵션 병합)
                 const newOptions = { ...options, credentials: 'include' };
                 return originalFetch(url, newOptions);
+            }
+
+            // 그 외 루트(/)로 시작하고 정적 파일이 아닌 경우에만 인터셉트 (필요 시)
+            if (url.startsWith('/') && !isStaticAsset) {
+                // 하지만 이제 대부분의 API가 Rewrite를 타므로, 이 부분은 거의 안 쓰일 것임.
+                // 혹시 모를 누락된 경로만 Railway로 직접 보냄.
+                const newUrl = API_BASE + url;
+                return originalFetch(newUrl, options);
             }
         }
         return originalFetch(url, options);

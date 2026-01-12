@@ -49,9 +49,14 @@ const REMEMBER_KEY = 'chzzk_bot_remember';
 // ============================================
 function escapeHTML(str) {
     if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/`/g, '&#96;')
+        .replace(/\//g, '&#x2F;');
 }
 
 function formatNumber(num) {
@@ -1252,7 +1257,6 @@ function deleteCounter(index) {
 // Settings & Points Updates
 // ============================================
 function updateSettings(settings) {
-    console.log('[Settings] Received settings:', settings);
     if (!settings) return;
     
     // Bot Chat Toggle
