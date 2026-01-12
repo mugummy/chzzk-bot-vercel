@@ -186,3 +186,8 @@ input:checked + .slider:before {
     filter: grayscale(80%);
     transition: 0.3s ease;
 }
+\
+/* Small Toggle for Sidebar */
+.toggle-switch.small { width: 36px; height: 20px; }
+.toggle-switch.small .slider:before { height: 14px; width: 14px; left: 3px; bottom: 3px; }
+.toggle-switch.small input:checked + .slider:before { transform: translateX(16px); }\

@@ -8,6 +8,7 @@
 let socket = null;
 window.socket = null;
 let botConnected = false;
+let isChatEnabled = true; // 봇 채팅 활성화 여부
 let currentUser = null;
 let isLegacyMode = false;
 let isOAuthConfigured = false;
@@ -690,20 +691,35 @@ function updateUserProfile(user) {
 // ============================================
 function updateBotStatus(connected) {
     botConnected = connected;
+    updateBotStatusUI(isChatEnabled);
+}
+
+function updateBotStatusUI(enabled) {
+    isChatEnabled = enabled;
     
     const indicator = document.getElementById('bot-status-indicator');
     const text = document.getElementById('bot-status-text');
+    const toggle = document.getElementById('bot-chat-toggle');
     
-    if (indicator) {
-        indicator.classList.toggle('online', connected);
+    if (toggle) toggle.checked = enabled;
+    
+    if (!botConnected) {
+        if (indicator) indicator.className = 'status-indicator offline'; // 회색
+        if (text) text.textContent = '봇 미연결';
+        return;
     }
-    if (text) {
-        text.textContent = connected ? '봇 연결됨' : '봇 미연결';
+    
+    if (enabled) {
+        if (indicator) indicator.className = 'status-indicator online'; // 초록색
+        if (text) text.textContent = '봇 작동중';
+    } else {
+        if (indicator) indicator.className = 'status-indicator idle'; // 노란색 (CSS 추가 필요)
+        if (text) text.textContent = '봇 대기중';
     }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.style.display = connected ? 'flex' : 'none';
+        logoutBtn.style.display = botConnected ? 'flex' : 'none';
     }
 }
 
@@ -2983,11 +2999,28 @@ function initButtonListeners() {
 
     // Bot Chat Toggle
     safeAddListener('bot-chat-toggle', 'change', (e) => {
+        const isEnabled = e.target.checked;
+        
+        // 1. 설정 저장
         sendWebSocket({
             type: 'updateSettings',
-            data: { chatEnabled: e.target.checked }
+            data: { chatEnabled: isEnabled }
         });
-        showNotification(e.target.checked ? '봇 채팅이 활성화되었습니다' : '봇 채팅이 비활성화되었습니다', 'info');
+        
+        // 2. 채팅 알림 (입장/퇴장)
+        if (currentUser) {
+            const msg = isEnabled ? '🤖 봇이 활성화되었습니다!' : '👋 봇이 비활성화되었습니다.';
+            sendWebSocket({
+                type: 'command',
+                command: 'chat',
+                data: msg
+            });
+        }
+        
+        // 3. UI 상태 즉시 반영
+        updateBotStatusUI(isEnabled);
+        
+        showNotification(isEnabled ? '봇이 활성화되었습니다.' : '봇이 비활성화되었습니다.', isEnabled ? 'success' : 'warning');
     });
 
     // Commands

@@ -446,9 +446,14 @@ body {
     border-radius: 50%;
     background: var(--text-muted);
 }
-.status-indicator.online {
-    background: var(--success);
-    box-shadow: 0 0 10px var(--success);
+.status-indicator.offline {
+    background-color: #666;
+    box-shadow: none;
+}
+
+.status-indicator.idle {
+    background-color: #ffd93d;
+    box-shadow: 0 0 8px rgba(255, 217, 61, 0.6);
 }
 #bot-status-text {
     font-size: 13px;
