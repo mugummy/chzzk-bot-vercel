@@ -165,7 +165,7 @@ export default function DashboardPage() {
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
-            {activeTab === 'songs' && <SongTab onControl={(a) => send({type:'controlMusic', action: a})} />}
+            {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} />}
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'votes' && <VotePanel onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}

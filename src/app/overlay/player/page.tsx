@@ -3,32 +3,24 @@
 import { useEffect, useState, useRef } from 'react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, User, SkipForward } from 'lucide-react';
+import { Music, User, SkipForward, Disc, ListMusic } from 'lucide-react';
 
-/**
- * OverlayPlayer: OBS 방송 화면에 띄우는 신청곡 플레이어 컴포넌트
- */
 export default function OverlayPlayer() {
   const store = useBotStore();
   const currentSong = store.songs.current;
+  const queue = store.songs.queue;
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const playerRef = useRef<any>(null);
 
-  // 1. WebSocket & YouTube API 초기화
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (!token) return;
 
-    // WebSocket 연결 (대시보드와 동일한 서버 주소)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`wss://web-production-19eef.up.railway.app/?token=${token}`);
     
-    ws.onopen = () => {
-      console.log('[Player] Linked to System');
-      ws.send(JSON.stringify({ type: 'connect' }));
-    };
-
+    ws.onopen = () => ws.send(JSON.stringify({ type: 'connect' }));
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === 'songStateUpdate') store.updateSongs(data.payload);
@@ -36,7 +28,6 @@ export default function OverlayPlayer() {
 
     setSocket(ws);
 
-    // YouTube IFrame API 로드
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -49,7 +40,6 @@ export default function OverlayPlayer() {
     return () => ws.close();
   }, []);
 
-  // 2. 노래 변경 감지 시 재생
   useEffect(() => {
     if (currentSong && (window as any).YT && (window as any).YT.Player) {
       if (!playerRef.current) {
@@ -60,13 +50,9 @@ export default function OverlayPlayer() {
           playerVars: { 'autoplay': 1, 'controls': 0, 'disablekb': 1 },
           events: {
             'onStateChange': (event: any) => {
-              // 곡이 끝나면 서버에 다음곡 요청 (스킵 신호)
-              if (event.data === 0) {
-                if (socket) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
-              }
+              if (event.data === 0 && socket) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
             },
             'onError': () => {
-              // 재생 실패 시 자동으로 다음곡 스킵
               if (socket) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
             }
           }
@@ -77,56 +63,75 @@ export default function OverlayPlayer() {
     }
   }, [currentSong]);
 
-  if (!currentSong) return null;
+  if (!currentSong) return <div className="fixed bottom-10 left-10 p-6 bg-black/80 rounded-2xl text-white font-bold backdrop-blur-md border border-white/10 flex items-center gap-3"><Music className="animate-bounce" /> 대기 중인 노래가 없습니다.</div>;
 
   return (
-    <div className="fixed bottom-10 left-10 w-[450px] font-sans">
-      {/* Hidden Player */}
+    <div className="fixed bottom-10 left-10 flex gap-6 font-sans items-end">
       <div id="yt-player" className="hidden" />
 
-      {/* Visual UI: Glassmorphism Design */}
-      <AnimatePresence mode="wait">
-        <motion.div 
-          key={currentSong.videoId}
-          initial={{ opacity: 0, x: -50, scale: 0.9 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: -20, scale: 0.95 }}
-          className="bg-black/80 backdrop-blur-3xl border border-white/10 p-8 rounded-[2.5rem] shadow-2xl flex items-center gap-8 relative overflow-hidden"
-        >
-          {/* Progress Ring Effect */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent pointer-events-none" />
-          
-          <div className="relative shrink-0">
-            <img 
-              src={currentSong.thumbnail} 
-              className="w-24 h-24 rounded-2xl object-cover shadow-2xl ring-1 ring-white/20"
-              alt="Thumbnail"
-            />
-            <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-8 h-8 rounded-xl flex items-center justify-center text-black shadow-lg">
-              <Music size={16} fill="currentColor" />
+      {/* Main Player Card */}
+      <motion.div 
+        layout
+        className="w-[450px] bg-black/90 backdrop-blur-3xl border border-white/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-tr from-pink-500/10 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="relative">
+            <motion.div 
+              animate={{ rotate: 360 }} 
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className="w-48 h-48 rounded-full border-8 border-white/5 shadow-2xl overflow-hidden relative z-10"
+            >
+              <img src={currentSong.thumbnail} className="w-full h-full object-cover" alt="Cover" />
+              <div className="absolute inset-0 bg-black/20" />
+            </motion.div>
+            <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full z-0" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-black rounded-full border-2 border-white/10 z-20 flex items-center justify-center">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full" />
             </div>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-gray-500 font-black text-[10px] uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Now Playing
+          <div className="w-full">
+            <h2 className="text-2xl font-black text-white tracking-tight truncate mb-1">{currentSong.title}</h2>
+            <p className="text-emerald-400 font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2">
+              <User size={12} /> {currentSong.requester}
             </p>
-            <h2 className="text-xl font-black text-white tracking-tighter truncate mb-2 drop-shadow-md">
-              {currentSong.title}
-            </h2>
-            <div className="flex items-center gap-2 text-gray-400 font-bold text-xs bg-white/5 w-fit px-3 py-1.5 rounded-full">
-              <User size={12} className="text-emerald-500" />
-              <span>{currentSong.requester} 님의 신청곡</span>
-            </div>
           </div>
 
-          {/* Skip Visual (Optional) */}
-          <div className="absolute top-0 right-0 p-6 opacity-10">
-            <SkipForward size={60} />
+          {/* Progress Bar (Visual Only) */}
+          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }} 
+              animate={{ width: "100%" }} 
+              transition={{ duration: 180, ease: "linear" }} 
+              className="h-full bg-gradient-to-r from-pink-500 to-emerald-500" 
+            />
           </div>
+        </div>
+      </motion.div>
+
+      {/* Queue Sidebar */}
+      {queue.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+          className="w-64 bg-black/80 backdrop-blur-md border border-white/10 p-6 rounded-[2rem] shadow-xl flex flex-col gap-4"
+        >
+          <div className="flex items-center gap-2 text-gray-400 font-bold text-xs uppercase tracking-widest pb-2 border-b border-white/10">
+            <ListMusic size={14} /> Next Up
+          </div>
+          {queue.slice(0, 3).map((song, i) => (
+            <div key={i} className="flex items-center gap-3 opacity-80">
+              <span className="text-emerald-500 font-black text-sm">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-bold truncate">{song.title}</p>
+                <p className="text-[10px] text-gray-500">{song.requester}</p>
+              </div>
+            </div>
+          ))}
+          {queue.length > 3 && <p className="text-[10px] text-center text-gray-600">+{queue.length - 3} more</p>}
         </motion.div>
-      </AnimatePresence>
+      )}
     </div>
   );
 }
