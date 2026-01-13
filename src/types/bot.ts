@@ -1,5 +1,3 @@
-// chzzk-bot-v2/src/types/bot.ts - The Absolute Type Authority
-
 export interface BotSettings {
   chatEnabled: boolean;
   songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -28,6 +26,12 @@ export interface SongItem {
   requestedAt: number;
 }
 
+export interface Participant {
+  userIdHash: string;
+  nickname: string;
+  joinedAt: number;
+}
+
 export interface VoteOption {
   id: string;
   text: string;
@@ -52,20 +56,31 @@ export interface BotState {
     channelName: string;
     channelImageUrl: string;
   } | null;
-  channelInfo: any | null;
-  liveStatus: any | null;
+  channelInfo: {
+    channelId: string;
+    channelName: string;
+    channelImageUrl: string;
+    followerCount: number;
+  } | null;
+  liveStatus: {
+    liveTitle: string;
+    status: 'OPEN' | 'CLOSE';
+    concurrentUserCount: number;
+    category: string;
+  } | null;
   settings: BotSettings | null;
   commands: CommandItem[];
   counters: any[];
   macros: any[];
-  votes: VoteSession[]; // VoteSession 사용 보장
+  votes: VoteSession[];
   songs: {
     queue: SongItem[];
     current: SongItem | null;
+    isPlaying: boolean; // [추가] 재생 상태 필드
   };
   participation: {
-    queue: any[];
-    active: any[];
+    queue: Participant[];
+    active: Participant[];
     isActive: boolean;
     max: number;
     ranking: any[];
@@ -74,6 +89,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
-  points: { [userId: string]: any };
+  points: { [userIdHash: string]: { nickname: string; points: number; lastMessageTime: number } };
   chatHistory: any[];
 }
