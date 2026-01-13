@@ -10,10 +10,12 @@ export default function OverlayPlayer() {
   const currentSong = store.songs.current;
   const queue = store.songs.queue;
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isApiReady, setIsApiReady] = useState(false); // [수정] API 로드 완료 상태
+  const [isPlayerReady, setIsPlayerReady] = useState(false); // [수정] 플레이어 객체 준비 완료 상태
   const [needsInteraction, setNeedsInteraction] = useState(true);
   const playerRef = useRef<any>(null);
 
+  // 1. WebSocket 및 YouTube API 로드
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -24,79 +26,77 @@ export default function OverlayPlayer() {
     
     ws.onopen = () => {
       console.log('[Player] Connected');
-      ws.send(JSON.stringify({ type: 'connect' })); 
-      // [핵심] 연결 즉시 현재 상태 요청 (이어듣기)
-      ws.send(JSON.stringify({ type: 'requestData' }));
+      ws.send(JSON.stringify({ type: 'connect' }));
+      ws.send(JSON.stringify({ type: 'requestData' })); // [중요] 접속 즉시 데이터 요청
     };
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      if (data.type === 'songStateUpdate') {
-        store.updateSongs(data.payload);
-      }
-      // [핵심] 전체 데이터 수신 시에도 노래 상태 동기화
-      if (data.type === 'connectResult' || data.type === 'requestData') {
-        // 서버가 보내주는 songStateUpdate를 기다림 (main.ts에서 sendFullState로 보냄)
-      }
+      if (data.type === 'songStateUpdate') store.updateSongs(data.payload);
+      if (data.type === 'connectResult') store.updateSongs(data.payload || { queue: [], currentSong: null }); // 초기 데이터 동기화
     };
     setSocket(ws);
 
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-    (window as any).onYouTubeIframeAPIReady = () => setIsReady(true);
+    if (!(window as any).YT) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      (window as any).onYouTubeIframeAPIReady = () => setIsApiReady(true);
+    } else {
+      setIsApiReady(true);
+    }
 
     return () => ws.close();
   }, []);
 
-  // 재생 로직 (상태 복구 시 자동 재생)
+  // 2. 플레이어 초기화 및 곡 변경 로직
   useEffect(() => {
-    if (isReady && currentSong && (window as any).YT) {
-      if (!playerRef.current) {
-        playerRef.current = new (window as any).YT.Player('yt-player', {
-          height: '360',
-          width: '640',
-          videoId: currentSong.videoId,
-          playerVars: { 
-            'autoplay': 1, 
-            'controls': 0, 
-            'disablekb': 1,
-            'modestbranding': 1,
-            'rel': 0
+    if (!currentSong || !isApiReady) return;
+
+    if (!playerRef.current) {
+      // 플레이어 최초 생성
+      playerRef.current = new (window as any).YT.Player('yt-player', {
+        height: '360',
+        width: '640',
+        videoId: currentSong.videoId,
+        playerVars: { 
+          'autoplay': 1, 
+          'controls': 0, 
+          'disablekb': 1,
+          'modestbranding': 1,
+          'rel': 0
+        },
+        events: {
+          'onReady': (event: any) => {
+            setIsPlayerReady(true);
+            event.target.playVideo();
+            if (!needsInteraction) event.target.unMute();
           },
-          events: {
-            'onReady': (event: any) => {
-              event.target.playVideo();
-              // [중요] 사용자가 이미 클릭했다면 음소거 해제
-              if (!needsInteraction) event.target.unMute();
-            },
-            'onStateChange': (event: any) => {
-              if (event.data === (window as any).YT.PlayerState.ENDED) {
-                if (socket) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
-              }
-            },
-            'onError': () => {
-              if (socket) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
+          'onStateChange': (event: any) => {
+            if (event.data === (window as any).YT.PlayerState.ENDED) {
+              if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
             }
+          },
+          'onError': () => {
+            if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
           }
-        });
-      } else {
-        // 이미 플레이어가 있다면 곡만 변경
-        const currentId = playerRef.current.getVideoData()?.video_id;
-        if (currentId !== currentSong.videoId) {
-          playerRef.current.loadVideoById(currentSong.videoId);
         }
+      });
+    } else if (isPlayerReady && playerRef.current.loadVideoById) {
+      // [수정] 플레이어가 준비된 상태에서만 메서드 호출 (getVideoData 에러 방지)
+      const currentId = playerRef.current.getVideoData?.()?.video_id;
+      if (currentId !== currentSong.videoId) {
+        playerRef.current.loadVideoById(currentSong.videoId);
       }
     }
-  }, [isReady, currentSong, needsInteraction]);
+  }, [currentSong, isApiReady, isPlayerReady, needsInteraction]); // 의존성 추가
 
   const handleInteraction = () => {
     setNeedsInteraction(false);
-    if (playerRef.current) {
-      playerRef.current.playVideo();
+    if (playerRef.current && typeof playerRef.current.unMute === 'function') {
       playerRef.current.unMute();
+      playerRef.current.playVideo();
     }
   };
 
@@ -108,7 +108,6 @@ export default function OverlayPlayer() {
 
   return (
     <div className="h-screen bg-[#050505] text-white font-sans p-10 overflow-hidden relative">
-      {/* Interaction Overlay */}
       <AnimatePresence>
         {needsInteraction && (
           <motion.div 

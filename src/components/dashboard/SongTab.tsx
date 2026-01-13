@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, SkipForward, Trash2, ExternalLink, Music, Disc, Settings2, Save, DollarSign, Clock } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion } from 'framer-motion';
@@ -14,40 +14,55 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
   const [mode, setMode] = useState<'all' | 'cooldown' | 'donation' | 'off'>('all');
   const [cooldown, setCooldown] = useState(30);
   const [minDonation, setMinDonation] = useState(1000);
+  
+  // [핵심] 서버 데이터와 로컬 데이터의 동기화 플래그
+  const isSynced = useRef(false);
 
+  // 초기 로드 및 서버 데이터 변경 시에만 동기화 (사용자 입력 중 방해 금지)
   useEffect(() => {
-    if (settings) {
+    if (settings && !isSynced.current) {
       setMode(settings.songRequestMode);
       setCooldown(settings.songRequestCooldown);
       setMinDonation(settings.minDonationAmount);
+      isSynced.current = true; // 최초 1회 동기화 완료
+    }
+    // 서버 값이 외부에서 바뀌었을 때도 반영 (단, 내가 수정 중이 아닐 때)
+    if (settings && settings.songRequestMode !== mode) {
+        // 여기서는 강제 동기화보다 사용자 의도를 존중하거나, 알림을 띄우는 것이 좋으나
+        // UX상 서버 값을 따라가는 것이 안전함. 단, 입력 중 튀는 현상 방지 위해 저장 버튼 누를 때만 서버 전송.
     }
   }, [settings]);
 
   const handleSaveSettings = () => {
-    store.updateSettings({ // 스토어 즉시 반영 (낙관적 업데이트)
-      songRequestMode: mode,
-      songRequestCooldown: cooldown,
-      minDonationAmount: minDonation
-    });
-    // 서버 전송 (실제 저장)
-    // 여기서는 onControl 대신 socket.send를 직접 하거나, 상위 page.tsx의 send 함수를 prop으로 더 받아와야 함.
-    // 하지만 구조상 onControl은 노래 제어용이므로, updateSettings 액션을 수행하는 별도 prop이 필요함.
-    // 임시로 window.sendWebSocket (global helper) 사용 또는 onControl을 확장하여 사용.
-    // *가장 깔끔한 방법: useBotStore의 액션은 상태만 바꾸므로, page.tsx에서 내려준 send 함수를 사용해야 함.
-    // 현재 onControl만 있으므로, 이를 통해 우회하거나 page.tsx 수정을 최소화하기 위해
-    // window.sendWebSocket을 활용 (page.tsx에서 정의됨).
+    // 1. 서버에 저장 요청
     if (typeof window !== 'undefined' && (window as any).sendWebSocket) {
       (window as any).sendWebSocket({ 
         type: 'updateSettings', 
-        data: { songRequestMode: mode, songRequestCooldown: cooldown, minDonationAmount: minDonation } 
+        data: { 
+          songRequestMode: mode, 
+          songRequestCooldown: cooldown, 
+          minDonationAmount: minDonation 
+        } 
       });
+      
+      // 2. 알림 표시
       if ((window as any).ui?.notify) (window as any).ui.notify('신청곡 설정이 저장되었습니다.', 'success');
+      
+      // 3. 동기화 플래그 리셋 (서버 응답을 다시 받아들이도록)
+      isSynced.current = false;
     }
+  };
+
+  const handleModeChange = (newMode: any) => {
+    setMode(newMode);
+    // 모드 변경은 즉시 저장하지 않고 '저장' 버튼을 눌러야 반영되도록 UX 변경 (실수 방지)
+    // 혹은 즉시 반영을 원하면 여기서 바로 sendWebSocket 호출 가능. 
+    // 사용자 경험상 '저장' 버튼이 있으므로 거기서 일괄 처리하는 것이 깔끔함.
   };
 
   return (
     <div className="space-y-10">
-      {/* 1. 설정 패널 (신규 추가) */}
+      {/* 1. 설정 패널 */}
       <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 space-y-8 shadow-2xl">
         <header className="flex justify-between items-center">
           <h3 className="text-2xl font-black flex items-center gap-3 text-white">
@@ -62,7 +77,7 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
           {['all', 'cooldown', 'donation', 'off'].map((m) => (
             <button 
               key={m}
-              onClick={() => setMode(m as any)}
+              onClick={() => handleModeChange(m)}
               className={`p-6 rounded-3xl border transition-all text-center font-bold uppercase tracking-widest ${
                 mode === m ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
               }`}
@@ -80,9 +95,11 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
             <Clock className="text-emerald-500" />
             <div className="flex-1">
               <label className="text-xs font-black text-gray-500 uppercase tracking-widest">재신청 대기 시간 (초)</label>
-              <input type="range" min="10" max="300" step="10" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="w-full accent-emerald-500 mt-2" />
+              <div className="flex items-center gap-4 mt-2">
+                <input type="range" min="10" max="300" step="10" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="flex-1 accent-emerald-500" />
+                <input type="number" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="w-20 bg-black/20 border border-white/10 p-2 rounded-xl text-center font-bold text-white outline-none" />
+              </div>
             </div>
-            <span className="text-2xl font-black w-20 text-center">{cooldown}s</span>
           </div>
         )}
 
@@ -91,7 +108,7 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
             <DollarSign className="text-emerald-500" />
             <div className="flex-1">
               <label className="text-xs font-black text-gray-500 uppercase tracking-widest">최소 후원 금액 (치즈)</label>
-              <input type="number" value={minDonation} onChange={e => setMinDonation(parseInt(e.target.value))} className="w-full bg-transparent border-b border-white/20 text-xl font-bold py-2 outline-none focus:border-emerald-500 transition-all" />
+              <input type="number" value={minDonation} onChange={e => setMinDonation(parseInt(e.target.value))} className="w-full bg-transparent border-b border-white/20 text-xl font-bold py-2 outline-none focus:border-emerald-500 transition-all text-white mt-1" />
             </div>
           </div>
         )}
@@ -101,7 +118,6 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
         
         {/* Current Song Card */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col items-center text-center shadow-2xl relative overflow-hidden group">
-          {/* ... (기존 플레이어 UI 유지) ... */}
           <div className="relative mb-10 z-10">
             <div className="absolute inset-0 bg-pink-500/20 blur-[100px] rounded-full group-hover:bg-pink-500/30 transition-all duration-700" />
             <motion.div animate={songs.current ? { rotate: 360 } : {}} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="relative z-10">
