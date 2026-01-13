@@ -74,78 +74,53 @@ export default function DashboardPage() {
           (window as any).ui.notify(`${winPlayer.nickname}님이 당첨되었습니다!`, 'success');
         }
         break;
+      case 'playerControl':
+        // 대시보드 UI에서도 재생/멈춤 상태를 알 수 있도록 처리 가능 (필요 시)
+        break;
     }
   }, [winner]);
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
-    
-    console.log('[WS] Connecting...');
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
-    
     ws.onopen = () => {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
     };
-
-    ws.onmessage = (e) => {
-      try { handleIncomingData(JSON.parse(e.data)); } catch (err) {}
-    };
-
+    ws.onmessage = (e) => { try { handleIncomingData(JSON.parse(e.data)); } catch (err) {} };
     ws.onclose = () => {
       useBotStore.getState().setBotStatus(false, true);
       socketRef.current = null;
       setTimeout(() => connectWS(token), 3000);
     };
-
     setSocket(ws);
   }, [handleIncomingData]);
 
   const send = useCallback((msg: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(msg));
-      if (msg.type === 'toggleCommand') {
-        const enabled = msg.data.enabled;
-        if (typeof window !== 'undefined' && (window as any).ui?.notify) (window as any).ui.notify(enabled ? '명령어가 활성화되었습니다.' : '명령어가 비활성화되었습니다.', 'info');
-      }
     }
   }, []);
 
-  const handleToggleChat = (enabled: boolean) => {
-    send({ type: 'updateSettings', data: { chatEnabled: enabled } });
-    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
-      (window as any).ui.notify(enabled ? '봇 채팅 연동이 켜졌습니다.' : '봇 채팅 연동이 꺼졌습니다.', enabled ? 'success' : 'info');
-    }
-  };
+  // [중요] 윈도우 전역 헬퍼에 send 함수를 바인딩하여 SongTab 등에서 접근 가능하게 함
+  useEffect(() => {
+    (window as any).sendWebSocket = send;
+  }, [send]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // [핵심 수정] URL 파라미터 확인을 가장 먼저 수행하여 토큰 저장 보장
     const params = new URLSearchParams(window.location.search);
     const sessionFromUrl = params.get('session');
-    
     if (sessionFromUrl) {
-      console.log('[Auth] New session detected from URL:', sessionFromUrl);
       localStorage.setItem('chzzk_session_token', sessionFromUrl);
-      // URL 클린업
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
-    // 저장된 토큰 확인
     const token = localStorage.getItem('chzzk_session_token');
+    if (!token) { window.location.href = '/'; return; }
     
-    if (!token) {
-      console.warn('[Auth] No token found, redirecting to landing page.');
-      window.location.href = '/';
-      return;
-    }
-    
-    // 토큰이 있으면 즉시 연결 시도
     fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { 
       headers: { 'Authorization': `Bearer ${token}` } 
     })
@@ -155,76 +130,30 @@ export default function DashboardPage() {
         store.setAuth(data.user);
         connectWS(token);
       } else {
-        console.error('[Auth] Session invalid, clearing token.');
         localStorage.removeItem('chzzk_session_token');
         window.location.href = '/';
       }
     })
-    .catch(() => {
-      setAuthError('서버 통신 장애가 발생했습니다.');
-    });
+    .catch(() => setAuthError('서버 통신 장애'));
+    
+    return () => { if (socketRef.current) socketRef.current.close(); };
+  }, [connectWS]);
 
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.onclose = null;
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, []); // 의존성 배열 비움 (최초 1회 실행 보장)
-
-  if (authError) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6 text-center">
-        <AlertCircle className="text-red-500 animate-bounce" size={64} />
-        <h2 className="text-3xl font-black text-white">{authError}</h2>
-        <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-emerald-500 transition-all">다시 시도</button>
-      </div>
-    );
-  }
-
-  if (isLoading && !store.currentUser) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <RefreshCw className="text-pink-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot Data...</p>
-      </div>
-    );
-  }
+  if (isLoading && !store.currentUser) return <div className="h-screen bg-black flex items-center justify-center"><Activity className="text-emerald-500 animate-spin" size={48} /></div>;
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      <AnimatePresence>
-        {store.isReconnecting && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
-            <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AnimatePresence>{store.isReconnecting && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black uppercase animate-pulse italic">Reconnecting...</p></motion.div>}</AnimatePresence>
 
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20">
+          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl">
             <Zap className="text-white" size={28} fill="currentColor" />
           </div>
           {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
         </div>
 
-        <div className="px-6 py-4">
-          <div className={`bg-white/5 p-5 rounded-[2rem] border border-white/5 transition-all ${!(store.settings?.chatEnabled) ? 'opacity-50' : ''}`}>
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-red-500'}`} />
-                {isSidebarOpen && <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>}
-              </div>
-              <Toggle checked={store.settings?.chatEnabled ?? true} onChange={handleToggleChat} />
-            </div>
-            {isSidebarOpen && <p className="text-[11px] font-black text-gray-400 uppercase tracking-tight">{store.settings?.chatEnabled ? 'Chat Active' : 'Chat Paused'}</p>}
-          </div>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-4 space-y-2 mt-8">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
@@ -236,8 +165,8 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300 group">
-            <LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300">
+            <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
       </aside>
@@ -245,10 +174,10 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-pink-500/20 transition-all duration-500">
-            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-pink-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl">
+            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
             <div>
-              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
+              <p className="text-white font-black text-2xl mb-2 leading-none">{store.currentUser?.channelName}</p>
               <div className="flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
                 <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>
@@ -258,11 +187,12 @@ export default function DashboardPage() {
         </header>
 
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
-            {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} />}
+            {/* [수정] onSend 프롭을 확실하게 전달하여 설정 저장을 보장함 */}
+            {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} onSend={send} />}
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'votes' && <VotePanel onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}
@@ -279,8 +209,8 @@ export default function DashboardPage() {
 function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
   return (
-    <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors duration-300`}>{icon}</span>
+    <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+      <span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>
       {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
     </button>
   );
