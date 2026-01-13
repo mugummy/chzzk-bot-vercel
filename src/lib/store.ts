@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
 
+/**
+ * BotStore: 애플리케이션의 모든 전역 상태를 통합 관리합니다.
+ */
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
   setBotStatus: (connected: boolean, reconnecting?: boolean) => void;
@@ -18,6 +21,7 @@ interface BotStore extends BotState {
 }
 
 export const useBotStore = create<BotStore>((set) => ({
+  // States (BotState 상속)
   isConnected: false,
   isReconnecting: false,
   currentUser: null,
@@ -31,9 +35,10 @@ export const useBotStore = create<BotStore>((set) => ({
   songs: { queue: [], current: null },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
-  points: {},
+  points: {}, // 초기값 보장
   chatHistory: [],
 
+  // Actions
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),

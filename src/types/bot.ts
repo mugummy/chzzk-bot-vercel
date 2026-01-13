@@ -1,3 +1,5 @@
+// chzzk-bot-v2/src/types/bot.ts - Expert Type Standard
+
 export interface BotSettings {
   chatEnabled: boolean;
   songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -88,6 +90,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
-  points: { [userId: string]: any };
+  points: { [userIdHash: string]: { nickname: string; points: number; lastMessageTime: number } }; // 포인트 타입 명시
   chatHistory: any[];
 }
