@@ -236,12 +236,24 @@ window.updatePreview = (srcId, preId) => {
     const src = document.getElementById(srcId);
     const pre = document.getElementById(preId);
     if (!src || !pre) return;
-    const map = { '/user': '무거미', '/uptime': '02:15:30', '/viewer': '120', '/random': '결과A', '/since': '365일', '/count': '1' };
+    
+    const map = { 
+        '/user': '무거미', 
+        '/uptime': '02:15:30', 
+        '/viewer': '120', 
+        '/random': '결과A', 
+        '/since': '365일', 
+        '/count': '1',
+        '{user}': '무거미'
+    };
+    
     let val = src.value || '미리보기가 표시됩니다.';
+    
+    // 정규식 대신 안전한 문자열 치환 사용
     Object.keys(map).forEach(key => {
-        const regex = new RegExp(key.replace(/[.*+?^${}()|[\\\]/g, '\\$&'), 'g');
-        val = val.replace(regex, `<span style="color:#00ff94; font-weight:bold">${map[key]}</span>`);
+        val = val.split(key).join(`<span style="color:#00ff94; font-weight:bold">${map[key]}</span>`);
     });
+    
     pre.innerHTML = `봇: ${val}`;
 };
 
@@ -285,11 +297,16 @@ function syncGreet(p) {
 async function main() {
     await initAuth();
     initWebSocket();
+    // Mouse Spotlight Effect
     document.addEventListener('mousemove', (e) => {
-        document.querySelectorAll('.card').forEach(c => {
-            const r = c.getBoundingClientRect();
-            c.style.setProperty('--mouse-x', `${e.clientX - r.left}px`);
-            c.style.setProperty('--mouse-y', `${e.clientY - r.top}px`);
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
         });
     });
     document.getElementById('bot-chat-toggle')?.addEventListener('change', (e) => sendWebSocket({ type: 'updateSettings', data: { chatEnabled: e.target.checked } }));
