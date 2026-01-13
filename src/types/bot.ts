@@ -1,4 +1,4 @@
-// chzzk-bot-v2/src/types/bot.ts - Expert Global Standard
+// chzzk-bot-v2/src/types/bot.ts - Expert Enterprise Standard
 
 export interface BotSettings {
   chatEnabled: boolean;
@@ -36,18 +36,8 @@ export interface BotState {
     channelName: string;
     channelImageUrl: string;
   } | null;
-  channelInfo: {
-    channelId: string;
-    channelName: string;
-    channelImageUrl: string;
-    followerCount: number;
-  } | null;
-  liveStatus: {
-    liveTitle: string;
-    status: 'OPEN' | 'CLOSE';
-    concurrentUserCount: number;
-    category: string;
-  } | null;
+  channelInfo: any | null;
+  liveStatus: any | null;
   settings: BotSettings | null;
   commands: CommandItem[];
   counters: any[];
@@ -68,6 +58,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
-  points: { [userIdHash: string]: { nickname: string; points: number; lastMessageTime: number } };
+  points: { [userId: string]: { nickname: string; points: number; lastMessageTime: number } };
   chatHistory: any[];
 }

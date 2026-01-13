@@ -102,7 +102,9 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const token = localStorage.getItem('chzzk_session_token');
+    
     if (!token) {
       window.location.href = '/';
       return;
@@ -121,9 +123,7 @@ export default function DashboardPage() {
       window.location.href = '/';
     });
 
-    return () => {
-      if (socket) socket.close();
-    };
+    return () => { if (socket) socket.close(); };
   }, [connectWS]);
 
   if (isLoading && !store.currentUser) {
@@ -230,7 +230,7 @@ function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
   return (
     <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>
+      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors`}>{icon}</span>
       {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
     </button>
   );
