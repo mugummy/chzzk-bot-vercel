@@ -1,33 +1,42 @@
-// dashboard.js - Final Expert Implementation (Stabilized)
+// dashboard.js - Comprehensive Expert Implementation (Final)
 
 let socket = null;
 let botConnected = false;
+let isChatEnabled = true;
 let currentUser = null;
 const SESSION_KEY = 'chzzk_session_token';
 
+// Global Storage
+window.dashboardData = { commands: [], macros: [], counters: [] };
+
 const ui = {
-    esc: (s) => !s ? '' : String(s).replace(/[&<>"'`\/]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;', '`': '&#96;', '/': '&#x2F;' }[m])),
+    esc: (s) => !s ? '' : String(s).replace(/[&<"'`\/]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;', '`': '&#96;', '/': '&#x2F;' }[m])),
     notify: (msg, type = 'info') => {
         const c = document.getElementById('notification-container');
         if (!c) return;
         const n = document.createElement('div');
         n.className = `notification ${type} show`;
-        n.innerHTML = `<span>${msg}</span>`;
+        n.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> <span>${msg}</span>`;
         c.appendChild(n);
-        setTimeout(() => { n.classList.replace('show', 'hide'); setTimeout(() => n.remove(), 300); }, 3000);
+        setTimeout(() => { n.classList.replace('show', 'hide'); setTimeout(() => n.remove(), 300); }, 4000);
+    },
+    modal: (id, show = true) => {
+        const m = document.getElementById(id);
+        if (m) show ? m.classList.add('show') : m.classList.remove('show');
     }
 };
 
-// ============================================
+// ============================================ 
 // Auth & Connection
-// ============================================
+// ============================================ 
 async function initAuth() {
     const params = new URLSearchParams(window.location.search);
     const session = params.get('session');
     if (session) {
         localStorage.setItem(SESSION_KEY, session);
         window.history.replaceState({}, document.title, window.location.pathname);
-        await new Promise(r => setTimeout(r, 1000)); // 서버 DB 싱크 대기
+        ui.notify('성공적으로 로그인되었습니다.', 'success');
+        await new Promise(r => setTimeout(r, 1000));
     }
     const token = localStorage.getItem(SESSION_KEY);
     if (!token) return (window.location.href = '/');
@@ -37,7 +46,7 @@ async function initAuth() {
         const data = await res.json();
         if (data.authenticated) {
             currentUser = data.user;
-            renderProfile(currentUser);
+            renderUserBasics(currentUser);
         } else window.location.href = '/';
     } catch (e) { window.location.href = '/'; }
 }
@@ -49,9 +58,8 @@ function initWebSocket() {
     window.socket = socket;
 
     socket.onopen = () => {
-        console.log('[WS] Connected');
+        console.log('[WS] Connection Active');
         sendWebSocket({ type: 'connect', data: { channel: currentUser?.channelId } });
-        // 접속 즉시 모든 데이터 요청
         sendWebSocket({ type: 'requestData' });
     };
 
@@ -72,50 +80,52 @@ function handleMessage(data) {
     switch (data.type) {
         case 'connectResult': 
             botConnected = data.success;
-            if(data.channelInfo) renderStreamerInfo(data.channelInfo, data.liveStatus);
+            updateBotStatusUI(botConnected, true);
+            if(data.channelInfo) renderStreamerStatus(data.channelInfo, data.liveStatus);
             break;
         case 'settingsUpdate': syncSettings(data.payload); break;
         case 'overlaySettingsUpdate': syncOverlay(data.payload); break;
-        case 'commandsUpdate': renderList('commands-list', data.payload, 'deleteCommand'); break;
-        case 'macrosUpdate': renderList('macros-list', data.payload, 'deleteMacro'); break;
-        case 'countersUpdate': renderList('counters-list', data.payload, 'deleteCounter'); break;
-        case 'songStateUpdate': renderSongState(data.payload); break;
+        case 'commandsUpdate': window.dashboardData.commands = data.payload; renderList('commands-list', data.payload, 'deleteCommand', 'editCommand'); break;
+        case 'macrosUpdate': window.dashboardData.macros = data.payload; renderList('macros-list', data.payload, 'deleteMacro', 'editMacro'); break;
+        case 'countersUpdate': window.dashboardData.counters = data.payload; renderList('counters-list', data.payload, 'deleteCounter', 'editCounter'); break;
+        case 'songStateUpdate': renderSongUI(data.payload); break;
         case 'participationStateUpdate': renderParticipation(data.payload); break;
         case 'newChat': renderChatLine(data.payload); break;
+        case 'error': ui.notify(data.message, 'error'); break;
     }
 }
 
-// ============================================
-// UI Renderers
-// ============================================
-function renderProfile(user) {
+// ============================================ 
+// Renderers
+// ============================================ 
+function renderUserBasics(user) {
+    document.querySelectorAll('#sidebar-avatar, #header-avatar').forEach(el => {
+        if(user.channelImageUrl) el.style.backgroundImage = `url(${user.channelImageUrl})`;
+    });
     document.getElementById('sidebar-name').textContent = user.channelName;
     document.getElementById('header-username').textContent = user.channelName;
     document.getElementById('header-profile').style.display = 'flex';
     document.getElementById('sidebar-profile').style.display = 'flex';
-    if (user.channelImageUrl) {
-        document.getElementById('sidebar-avatar').style.backgroundImage = `url(${user.channelImageUrl})`;
-        document.getElementById('header-avatar').style.backgroundImage = `url(${user.channelImageUrl})`;
-    }
 }
 
-function renderStreamerInfo(info, live) {
+function renderStreamerStatus(info, live) {
     document.getElementById('channel-name').textContent = info.channelName;
-    document.getElementById('follower-count').innerHTML = `<i class="fas fa-heart"></i><span>${info.followerCount?.toLocaleString()} 팔로워</span>`;
+    document.getElementById('follower-count').innerHTML = `<i class="fas fa-heart"></i><span> ${info.followerCount?.toLocaleString()} 팔로워</span>`;
     if (info.channelImageUrl) document.getElementById('channel-avatar').style.backgroundImage = `url(${info.channelImageUrl})`;
+    
     if (live) {
         document.getElementById('stream-title').textContent = live.liveTitle || '방송 제목 없음';
         document.getElementById('viewer-count').textContent = `${live.concurrentUserCount?.toLocaleString() || 0}명`;
-        const badge = document.querySelector('.status-badge');
+        const badge = document.querySelector('#stream-status-box .status-badge');
         if (badge) {
             badge.className = `status-badge ${live.status === 'OPEN' ? 'live' : 'offline'}`;
             badge.textContent = live.status === 'OPEN' ? 'LIVE' : 'OFFLINE';
         }
-        document.getElementById('stream-category').innerHTML = `<i class="fas fa-gamepad"></i><span>${live.category || '-'}</span>`;
+        document.getElementById('stream-category').innerHTML = `<i class="fas fa-gamepad"></i><span> ${live.category || '-'}</span>`;
     }
 }
 
-function renderList(id, list, deleteFn) {
+function renderList(id, list, deleteFn, editFn) {
     const el = document.getElementById(id);
     if (!el) return;
     el.innerHTML = list.length ? list.map(item => `
@@ -125,28 +135,40 @@ function renderList(id, list, deleteFn) {
                 <span>${ui.esc(item.response || item.message)}</span>
             </div>
             <div class="item-actions">
+                <div class="toggle-switch small"><input type="checkbox" ${item.enabled ? 'checked' : ''}><span class="slider round"></span></div>
+                <button class="btn-icon" onclick="window.${editFn}('${item.id || item.trigger}')"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon btn-danger" onclick="window.${deleteFn}('${item.id || item.trigger}')"><i class="fas fa-trash"></i></button>
             </div>
-        </div>`).join('') : '<div class="empty-state">데이터가 없습니다.</div>';
+        </div>`).join('') : '<div class="empty-state">등록된 정보가 없습니다.</div>';
 }
 
-function renderSongState(state) {
+function renderSongUI(state) {
     const list = document.getElementById('song-queue-list');
-    if (list) list.innerHTML = state.queue.length ? state.queue.map(s => `<div class="queue-item"><span>${ui.esc(s.title)}</span></div>`).join('') : '<div class="empty-state">대기열이 비어있습니다.</div>';
-    const cur = document.getElementById('current-song');
-    if (cur) cur.textContent = state.currentSong ? state.currentSong.title : '재생 중인 곡 없음';
+    if (list) list.innerHTML = state.queue.length ? state.queue.map(s => `
+        <div class="queue-item">
+            <img src="${s.thumbnail || ''}" style="width:40px; height:40px; border-radius:4px;">
+            <div class="q-info"><b>${ui.esc(s.title)}</b><br><small>신청: ${ui.esc(s.requester)}</small></div>
+        </div>`).join('') : '<div class="empty-state">대기열이 비어있습니다.</div>';
+    
+    const cur = state.currentSong;
+    if (cur) {
+        const thumb = document.getElementById('current-song-thumbnail');
+        if (thumb) thumb.src = cur.thumbnail || '';
+        document.getElementById('current-song').textContent = cur.title;
+    }
     document.getElementById('queue-count').textContent = state.queue.length;
-    document.getElementById('stat-songs').textContent = state.queue.length;
+    const statSongs = document.getElementById('stat-songs');
+    if (statSongs) statSongs.textContent = state.queue.length;
 }
 
 function renderParticipation(state) {
     document.getElementById('waiting-count').textContent = state.queue.length;
     document.getElementById('active-count').textContent = state.participants.length;
     document.getElementById('stat-participants').textContent = state.participants.length;
-    const wait = document.getElementById('waiting-queue');
-    if (wait) wait.innerHTML = state.queue.map(p => `<div class="participant-item"><span>${ui.esc(p.nickname)}</span><button class="btn-sm" onclick="sendWebSocket({type:'moveToParticipants',data:{userIdHash:'${p.userIdHash}'}})">승인</button></div>`).join('');
-    const active = document.getElementById('active-participants');
-    if (active) active.innerHTML = state.participants.map(p => `<div class="participant-item">${ui.esc(p.nickname)}</div>`).join('');
+    const waitList = document.getElementById('waiting-queue');
+    if (waitList) waitList.innerHTML = state.queue.map(p => `<div class="participant-item"><span>${ui.esc(p.nickname)}</span><button class="btn-sm btn-primary" onclick="window.approveParticipant('${p.userIdHash}')">승인</button></div>`).join('');
+    const activeList = document.getElementById('active-participants');
+    if (activeList) activeList.innerHTML = state.participants.map(p => `<div class="participant-item"><i class="fas fa-user-check"></i> ${ui.esc(p.nickname)}</div>`).join('');
 }
 
 function renderChatLine(chat) {
@@ -160,14 +182,47 @@ function renderChatLine(chat) {
     if (box.children.length > 50) box.removeChild(box.firstChild);
 }
 
-// ============================================
+// ============================================ 
 // Actions
-// ============================================
+// ============================================ 
+window.insertFunction = (targetId, func) => {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    const start = el.selectionStart;
+    el.value = el.value.substring(0, start) + func + el.value.substring(el.selectionEnd);
+    el.focus();
+    window.updatePreview(targetId, targetId.includes('command') ? 'cmd-preview' : targetId.includes('macro') ? 'macro-preview' : 'counter-preview');
+};
+
+window.updatePreview = (srcId, preId) => {
+    const src = document.getElementById(srcId);
+    const pre = document.getElementById(preId);
+    if (!src || !pre) return;
+    const map = { '{user}': '무거미', '{uptime}': '02:15:30', '{viewers}': '120', '{game}': '저챗', '{count}': '1', '{date}': '2026-01-13', '{time}': '14:00:00', '{since}': '365일' };
+    let val = src.value || '미리보기가 표시됩니다.';
+    Object.keys(map).forEach(key => {
+        const regex = new RegExp(key.replace(/[.*+?^${}()|[\\]/g, '\\$&'), 'g');
+        val = val.replace(regex, `<span style="color:#00ff94; font-weight:bold">${map[key]}</span>`);
+    });
+    pre.innerHTML = val;
+};
+
 window.addCommand = () => {
     const t = document.getElementById('new-command-trigger').value.trim();
     const r = document.getElementById('new-command-response').value.trim();
     if (t && r) { sendWebSocket({ type: 'addCommand', data: { trigger: t, response: r } }); window.hideModal('add-command-modal'); }
 };
+
+window.editCommand = (trigger) => {
+    const item = window.dashboardData.commands.find(c => (c.triggers && c.triggers[0] === trigger) || c.trigger === trigger);
+    if (item) {
+        document.getElementById('new-command-trigger').value = item.triggers ? item.triggers[0] : item.trigger;
+        document.getElementById('new-command-response').value = item.response;
+        window.showModal('add-command-modal');
+        window.updatePreview('new-command-response', 'cmd-preview');
+    }
+};
+
 window.deleteCommand = (t) => confirm('삭제하시겠습니까?') && sendWebSocket({ type: 'removeCommand', data: { trigger: t } });
 
 window.addMacro = () => {
@@ -175,6 +230,17 @@ window.addMacro = () => {
     const m = document.getElementById('new-macro-message').value.trim();
     if (m) { sendWebSocket({ type: 'addMacro', data: { interval: parseInt(i), message: m } }); window.hideModal('add-macro-modal'); }
 };
+
+window.editMacro = (id) => {
+    const item = window.dashboardData.macros.find(m => m.id === id);
+    if (item) {
+        document.getElementById('new-macro-interval').value = item.interval;
+        document.getElementById('new-macro-message').value = item.message;
+        window.showModal('add-macro-modal');
+        window.updatePreview('new-macro-message', 'macro-preview');
+    }
+};
+
 window.deleteMacro = (id) => confirm('삭제할까요?') && sendWebSocket({ type: 'removeMacro', data: { id } });
 
 window.addCounter = () => {
@@ -182,6 +248,17 @@ window.addCounter = () => {
     const r = document.getElementById('new-counter-response').value.trim();
     if (t && r) { sendWebSocket({ type: 'addCounter', data: { trigger: t, response: r } }); window.hideModal('add-counter-modal'); }
 };
+
+window.editCounter = (trigger) => {
+    const item = window.dashboardData.counters.find(c => c.trigger === trigger);
+    if (item) {
+        document.getElementById('new-counter-trigger').value = item.trigger;
+        document.getElementById('new-counter-response').value = item.response;
+        window.showModal('add-counter-modal');
+        window.updatePreview('new-counter-response', 'counter-preview');
+    }
+};
+
 window.deleteCounter = (t) => confirm('삭제할까요?') && sendWebSocket({ type: 'removeCounter', data: { trigger: t } });
 
 window.saveSongSettings = () => {
@@ -189,7 +266,7 @@ window.saveSongSettings = () => {
     const cooldown = document.getElementById('song-cooldown').value;
     const amount = document.getElementById('song-min-donation').value;
     sendWebSocket({ type: 'updateSettings', data: { songRequestMode: mode, songRequestCooldown: parseInt(cooldown), minDonationAmount: parseInt(amount) } });
-    ui.notify('설정이 저장되었습니다.', 'success');
+    ui.notify('설정 저장 완료', 'success');
 };
 
 window.savePointsSettings = () => {
@@ -197,28 +274,43 @@ window.savePointsSettings = () => {
     const cooldown = document.getElementById('points-cooldown').value;
     const name = document.getElementById('points-unit-name').value;
     sendWebSocket({ type: 'updateSettings', data: { pointsPerChat: parseInt(perChat), pointsCooldown: parseInt(cooldown), pointsName: name } });
-    ui.notify('포인트 설정이 저장되었습니다.', 'success');
+    ui.notify('포인트 설정 저장 완료', 'success');
 };
 
 window.saveParticipationSettings = () => {
     const cmd = document.getElementById('participation-command').value;
-    const max = document.getElementById('max-participants').value;
+    const max = document.getElementById('max-participants-slider').value;
     sendWebSocket({ type: 'updateSettings', data: { participationCommand: cmd } });
     sendWebSocket({ type: 'updateMaxParticipants', payload: { count: parseInt(max) } });
-    ui.notify('참여 설정이 저장되었습니다.', 'success');
+    ui.notify('참여 설정 저장 완료', 'success');
 };
 
 window.saveOverlaySettings = () => {
-    const s = { backgroundOpacity: parseInt(document.getElementById('overlay-opacity').value), autoHideDelay: parseInt(document.getElementById('overlay-auto-hide').value) * 1000 };
+    const s = { backgroundOpacity: parseInt(document.getElementById('overlay-opacity').value), autoHideDelay: parseInt(document.getElementById('overlay-auto-hide').value) * 1000, themeColor: document.getElementById('overlay-color').value };
     sendWebSocket({ type: 'updateOverlaySettings', payload: s });
-    ui.notify('오버레이 설정이 저장되었습니다.', 'success');
+    ui.notify('오버레이 설정 저장 완료', 'success');
 };
 
-// ... (Sync Helpers)
+window.toggleParticipation = () => sendWebSocket({ type: 'toggleParticipation' });
+window.clearParticipants = () => confirm('초기화할까요?') && sendWebSocket({ type: 'clearParticipants' });
+window.approveParticipant = (id) => sendWebSocket({ type: 'moveToParticipants', data: { userIdHash: id } });
+window.openPlayer = () => window.open('/player.html', '_blank', 'width=850,height=650');
+window.handleLogout = () => { localStorage.removeItem(SESSION_KEY); window.location.href = '/'; };
+window.showModal = (id) => document.getElementById(id).classList.add('show');
+window.hideModal = (id) => document.getElementById(id).classList.remove('show');
+window.copyOverlayUrl = () => {
+    const el = document.getElementById('overlay-url');
+    el.select(); document.execCommand('copy');
+    ui.notify('URL 복사 완료!', 'success');
+};
+
+// ============================================ 
+// Sync Helpers
+// ============================================ 
 function syncSettings(s) {
     if (s.chatEnabled !== undefined) {
-        const t = document.getElementById('bot-chat-toggle'); if (t) t.checked = s.chatEnabled;
-        document.getElementById('bot-status-indicator').className = `status-indicator ${botConnected ? (s.chatEnabled ? 'online' : 'idle') : 'offline'}`;
+        const toggle = document.getElementById('bot-chat-toggle'); if (toggle) toggle.checked = s.chatEnabled;
+        const ind = document.getElementById('bot-status-indicator'); if (ind) ind.className = `status-indicator ${botConnected ? (s.chatEnabled ? 'online' : 'idle') : 'offline'}`;
         document.getElementById('bot-status-text').textContent = botConnected ? (s.chatEnabled ? '봇 작동중' : '봇 대기중') : '봇 미연결';
     }
     if (s.songRequestMode) { const r = document.querySelector(`input[name="songRequestMode"][value="${s.songRequestMode}"]`); if(r) r.checked = true; }
@@ -231,26 +323,19 @@ function syncSettings(s) {
 }
 
 function syncOverlay(os) {
-    const op = document.getElementById('overlay-opacity'); if (op) op.value = os.backgroundOpacity || 70;
-    const ah = document.getElementById('overlay-auto-hide'); if (ah) ah.value = (os.autoHideDelay || 5000) / 1000;
+    const op = document.getElementById('overlay-opacity'); if (op) { op.value = os.backgroundOpacity || 70; document.getElementById('overlay-opacity-value').textContent = op.value+'%'; }
+    const ah = document.getElementById('overlay-auto-hide'); if (ah) { ah.value = (os.autoHideDelay || 5000) / 1000; document.getElementById('overlay-auto-hide-value').textContent = ah.value+'초'; }
+    if (os.themeColor) document.getElementById('overlay-color').value = os.themeColor;
 }
 
-// ... (Utility Helpers)
-window.showModal = (id) => document.getElementById(id).classList.add('show');
-window.hideModal = (id) => document.getElementById(id).classList.remove('show');
-window.insertFunction = (targetId, func) => {
-    const el = document.getElementById(targetId);
-    const start = el.selectionStart; el.value = el.value.substring(0, start) + func + el.value.substring(el.selectionEnd);
-    el.focus(); window.updatePreview(targetId, targetId.replace('response','preview'));
-};
-window.updatePreview = (srcId, preId) => {
-    const src = document.getElementById(srcId); const pre = document.getElementById(preId);
-    if (src && pre) pre.innerHTML = src.value.replace(/{user}/g, '<span style="color:#00ff94">무거미</span>');
-};
-window.syncRangeValue = (el, targetId) => document.getElementById(targetId).textContent = (el.id.includes('opacity') ? el.value + '%' : el.value + '초');
-window.openPlayer = () => window.open('/player.html', '_blank');
-window.handleLogout = () => { localStorage.removeItem(SESSION_KEY); window.location.href = '/'; };
+function updateBotStatusUI(connected, chatEnabled) {
+    const indicator = document.getElementById('bot-status-indicator');
+    const text = document.getElementById('bot-status-text');
+    if (indicator) indicator.className = `status-indicator ${connected ? (chatEnabled ? 'online' : 'idle') : 'offline'}`;
+    if (text) text.textContent = connected ? (chatEnabled ? '봇 작동중' : '봇 대기중') : '봇 미연결';
+}
 
+// Initializer
 async function main() {
     await initAuth();
     initWebSocket();
@@ -262,11 +347,13 @@ async function main() {
         });
     });
     document.getElementById('bot-chat-toggle')?.addEventListener('change', (e) => sendWebSocket({ type: 'updateSettings', data: { chatEnabled: e.target.checked } }));
+    document.getElementById('max-participants-slider')?.addEventListener('input', (e) => document.getElementById('max-participants-value').textContent = e.target.value);
+    
     document.querySelectorAll('.nav-item').forEach(item => {
         item.onclick = () => {
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); item.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`${item.dataset.tab}-tab`).classList.add('active');
+            const target = item.dataset.tab;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i === item));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `${target}-tab`));
             document.getElementById('header-title').textContent = item.querySelector('span').textContent;
         };
     });
