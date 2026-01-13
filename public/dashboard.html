@@ -220,32 +220,64 @@
                     <!-- 투표 생성 카드 -->
                     <div class="card vote-creation-card">
                         <div class="card-header">
-                            <h3><i class="fas fa-plus-circle"></i> 새 투표 생성</h3>
+                            <h3><i class="fas fa-plus-circle"></i> 투표 시스템 설정</h3>
                         </div>
                         <div class="form-group mt-20">
-                            <label>투표 질문</label>
-                            <input type="text" id="vote-question" class="form-input" placeholder="시청자에게 물어볼 내용을 입력하세요">
-                        </div>
-                        <div class="form-group mt-20">
-                            <label>투표 항목</label>
+                            <label>질문 및 선택지</label>
+                            <input type="text" id="vote-question" class="form-input" placeholder="질문을 입력하세요">
                             <div id="vote-options-container" class="mt-10">
-                                <div class="vote-option-item">
-                                    <input type="text" class="form-input" placeholder="항목 1">
+                                <div class="vote-option-item" style="display:flex; gap:10px; margin-bottom:10px;">
+                                    <div style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:#00ff94; color:#000; border-radius:8px; font-weight:900;">1</div>
+                                    <input type="text" class="form-input" placeholder="옵션 1">
                                 </div>
-                                <div class="vote-option-item">
-                                    <input type="text" class="form-input" placeholder="항목 2">
+                                <div class="vote-option-item" style="display:flex; gap:10px; margin-bottom:10px;">
+                                    <div style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:#00ff94; color:#000; border-radius:8px; font-weight:900;">2</div>
+                                    <input type="text" class="form-input" placeholder="옵션 2">
                                 </div>
                             </div>
-                            <button class="btn btn-secondary btn-sm mt-10" onclick="window.addVoteOption()">
-                                <i class="fas fa-plus"></i> 항목 추가
-                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="window.addVoteOption()">+ 옵션 추가</button>
                         </div>
+
+                        <div class="vote-divider"></div>
+
                         <div class="form-group mt-20">
-                            <label>투표 시간 (초)</label>
-                            <input type="number" id="vote-duration" class="form-input" value="60">
+                            <label>투표 모드</label>
+                            <div class="radio-group">
+                                <label class="radio-label"><input type="radio" name="voteMode" value="any" checked><span>자유 (숫자 포함 시)</span></label>
+                                <label class="radio-label"><input type="radio" name="voteMode" value="command"><span>명령어 (!1 형태)</span></label>
+                            </div>
                         </div>
+
+                        <div class="flex-row-group mt-20" style="grid-template-columns: 1.2fr 1fr;">
+                            <div class="form-group">
+                                <label class="checkbox-label" style="margin:0">
+                                    <span>후원 투표 활성화</span>
+                                    <input type="checkbox" id="vote-allow-donation" checked>
+                                    <div class="toggle-indicator"></div>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>가중치 (원당 1표)</label>
+                                <input type="number" id="vote-donation-weight" class="form-input" value="100">
+                            </div>
+                        </div>
+
+                        <div class="flex-row-group mt-20">
+                            <div class="form-group">
+                                <label class="checkbox-label" style="margin:0">
+                                    <span>구독자 전용</span>
+                                    <input type="checkbox" id="vote-subscriber-only">
+                                    <div class="toggle-indicator"></div>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>시간제한 (초)</label>
+                                <input type="number" id="vote-duration" class="form-input" value="60">
+                            </div>
+                        </div>
+
                         <button class="btn btn-primary btn-block mt-30" onclick="window.createVote()">
-                            <i class="fas fa-play"></i> 투표 시작하기
+                            <i class="fas fa-play"></i> 투표 생성 및 시작
                         </button>
                     </div>
 
@@ -353,6 +385,28 @@
     <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 설정</h2><button class="modal-close" onclick="window.hideModal('add-macro-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-macro-id"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" oninput="window.updatePreview('new-macro-message','macro-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/uptime')">/uptime</span><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/viewer')">/viewer</span></div></div><div class="preview-box" id="macro-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addMacro()">저장</button></div></div></div>
     <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 설정</h2><button class="modal-close" onclick="window.hideModal('add-counter-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-counter-id"><div class="form-group"><label>트리거</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea" oninput="window.updatePreview('new-counter-response','counter-preview')"></textarea></div><div class="form-group" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px;"><label style="margin:0">하루 한 번만 실행</label><label class="toggle-switch small"><input type="checkbox" id="new-counter-once"><span class="slider round"></span></label></div><div class="preview-box mt-20" id="counter-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addCounter()">저장</button></div></div></div>
     <div id="edit-greet-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>인사 문구 수정</h2><button class="modal-close" onclick="window.hideModal('edit-greet-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>인사 메시지</label><textarea id="edit-greet-input" class="form-textarea" rows="4" oninput="window.updatePreview('edit-greet-input','greet-preview')"></textarea><small class="form-help">{user} 변수 사용 가능</small></div><div class="preview-box" id="greet-preview">봇: 응답 예시...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.saveGreetEditor()">적용</button></div></div></div>
+
+    <!-- Winner Chat Popup (Expert) -->
+    <div id="winner-chat-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="winner-title">🎉 당첨자 채팅 모니터링</h2>
+                <button class="modal-close" onclick="window.closeWinnerPopup()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div id="winner-avatar" style="width:80px; height:80px; border-radius:50%; margin:0 auto 10px; background-size:cover; border:3px solid #00ff94;"></div>
+                    <h3 id="winner-nickname" style="font-size:1.5rem; color:#00ff94;">닉네임</h3>
+                </div>
+                <div id="winner-chat-log" style="height:200px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:12px; padding:15px; border:1px solid rgba(255,255,255,0.05);">
+                    <!-- 당첨자의 채팅만 여기에 실시간으로 올라옵니다 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-block" onclick="window.closeWinnerPopup()">닫기 및 TTS 중단</button>
+            </div>
+        </div>
+    </div>
 
     <div id="notification-container"></div>
     <script src="/dashboard.js"></script>
