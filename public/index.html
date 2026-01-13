@@ -3,220 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot - 스트리밍 도우미</title>
+    <title>Chzzk Bot - Next-Gen Streaming Assistant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/modern-ui.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: block; /* Override flex center */
-        }
-
-        /* Navbar */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            background: rgba(10, 10, 15, 0.3);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            box-sizing: border-box;
-        }
-
-        .nav-logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #fff;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-login-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-login-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        /* Hero Section */
-        .hero-section {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 120px 20px 60px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-title {
-            font-size: 5rem;
-            line-height: 1.1;
-            margin-bottom: 20px;
-            text-shadow: 0 0 80px rgba(0, 255, 157, 0.3);
-        }
-
-        .hero-subtitle {
-            font-size: 1.3rem;
-            color: #a1a1aa;
-            max-width: 600px;
-            margin-bottom: 50px;
-        }
-
-        /* Main Login Button */
-        .hero-login-btn {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            background: linear-gradient(135deg, #03C75A, #02b350);
-            color: white;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            text-decoration: none;
-            box-shadow: 0 10px 40px rgba(3, 199, 90, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-login-btn:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 20px 60px rgba(3, 199, 90, 0.6);
-        }
-
-        .hero-login-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-            transform: rotate(45deg);
-            animation: shine 3s infinite;
-        }
-
-        @keyframes shine {
-            0% { left: -100%; }
-            20% { left: 200%; }
-            100% { left: 200%; }
-        }
-
-        /* Features Section */
-        .features-section {
-            padding: 80px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .feature-card {
-            background: rgba(20, 20, 25, 0.6) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.3s ease;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-            border-color: #00ff94;
-        }
-
-        footer {
-            text-align: center;
-            padding: 40px;
-            color: rgba(255, 255, 255, 0.2);
-            font-size: 0.9rem;
-        }
-    </style>
 </head>
 <body>
-    <!-- Background -->
     <div class="background-wrapper">
-        <div class="blob"></div>
         <div class="blob"></div>
         <div class="blob"></div>
     </div>
     <div class="noise-overlay"></div>
 
-    <!-- Navbar -->
+    <!-- Navigation -->
     <nav class="navbar">
-        <a href="/" class="nav-logo">
-            <i class="fas fa-robot" style="color: #00ff94;"></i> CHZZK BOT
-        </a>
-        <a href="/auth/login" class="nav-login-btn">로그인</a>
+        <div class="nav-content">
+            <a href="/" class="logo">
+                <i class="fas fa-robot"></i> CHZZK<span>BOT</span>
+            </a>
+            <a href="/auth/login" class="btn-naver" style="padding: 10px 24px; font-size: 0.9rem; border-radius: 100px;">로그인</a>
+        </div>
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-section">
-        <h1 class="hero-title">
-            방송 관리의<br>
-            <span style="color: #00ff94;">새로운 차원</span>
-        </h1>
-        <p class="hero-subtitle">
-            명령어부터 시청자 참여까지, 봇 하나로 끝내세요.<br>
-            복잡한 설정 없이 로그인 한 번으로 시작됩니다.
+    <main class="hero">
+        <div class="hero-pill">New Generation Streaming Bot</div>
+        <h1>치지직 방송의<br>새로운 차원</h1>
+        <p>
+            명령어, 자동화, 시청자 참여까지. <br>
+            가장 직관적이고 강력한 대시보드로 당신의 방송을 완성하세요.
         </p>
         
-        <a href="/auth/login" class="hero-login-btn">
-            <i class="fas fa-check-circle"></i>
+        <a href="/auth/login" class="btn-naver">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="white" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+            </svg>
             <span>네이버 아이디로 시작하기</span>
         </a>
-    </section>
+    </main>
 
-    <!-- Features -->
-    <section class="features-section">
-        <div class="features-grid">
-            <div class="card feature-card">
-                <i class="fas fa-magic feature-icon"></i>
-                <h3 class="feature-title">자동화</h3>
-                <p class="feature-desc">반복적인 채팅 관리와<br>명령어 응답을 자동화하세요.</p>
-            </div>
-            <div class="card feature-card">
-                <i class="fas fa-music feature-icon"></i>
-                <h3 class="feature-title">신청곡</h3>
-                <p class="feature-desc">유튜브 링크 한 번으로<br>대기열 관리 끝.</p>
-            </div>
-            <div class="card feature-card">
-                <i class="fas fa-users feature-icon"></i>
-                <h3 class="feature-title">시청자 참여</h3>
-                <p class="feature-desc">투표, 룰렛, 추첨으로<br>방송의 재미를 더하세요.</p>
-            </div>
+    <!-- Bento Features Grid -->
+    <section class="features-grid">
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+            <h3>실시간 동기화</h3>
+            <p>서버와 대시보드 간의 0.1초 미만의 지연 시간. 모든 설정이 즉시 방송에 반영됩니다.</p>
+        </div>
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-magic"></i></div>
+            <h3>강력한 변수 에디터</h3>
+            <p>{user}, {uptime} 등 20여 가지 이상의 동적 변수로 풍부한 명령어 응답을 구성하세요.</p>
+        </div>
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-music"></i></div>
+            <h3>통합 신청곡 시스템</h3>
+            <p>유튜브 링크 감지, 대기열 관리, 수익 창출을 위한 후원 연동까지 한 번에 관리하세요.</p>
+        </div>
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-users"></i></div>
+            <h3>시청자 커뮤니티</h3>
+            <p>투표, 추첨, 참여 랭킹 시스템으로 시청자와의 유대감을 극대화합니다.</p>
+        </div>
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+            <h3>안전한 보안</h3>
+            <p>치지직 공식 OAuth 인증과 Supabase 암호화 기술로 당신의 데이터를 철저히 보호합니다.</p>
+        </div>
+        <div class="feature-card card">
+            <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+            <h3>모바일 최적화</h3>
+            <p>방송 중에도 스마트폰으로 간편하게 봇을 제어하세요. 모든 기기에서 완벽한 UI를 제공합니다.</p>
         </div>
     </section>
 
-    <footer>
-        &copy; 2026 Chzzk Bot. Designed for Streamers.
+    <footer style="text-align:center; padding: 100px 0 50px; color: var(--text-muted); font-size: 0.9rem;">
+        &copy; 2026 Chzzk Bot Dashboard. Built for the future of streaming.
     </footer>
 
     <script>
-        // Mouse Spotlight
+        // 마우스 빛 효과 (Expert Sync)
         document.addEventListener('mousemove', (e) => {
             document.querySelectorAll('.card').forEach(card => {
                 const rect = card.getBoundingClientRect();
@@ -225,6 +93,24 @@
                 card.style.setProperty('--mouse-x', `${x}px`);
                 card.style.setProperty('--mouse-y', `${y}px`);
             });
+        });
+
+        // 스크롤 시 페이드인 애니메이션 (Intersection Observer)
+        const observerOptions = { threshold: 0.1 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = "1";
+                    entry.target.style.transform = "translateY(0)";
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = "0";
+            card.style.transform = "translateY(30px)";
+            card.style.transition = "all 0.8s cubic-bezier(0.4, 0, 0.2, 1)";
+            observer.observe(card);
         });
     </script>
 </body>

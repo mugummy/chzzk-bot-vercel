@@ -1,9 +1,9 @@
-// vote-system.js - Stable Integrated Subtab Controller
+// vote-system.js - Expert Finalized Version
 
 function startDraw() {
-    const kw = document.getElementById('draw-keyword').value;
-    const ct = document.getElementById('draw-winner-count').value;
-    sendWebSocket({ type: 'startDraw', payload: { keyword: kw, settings: { winnerCount: parseInt(ct) } } });
+    const keyword = document.getElementById('draw-keyword').value;
+    const count = document.getElementById('draw-winner-count').value;
+    sendWebSocket({ type: 'startDraw', payload: { keyword, settings: { winnerCount: parseInt(count) } } });
 }
 
 function stopDrawCollecting() { sendWebSocket({ type: 'stopDrawCollecting' }); }
@@ -11,19 +11,19 @@ function executeDraw() { sendWebSocket({ type: 'executeDraw', payload: { count: 
 function resetDraw() { sendWebSocket({ type: 'resetDraw' }); }
 
 function createVote() {
-    const q = document.getElementById('vote-question').value;
-    const d = document.getElementById('vote-duration').value;
-    const opts = Array.from(document.querySelectorAll('#vote-options-container input')).map(i => i.value).filter(v => v);
-    if (q && opts.length >= 2) sendWebSocket({ type: 'createVote', data: { question: q, options: opts, durationSeconds: parseInt(d) } });
+    const question = document.getElementById('vote-question').value;
+    const duration = document.getElementById('vote-duration')?.value || 60;
+    const options = Array.from(document.querySelectorAll('#vote-options-container input')).map(i => i.value).filter(v => v);
+    if (question && options.length >= 2) sendWebSocket({ type: 'createVote', data: { question, options, durationSeconds: parseInt(duration) } });
     else ui.notify('제목과 최소 2개의 항목이 필요합니다.', 'warning');
 }
 
 function addVoteOption() {
-    const c = document.getElementById('vote-options-container');
-    const d = document.createElement('div');
-    d.className = 'vote-option-item';
-    d.innerHTML = `<input type="text" class="form-input" placeholder="항목 ${c.children.length + 1}"><button class="btn-icon btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
-    c.appendChild(d);
+    const container = document.getElementById('vote-options-container');
+    const div = document.createElement('div');
+    div.className = 'vote-option-item';
+    div.innerHTML = `<input type="text" class="form-input" placeholder="항목 ${container.children.length + 1}"><button class="btn-icon btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+    container.appendChild(div);
 }
 
 function startVote() { sendWebSocket({ type: 'startVote' }); }
@@ -31,11 +31,11 @@ function endVote() { sendWebSocket({ type: 'endVote' }); }
 function resetVote() { sendWebSocket({ type: 'resetVote' }); }
 
 function addRouletteItem(txt = '', weight = 1) {
-    const c = document.getElementById('roulette-items-container');
-    const d = document.createElement('div');
-    d.className = 'vote-option-item';
-    d.innerHTML = `<input type="text" class="form-input" placeholder="항목 이름" value="${txt}"><input type="number" class="form-input" style="width:70px" value="${weight}"><button class="btn-icon btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>`;
-    c.appendChild(d);
+    const container = document.getElementById('roulette-items-container');
+    const div = document.createElement('div');
+    div.className = 'vote-option-item';
+    div.innerHTML = `<input type="text" class="form-input" placeholder="항목 이름" value="${txt}"><input type="number" class="form-input" style="width:70px" value="${weight}"><button class="btn-icon btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>`;
+    container.appendChild(div);
 }
 
 function createRoulette() {
@@ -73,7 +73,7 @@ function updateVoteUI(state) {
     if (!v) { d.innerHTML = '<p>진행 중인 투표가 없습니다.</p>'; if(c) c.style.display = 'none'; return; }
     if(c) c.style.display = 'block';
     const total = Object.values(v.results || {}).reduce((a, b) => a + b, 0);
-    d.innerHTML = `<h4 class="mb-10">${v.question}</h4>` + v.options.map(o => {
+    d.innerHTML = `<h4>${v.question}</h4>` + v.options.map(o => {
         const count = v.results[o.id] || 0;
         const pct = total > 0 ? Math.round((count/total)*100) : 0;
         return `<div class="mb-10"><span>${o.text} (${count}표)</span><div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div></div>`;
@@ -84,7 +84,7 @@ function updateRouletteUI(state) {
     const c = document.getElementById('roulette-container');
     const s = document.getElementById('spin-roulette-btn');
     if (state.currentSession) {
-        c.innerHTML = `<div class="roulette-ready">룰렛 준비됨 (${state.currentSession.items.length}개 항목)</div>`;
+        c.innerHTML = `<div class="roulette-info">룰렛 준비됨 (${state.currentSession.items.length}개 항목)</div>`;
         if (s) s.style.display = 'inline-flex';
     } else {
         c.innerHTML = '<div class="empty-state">룰렛을 생성하세요.</div>';
@@ -92,7 +92,7 @@ function updateRouletteUI(state) {
     }
 }
 
-// Global Bridge
+// Global Sync Bridge
 window.handleVoteSystemMessage = (data) => {
     switch (data.type) {
         case 'drawStateUpdate': updateDrawUI(data.payload); break;
@@ -108,7 +108,6 @@ window.switchVoteSubTab = (tab) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.vote-sub-tab').forEach(btn => btn.onclick = () => window.switchVoteSubTab(btn.dataset.voteSubtab));
-    // Roulette Initial Items
     const rContainer = document.getElementById('roulette-items-container');
     if (rContainer && rContainer.children.length === 0) { addRouletteItem('항목 1', 1); addRouletteItem('항목 2', 1); }
 });
@@ -117,8 +116,8 @@ window.startDraw = startDraw;
 window.stopDrawCollecting = stopDrawCollecting;
 window.executeDraw = executeDraw;
 window.resetDraw = resetDraw;
-window.addVoteOption = addVoteOption;
 window.createVote = createVote;
+window.addVoteOption = addVoteOption;
 window.startVote = startVote;
 window.endVote = endVote;
 window.resetVote = resetVote;
@@ -126,12 +125,3 @@ window.addRouletteItem = addRouletteItem;
 window.createRoulette = createRoulette;
 window.spinRoulette = spinRoulette;
 window.resetRoulette = resetRoulette;
-window.copyOverlayUrl = () => {
-    const el = document.getElementById('overlay-url');
-    el.select(); document.execCommand('copy');
-    ui.notify('URL 복사 완료!', 'success');
-};
-window.saveOverlaySettings = () => {
-    const os = { backgroundOpacity: parseInt(document.getElementById('overlay-opacity').value), themeColor: document.getElementById('overlay-color').value };
-    sendWebSocket({ type: 'updateOverlaySettings', payload: os });
-};

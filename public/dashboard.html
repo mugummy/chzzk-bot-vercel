@@ -3,32 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot Dashboard - Ultimate Edition</title>
+    <title>Chzzk Bot Dashboard - Expert Edition</title>
+    <!-- Server Integration -->
     <script src="/config.js"></script>
     <script src="/api-adapter.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- CSS Assets -->
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/modern-ui.css">
     <link rel="stylesheet" href="/vote-ui-enhanced.css">
     <link rel="stylesheet" href="/toggle.css">
     <style>
-        .flex-row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+        .flex-row-group { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-bottom: 24px; }
         @media (max-width: 1024px) { .flex-row-group { grid-template-columns: 1fr; } }
         .current-song-container { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         #current-song-thumbnail { width: 100%; max-width: 320px; aspect-ratio: 16/9; border-radius: 12px; background: #000; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
-        .vote-option-item { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; }
-        .vote-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
         .mt-20 { margin-top: 20px; }
         .mb-20 { margin-bottom: 20px; }
+        .mt-30 { margin-top: 30px; }
+        .btn-block { width: 100%; }
     </style>
 </head>
 <body>
+    <!-- Background Effects -->
     <div class="background-wrapper"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
     <div class="noise-overlay"></div>
 
+    <!-- Header -->
     <header class="header">
         <div class="header-left">
             <button class="sidebar-toggle" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
@@ -39,16 +45,17 @@
                 <div class="header-avatar" id="header-avatar" style="width:32px; height:32px; border-radius:50%; background-size:cover; border:1px solid #00ff94;"></div>
                 <span class="header-username" id="header-username"></span>
             </div>
-            <button class="header-logout" onclick="window.handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+            <button class="header-logout" onclick="window.handleLogout()" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </header>
 
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
                 <div class="sidebar-avatar" id="sidebar-avatar" style="width:48px; height:48px; border-radius:12px; background-size:cover; border:2px solid #00ff94;"></div>
                 <div class="sidebar-info">
-                    <div class="sidebar-name" id="sidebar-name">로딩 중...</div>
+                    <div class="sidebar-name" id="sidebar-name">사용자</div>
                     <div class="sidebar-status"><span class="status-dot"></span><span id="sidebar-status-text">연결됨</span></div>
                 </div>
             </div>
@@ -57,6 +64,7 @@
                 <label class="toggle-switch small" style="margin-left: auto;" title="봇 활성화"><input type="checkbox" id="bot-chat-toggle" checked><span class="slider round"></span></label>
             </div>
         </div>
+        
         <nav class="sidebar-nav">
             <ul class="nav-list">
                 <li class="nav-item active" data-tab="dashboard"><i class="fas fa-home"></i><span>대시보드</span></li>
@@ -64,11 +72,19 @@
                 <li class="nav-item" data-tab="macros"><i class="fas fa-clock"></i><span>매크로</span></li>
                 <li class="nav-item" data-tab="counters"><i class="fas fa-calculator"></i><span>카운터</span></li>
                 <li class="nav-item" data-tab="songs"><i class="fas fa-music"></i><span>신청곡</span></li>
+                <li class="nav-item" data-tab="greet"><i class="fas fa-hand-sparkles"></i><span>인사</span></li>
                 <li class="nav-item" data-tab="votes"><i class="fas fa-poll"></i><span>투표/추첨</span></li>
                 <li class="nav-item" data-tab="participation"><i class="fas fa-users"></i><span>참여</span></li>
                 <li class="nav-item" data-tab="points"><i class="fas fa-coins"></i><span>포인트</span></li>
             </ul>
         </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logout-btn" onclick="window.handleLogout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>로그아웃</span>
+            </button>
+        </div>
     </aside>
 
     <main class="main-content">
@@ -77,7 +93,7 @@
             <div class="dashboard-grid">
                 <div class="card channel-card">
                     <div class="channel-info">
-                        <div class="channel-avatar" id="channel-avatar" style="width:60px; height:60px; border-radius:15px; background-size:cover; border:2px solid #00ff94;"></div>
+                        <div class="channel-avatar" id="main-channel-avatar" style="width:60px; height:60px; border-radius:15px; background-size:cover; border:2px solid #00ff94;"></div>
                         <div class="channel-details">
                             <h2 class="channel-name" id="channel-name">채널명</h2>
                             <div class="channel-stats"><span id="follower-count"><i class="fas fa-heart"></i> 0 팔로워</span></div>
@@ -127,7 +143,8 @@
         <div id="songs-tab" class="tab-content">
             <div class="tab-header"><h2>신청곡 관리</h2></div>
             <div class="songs-grid">
-                <div class="card"><h3>현재 재생</h3>
+                <div class="card current-song-card">
+                    <h3>현재 재생</h3>
                     <div class="current-song-container">
                         <img id="current-song-thumbnail" src="" alt="Thumbnail">
                         <div id="current-song" style="font-weight: 800; font-size: 1.1rem; text-align: center;">재생 중인 곡 없음</div>
@@ -140,19 +157,45 @@
                 <div class="card"><h3>대기열 <span class="badge" id="queue-count">0</span></h3><div id="song-queue-list"></div></div>
             </div>
             <div class="card mt-20">
-                <div class="card-header"><h3>신청곡 설정</h3><button class="btn btn-primary btn-sm" onclick="window.saveSongSettings()">설정 저장</button></div>
+                <div class="card-header"><h3>신청곡 설정</h3><button class="btn btn-secondary btn-sm" onclick="window.openPlayer()"><i class="fas fa-external-link-alt"></i> 플레이어 열기</button></div>
                 <div class="settings-grid mt-20">
                     <div class="setting-item" style="grid-column: span 3;"><label>신청 모드</label>
                         <div class="radio-group">
-                            <label class="radio-label"><input type="radio" name="songRequestMode" value="all"><span>전체</span></label>
+                            <label class="radio-label"><input type="radio" name="songRequestMode" value="all"><span>전체 허용</span></label>
                             <label class="radio-label"><input type="radio" name="songRequestMode" value="cooldown"><span>쿨타임</span></label>
-                            <label class="radio-label"><input type="radio" name="songRequestMode" value="donation"><span>후원</span></label>
-                            <label class="radio-label"><input type="radio" name="songRequestMode" value="off"><span>OFF</span></label>
+                            <label class="radio-label"><input type="radio" name="songRequestMode" value="donation"><span>후원 전용</span></label>
+                            <label class="radio-label"><input type="radio" name="songRequestMode" value="off"><span>비활성화</span></label>
                         </div>
                     </div>
                     <div class="setting-item"><label>쿨타임(초)</label><input type="number" id="song-cooldown" class="form-input"></div>
-                    <div class="setting-item"><label>최소 후원금</label><input type="number" id="song-min-donation" class="form-input"></div>
-                    <div class="setting-item"><label>플레이어</label><button class="btn btn-secondary btn-block" onclick="window.openPlayer()"><i class="fas fa-external-link-alt"></i> 플레이어 열기</button></div>
+                    <div class="setting-item"><label>최소 후원금(원)</label><input type="number" id="song-min-donation" class="form-input"></div>
+                </div>
+                <button class="btn btn-primary mt-20" onclick="window.saveSongSettings()">설정 저장</button>
+            </div>
+        </div>
+
+        <!-- 5.5 Greet Tab -->
+        <div id="greet-tab" class="tab-content">
+            <div class="tab-header"><h2>인사 설정</h2><button class="btn btn-primary" onclick="window.saveGreetSettings()">설정 저장</button></div>
+            <div class="card mt-20">
+                <div class="settings-box">
+                    <div class="box-label">인사 방식 선택</div>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="greetType" value="1" checked><span>최초 1회</span></label>
+                        <label class="radio-label"><input type="radio" name="greetType" value="2"><span>매일마다</span></label>
+                    </div>
+                </div>
+                <div class="flex-row-group mt-30">
+                    <div class="card" style="padding:20px; cursor:pointer;" onclick="window.showModal('edit-greet-modal')">
+                        <div style="color:#888; font-size:0.9rem; margin-bottom:10px;">새로운 채팅을 보면</div>
+                        <div id="display-greet-msg" style="font-weight:700; color:#00ff94;">방송에 오신 것을 환영합니다!</div>
+                        <div style="color:#555; font-size:0.8rem; margin-top:10px;">클릭하여 문구 수정 <i class="fas fa-pen"></i></div>
+                    </div>
+                    <div class="card" style="padding:20px; text-align:center;">
+                        <div style="font-size:2rem; font-weight:900; color:#00ff94" id="greet-history-count">0명</div>
+                        <p style="color:#888;">을 기억하고 있어요!</p>
+                        <button class="btn btn-danger btn-sm mt-10 btn-block" onclick="window.resetGreetHistory()">기록 초기화</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -169,7 +212,7 @@
                 <div class="flex-row-group mt-20">
                     <div class="card"><h3>추첨 설정</h3>
                         <div class="form-group"><label>키워드</label><input type="text" id="draw-keyword" class="form-input" value="!참여"></div>
-                        <div class="form-group"><label>당첨 인원</label><input type="number" id="draw-winner-count" class="form-input" value="1"></div>
+                        <div class="form-group"><label>인원</label><input type="number" id="draw-winner-count" class="form-input" value="1"></div>
                         <div class="btn-group mt-20">
                             <button class="btn btn-primary" id="start-draw-btn" onclick="window.startDraw()">시작</button>
                             <button class="btn btn-warning" id="stop-draw-btn" style="display:none;" onclick="window.stopDrawCollecting()">마감</button>
@@ -177,39 +220,38 @@
                             <button class="btn btn-secondary" onclick="window.resetDraw()">초기화</button>
                         </div>
                     </div>
-                    <div class="card"><h3>참여자 명단 (<span id="draw-participant-count">0</span>)</h3><div id="draw-participants" class="participant-list"></div></div>
+                    <div class="card"><h3>참여자 (<span id="draw-participant-count">0</span>)</h3><div id="draw-participants" class="participant-list"></div></div>
                 </div>
             </div>
             <div id="vote-subtab" class="vote-subtab">
                 <div class="flex-row-group mt-20">
                     <div class="card"><h3>투표 생성</h3>
                         <div class="form-group"><label>질문</label><input type="text" id="vote-question" class="form-input"></div>
-                        <div class="vote-divider"></div>
                         <div id="vote-options-container">
                             <div class="vote-option-item"><input type="text" class="form-input" placeholder="항목 1"></div>
                             <div class="vote-option-item"><input type="text" class="form-input" placeholder="항목 2"></div>
                         </div>
-                        <button class="btn btn-secondary btn-sm" onclick="window.addVoteOption()">+ 추가</button>
+                        <button class="btn-sm mt-10" onclick="window.addVoteOption()">+ 항목 추가</button>
                         <button class="btn btn-primary mt-20 btn-block" onclick="window.createVote()">투표 시작</button>
                     </div>
-                    <div class="card"><h3>진행 상태</h3><div id="current-vote-display"></div><div id="vote-controls" class="mt-20" style="display:none"><button class="btn btn-danger btn-block" onclick="window.endVote()">종료</button></div></div>
+                    <div class="card"><h3>결과</h3><div id="current-vote-display"></div><div id="vote-controls" style="display:none" class="mt-20"><button class="btn btn-danger btn-block" onclick="window.endVote()">종료</button><button class="btn btn-secondary btn-block mt-10" onclick="window.resetVote()">초기화</button></div></div>
                 </div>
             </div>
             <div id="roulette-subtab" class="vote-subtab">
                 <div class="flex-row-group mt-20">
-                    <div class="card"><h3>룰렛 설정</h3><div id="roulette-items-container"></div><button class="btn btn-secondary btn-sm" onclick="window.addRouletteItem()">+ 추가</button><button class="btn btn-primary mt-20 btn-block" onclick="window.createRoulette()">룰렛 생성</button></div>
-                    <div class="card"><h3>실행</h3><div id="roulette-container"></div><button class="btn btn-primary mt-20 btn-block" id="spin-roulette-btn" style="display:none" onclick="window.spinRoulette()">돌리기!</button></div>
+                    <div class="card"><h3>룰렛 설정</h3><div id="roulette-items-container">
+                        <div class="vote-option-item"><input type="text" class="form-input" value="항목 1"><input type="number" class="form-input" style="width:70px" value="1"></div>
+                        <div class="vote-option-item"><input type="text" class="form-input" value="항목 2"><input type="number" class="form-input" style="width:70px" value="1"></div>
+                    </div><button class="btn-sm" onclick="window.addRouletteItem()">+ 추가</button><button class="btn btn-primary mt-20 btn-block" onclick="window.createRoulette()">룰렛 생성</button></div>
+                    <div class="card"><h3>룰렛</h3><div id="roulette-container"></div><button class="btn btn-primary mt-20 btn-block" id="spin-roulette-btn" style="display:none" onclick="window.spinRoulette()">돌리기!</button></div>
                 </div>
             </div>
             <div id="settings-subtab" class="vote-subtab">
-                <div class="card mt-20"><h3>오버레이 디자인</h3>
+                <div class="card mt-20"><h3>오버레이</h3>
                     <div class="form-group"><label>오버레이 URL</label><div class="input-group"><input type="text" id="overlay-url" class="form-input" readonly><button class="btn btn-primary" onclick="window.copyOverlayUrl()">복사</button></div></div>
-                    <div class="settings-grid mt-20">
-                        <div class="setting-item"><label>테마 색상</label><input type="color" id="overlay-color" class="form-input" style="height:45px"></div>
-                        <div class="setting-item"><label>배경 투명도</label><input type="range" id="overlay-opacity" min="0" max="100" class="form-slider"><span id="overlay-opacity-value">70%</span></div>
-                        <div class="setting-item"><label>결과 시간(초)</label><input type="range" id="overlay-auto-hide" min="3" max="20" class="form-slider"><span id="overlay-auto-hide-value">5초</span></div>
-                    </div>
-                    <button class="btn btn-primary mt-20" onclick="window.saveOverlaySettings()">설정 저장</button>
+                    <div class="form-group"><label>배경 투명도</label><input type="range" id="overlay-opacity" min="0" max="100" class="form-slider" oninput="window.syncRangeValue(this, 'overlay-opacity-value')"><span id="overlay-opacity-value">70%</span></div>
+                    <div class="form-group"><label>결과 시간</label><input type="range" id="overlay-auto-hide" min="3" max="20" class="form-slider" oninput="window.syncRangeValue(this, 'overlay-auto-hide-value')"><span id="overlay-auto-hide-value">5초</span></div>
+                    <button class="btn btn-primary mt-20 btn-block" onclick="window.saveOverlaySettings()">저장</button>
                 </div>
             </div>
         </div>
@@ -217,14 +259,14 @@
         <!-- 7. Participation Tab -->
         <div id="participation-tab" class="tab-content">
             <div class="card mb-20">
-                <div class="card-header"><h3>참여 설정</h3><button class="btn btn-primary btn-sm" onclick="window.saveParticipationSettings()">저장</button></div>
+                <h3>참여 설정</h3>
                 <div class="flex-row-group mt-20">
-                    <div class="form-group"><label>참여 명령어</label><input type="text" id="participation-command" class="form-input"></div>
-                    <div class="form-group"><label>최대 인원 (<span id="max-participants-value">10</span>명)</label><input type="range" id="max-participants-slider" min="1" max="100" class="form-slider"></div>
+                    <div class="form-group"><label>참여 명령어</label><input type="text" id="participation-command" class="form-input" value="!시참 참여"></div>
+                    <div class="form-group"><label>최대 참여 인원 (<span id="max-participants-value">10</span>명)</label><input type="range" id="max-participants-slider" min="1" max="100" class="form-slider" oninput="document.getElementById('max-participants-value').textContent=this.value"></div>
                 </div>
                 <div class="btn-group mt-20">
                     <button class="btn btn-primary" id="toggle-participation-btn" onclick="window.toggleParticipation()">참여 시작</button>
-                    <button class="btn btn-danger" onclick="window.clearParticipants()">데이터 초기화</button>
+                    <button class="btn btn-danger" onclick="window.clearParticipants()">초기화</button>
                 </div>
             </div>
             <div class="flex-row-group">
@@ -240,7 +282,7 @@
                     <div class="form-group"><label>지급 포인트</label><input type="number" id="points-per-chat" class="form-input"></div>
                     <div class="form-group"><label>지급 쿨타임(초)</label><input type="number" id="points-cooldown" class="form-input"></div>
                     <div class="form-group"><label>단위 이름</label><input type="text" id="points-unit-name" class="form-input" placeholder="포인트"></div>
-                    <button class="btn btn-primary mt-20" onclick="window.savePointsSettings()">설정 저장</button>
+                    <button class="btn btn-primary mt-20 btn-block" onclick="window.savePointsSettings()">저장</button>
                 </div>
                 <div class="card"><h3>랭킹</h3><div id="points-ranking" class="item-list"></div></div>
             </div>
@@ -255,28 +297,25 @@
                 <input type="hidden" id="edit-command-id">
                 <div class="form-group"><label>트리거</label><input type="text" id="new-command-trigger" class="form-input"></div>
                 <div class="form-group"><label>응답 내용</label><textarea id="new-command-response" class="form-textarea" oninput="window.updatePreview('new-command-response','cmd-preview')"></textarea></div>
-                <div class="form-group"><label>함수 칩</label>
+                <div class="form-group"><label>함수 칩 (클릭 삽입)</label>
                     <div class="function-chips">
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{user}')" title="사용자 닉네임">{user}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{uptime}')" title="방송 시간">{uptime}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{viewers}')" title="시청자 수">{viewers}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{game}')" title="카테고리">{game}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{random(1,100)}')" title="랜덤 숫자">{random}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{date}')" title="오늘 날짜">{date}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{time}')" title="현재 시간">{time}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{count}')" title="카운터">{count}</span>
-                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','{since}')" title="팔로우 기간">{since}</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/user')" title="사용자 닉네임">/user</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/uptime')" title="방송 시간">/uptime</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/viewer')" title="시청자 수">/viewer</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/random')" title="랜덤">/random</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/since')" title="팔로우 기간">/since</span>
+                        <span class="fn-chip" onclick="window.insertFunction('new-command-response','/count')" title="카운터">/count</span>
                     </div>
                 </div>
-                <div class="preview-box" id="cmd-preview">미리보기...</div>
+                <div class="preview-box" id="cmd-preview">봇: 응답 예시...</div>
             </div>
             <div class="modal-footer"><button class="btn btn-primary" onclick="window.addCommand()">저장</button></div>
         </div>
     </div>
 
-    <!-- Macro/Counter Modals -->
-    <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 설정</h2><button class="modal-close" onclick="window.hideModal('add-macro-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-macro-id"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" oninput="window.updatePreview('new-macro-message','macro-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-macro-message','{uptime}')">{uptime}</span><span class="fn-chip" onclick="window.insertFunction('new-macro-message','{game}')">{game}</span></div></div><div class="preview-box" id="macro-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addMacro()">저장</button></div></div></div>
-    <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 설정</h2><button class="modal-close" onclick="window.hideModal('add-counter-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-counter-id"><div class="form-group"><label>트리거</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답 내용</label><textarea id="new-counter-response" class="form-textarea" oninput="window.updatePreview('new-counter-response','counter-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-counter-response','{count}')">{count}</span></div></div><div class="preview-box" id="counter-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addCounter()">저장</button></div></div></div>
+    <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 설정</h2><button class="modal-close" onclick="window.hideModal('add-macro-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-macro-id"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" oninput="window.updatePreview('new-macro-message','macro-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/uptime')">/uptime</span><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/viewer')">/viewer</span></div></div><div class="preview-box" id="macro-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addMacro()">저장</button></div></div></div>
+    <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 설정</h2><button class="modal-close" onclick="window.hideModal('add-counter-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-counter-id"><div class="form-group"><label>트리거</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea" oninput="window.updatePreview('new-counter-response','counter-preview')"></textarea></div><div class="form-group" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px;"><label style="margin:0">하루 한 번만 실행</label><label class="toggle-switch small"><input type="checkbox" id="new-counter-once"><span class="slider round"></span></label></div><div class="preview-box mt-20" id="counter-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addCounter()">저장</button></div></div></div>
+    <div id="edit-greet-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>인사 문구 수정</h2><button class="modal-close" onclick="window.hideModal('edit-greet-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>인사 메시지</label><textarea id="edit-greet-input" class="form-textarea" rows="4" oninput="window.updatePreview('edit-greet-input','greet-preview')"></textarea><small class="form-help">{user} 변수 사용 가능</small></div><div class="preview-box" id="greet-preview">봇: 응답 예시...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.saveGreetEditor()">적용</button></div></div></div>
 
     <div id="notification-container"></div>
     <script src="/dashboard.js"></script>

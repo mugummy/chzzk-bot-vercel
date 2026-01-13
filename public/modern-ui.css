@@ -1,83 +1,79 @@
 /* ========================================= */
-/* PREMIUM UI DESIGN - DEEP SPACE AURORA     */
+/* PREMIUM UI - BUZZK STYLE x AURORA TECH    */
 /* ========================================= */
 
 :root {
-    --bg-color: #030014;
-    --card-bg: rgba(20, 20, 30, 0.6);
-    --primary: #00ff9d;
-    --primary-glow: rgba(0, 255, 157, 0.4);
+    --bg-deep: #030014;
+    --primary: #00ff94;
+    --primary-glow: rgba(0, 255, 148, 0.3);
     --secondary: #7000ff;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
     --text-main: #ffffff;
-    --text-muted: #a1a1aa;
-    --border-color: rgba(255, 255, 255, 0.08);
+    --text-muted: #88888e;
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: var(--bg-deep);
     color: var(--text-main);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    min-height: 100vh;
+    line-height: 1.5;
 }
 
-/* 1. High-Quality Mesh Gradient Background (No Pixelation) */
+/* 1. Aurora Background System (High-Resolution) */
 .background-wrapper {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    overflow: hidden;
-    background: var(--bg-color);
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    background: var(--bg-deep);
 }
 
 .blob {
     position: absolute;
-    filter: blur(80px);
-    opacity: 0.6;
-    animation: blob-bounce 20s infinite ease-in-out alternate;
-    border-radius: 50%;
-}
-
-.blob:nth-child(1) {
-    top: -10%;
-    left: -10%;
-    width: 50vw;
-    height: 50vw;
-    background: var(--secondary);
-    animation-delay: -5s;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: move 25s infinite alternate ease-in-out;
 }
 
 .blob:nth-child(2) {
-    bottom: -10%;
+    background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+    width: 500px;
+    height: 500px;
     right: -10%;
-    width: 60vw;
-    height: 60vw;
-    background: #0044ff;
-    animation-delay: -10s;
+    top: -10%;
+    opacity: 0.1;
+    animation-duration: 20s;
 }
 
-.blob:nth-child(3) {
-    top: 30%;
-    left: 40%;
-    width: 40vw;
-    height: 40vw;
-    background: var(--primary);
-    opacity: 0.2;
-    animation-delay: -2s;
-    filter: blur(100px);
+@keyframes move {
+    from { transform: translate(0, 0) rotate(0deg); }
+    to { transform: translate(100px, 100px) rotate(15deg); }
 }
 
-@keyframes blob-bounce {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(50px, 50px) scale(1.1); }
+/* Subtle Grid Pattern */
+.background-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    mask-image: radial-gradient(circle at center, black, transparent 80%);
+    pointer-events: none;
 }
 
-/* Noise Texture Overlay (Adds Texture) */
 .noise-overlay {
     position: fixed;
     top: 0;
@@ -85,145 +81,160 @@ body {
     width: 100%;
     height: 100%;
     z-index: -1;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     pointer-events: none;
 }
 
-/* 2. Glassmorphism Cards */
-.card, .login-card, .modal {
-    background: var(--card-bg) !important;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-    border-radius: 24px !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.3s ease;
+/* 2. Navigation Bar */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(3, 0, 20, 0.5);
+    padding: 15px 0;
 }
 
-.card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 
-                0 0 20px var(--primary-glow);
+.nav-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
 }
 
-/* 3. Typography & Gradients */
-.hero-title {
-    font-size: 5rem;
+.logo {
+    font-size: 1.4rem;
     font-weight: 900;
-    letter-spacing: -3px;
-    background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+    color: var(--text-main);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -1px;
+}
+
+.logo span { color: var(--primary); }
+
+/* 3. Hero Section */
+.hero {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.hero-pill {
+    background: rgba(0, 255, 148, 0.1);
+    color: var(--primary);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid rgba(0, 255, 148, 0.2);
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hero h1 {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: -4px;
+    background: linear-gradient(180deg, #fff 30%, #888 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 50px rgba(255, 255, 255, 0.3);
-    margin-bottom: 1.5rem;
 }
 
-.hero-subtitle {
+.hero p {
     font-size: 1.25rem;
     color: var(--text-muted);
-    line-height: 1.6;
     max-width: 600px;
-    margin: 0 auto 3rem auto;
+    margin: 20px 0 40px;
 }
 
-/* 4. Login Button (Shimmer Effect) */
-.login-btn-lg {
+/* 4. Premium Buttons */
+.btn-naver {
+    background: #03C75A;
+    color: #white;
+    padding: 18px 45px;
+    border-radius: 16px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(3, 199, 90, 0.3);
+}
+
+.btn-naver:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(3, 199, 90, 0.5);
+    background: #04d663;
+}
+
+/* 5. Feature Grid (Buzzk Style) */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto 100px;
+    padding: 0 40px;
+}
+
+.feature-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 40px;
+    border-radius: 32px;
+    transition: 0.3s;
     position: relative;
-    background: #03C75A; /* Naver Green */
     overflow: hidden;
-    border: none !important;
 }
 
-.login-btn-lg::before {
+.feature-card:hover {
+    border-color: var(--primary);
+    background: rgba(255,255,255,0.05);
+}
+
+.feature-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.5rem;
+    margin-bottom: 25px;
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.feature-card h3 { font-size: 1.5rem; margin-bottom: 15px; }
+.feature-card p { color: var(--text-muted); line-height: 1.6; margin: 0; }
+
+/* Mouse Effect */
+.card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(
-        120deg, 
-        transparent, 
-        rgba(255, 255, 255, 0.4), 
-        transparent
-    );
-    animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-    0% { left: -100%; }
-    20% { left: 200%; }
-    100% { left: 200%; }
-}
-
-/* 5. Dashboard Elements */
-.sidebar {
-    background: rgba(10, 10, 15, 0.7) !important;
-    backdrop-filter: blur(25px);
-    border-right: 1px solid var(--border-color);
-}
-
-.header {
-    background: rgba(10, 10, 15, 0.4) !important;
-    backdrop-filter: blur(15px);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.nav-item.active {
-    background: rgba(0, 255, 157, 0.1);
-    color: var(--primary);
-    border-left: 3px solid var(--primary);
-    box-shadow: 0 0 15px rgba(0, 255, 157, 0.1);
-}
-
-/* Inputs & Forms */
-.form-input, .form-textarea {
-    background: rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 12px !important;
-    color: #fff !important;
-    transition: all 0.3s ease;
-}
-
-.form-input:focus, .form-textarea:focus {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.15) !important;
-    background: rgba(0, 0, 0, 0.6) !important;
-}
-
-/* Status Badges */
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 700;
-}
-
-.status-badge.live {
-    background: rgba(255, 59, 59, 0.2);
-    color: #ff3b3b;
-    border: 1px solid rgba(255, 59, 59, 0.3);
-    box-shadow: 0 0 10px rgba(255, 59, 59, 0.2);
-}
-
-.status-badge.offline {
-    background: rgba(100, 100, 100, 0.2);
-    color: #aaa;
-    border: 1px solid rgba(100, 100, 100, 0.3);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    top: var(--mouse-y, 50%);
+    left: var(--mouse-x, 50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(0, 255, 148, 0.05) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
 }
