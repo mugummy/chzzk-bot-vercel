@@ -53,159 +53,159 @@ async function initAuth() {
     const token = localStorage.getItem(SESSION_KEY);
     if (!token) return (window.location.href = '/');
 
-    try {
-        const res = await fetch('/api/auth/session', { 
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.authenticated) {
-            currentUser = data.user;
-            console.log('[Auth] Logged in as:', currentUser.channelName);
-            renderUserBasics(currentUser);
-        } else {
-            console.warn('[Auth] Session invalid');
-            window.location.href = '/';
-        }
-    } catch (e) { 
-        console.error('[Auth] Fetch Error:', e);
-        window.location.href = '/'; 
-    }
-}
-
-function initWebSocket() {
-    const token = localStorage.getItem(SESSION_KEY);
-    if (!token) return;
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/?token=${token}`;
-    
-    console.log('[WS] Connecting to:', wsUrl);
-    socket = new WebSocket(wsUrl);
-    window.socket = socket;
-
-    socket.onopen = () => {
-        console.log('[WS] Connected');
-        sendWebSocket({ type: 'connect', data: { channel: currentUser?.channelId } });
-        sendWebSocket({ type: 'requestData' });
-    };
-
-    socket.onmessage = (e) => {
         try {
-            const data = JSON.parse(e.data);
-            handleMessage(data);
-            if (window.handleVoteSystemMessage) window.handleVoteSystemMessage(data);
-        } catch (err) {
-            console.error('[WS] Parse Error:', err);
+            const res = await fetch('/api/auth/session', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.authenticated) {
+                currentUser = data.user;
+                console.log('[Auth] Logged in as:', currentUser.channelName);
+                renderUserBasics(currentUser);
+            } else {
+                console.warn('[Auth] Session invalid');
+                window.location.href = '/?error=expired';
+            }
+        } catch (e) {
+            console.error('[Auth] Fetch Error:', e);
+            window.location.href = '/?error=error';
         }
-    };
-    
-    socket.onclose = () => {
-        console.warn('[WS] Closed, reconnecting...');
-        setTimeout(initWebSocket, 3000);
-    };
-}
-
-function sendWebSocket(data) { 
-    if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(data)); 
     }
-}
-
-function handleMessage(data) {
-    console.log('[WS] Msg:', data.type);
-    switch (data.type) {
-        case 'connectResult': 
-            botConnected = data.success;
-            updateBotStatusUI(botConnected, isChatEnabled);
-            if(data.channelInfo) renderStreamerStatus(data.channelInfo, data.liveStatus);
-            break;
-        case 'settingsUpdate': syncSettings(data.payload); break;
-        case 'overlaySettingsUpdate': syncOverlay(data.payload); break;
-        case 'commandsUpdate': window.dashboardData.commands = data.payload; renderList('commands-list', data.payload, 'deleteCommand', 'editCommand'); break;
-        case 'macrosUpdate': window.dashboardData.macros = data.payload; renderList('macros-list', data.payload, 'deleteMacro', 'editMacro'); break;
-        case 'countersUpdate': window.dashboardData.counters = data.payload; renderList('counters-list', data.payload, 'deleteCounter', 'editCounter'); break;
-        case 'songStateUpdate': renderSongUI(data.payload); break;
-        case 'participationStateUpdate': renderParticipationUI(data.payload); break;
-        case 'greetStateUpdate': syncGreet(data.payload); break;
-        case 'newChat': renderChatLine(data.payload); break;
-        case 'error': ui.notify(data.message, 'error'); break;
-    }
-}
-
-// ============================================
-// Renderers
-// ============================================
-function renderUserBasics(user) {
-    const avatarEls = document.querySelectorAll('#sidebar-avatar, #header-avatar, #main-channel-avatar');
-    avatarEls.forEach(el => { 
-        if (user.channelImageUrl) el.style.backgroundImage = `url(${user.channelImageUrl})`; 
-    });
-    document.getElementById('sidebar-name').textContent = user.channelName;
-    document.getElementById('header-username').textContent = user.channelName;
-    document.getElementById('header-profile').style.display = 'flex';
-    document.getElementById('sidebar-profile').style.display = 'flex';
-}
-
-function renderStreamerStatus(info, live) {
-    document.getElementById('channel-name').textContent = info.channelName;
-    document.getElementById('follower-count').innerHTML = `<i class="fas fa-heart"></i><span> ${info.followerCount?.toLocaleString()} 팔로워</span>`;
     
-    if (live) {
-        document.getElementById('stream-title').textContent = live.liveTitle || '-';
-        document.getElementById('viewer-count').textContent = `${live.concurrentUserCount?.toLocaleString() || 0}명`;
-        const badge = document.querySelector('#stream-status-box .status-badge');
-        if (badge) {
-            badge.className = `status-badge ${live.status === 'OPEN' ? 'live' : 'offline'}`;
-            badge.textContent = live.status === 'OPEN' ? 'LIVE' : 'OFFLINE';
+    function initWebSocket() {
+        const token = localStorage.getItem(SESSION_KEY);
+        if (!token) return;
+    
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/?token=${token}`;
+        
+        console.log('[WS] Connecting to:', wsUrl);
+        socket = new WebSocket(wsUrl);
+        window.socket = socket;
+    
+        socket.onopen = () => {
+            console.log('[WS] Connected');
+            sendWebSocket({ type: 'connect', data: { channel: currentUser?.channelId } });
+            sendWebSocket({ type: 'requestData' });
+        };
+    
+        socket.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                handleMessage(data);
+                if (window.handleVoteSystemMessage) window.handleVoteSystemMessage(data);
+            } catch (err) {
+                console.error('[WS] Parse Error:', err);
+            }
+        };
+        
+        socket.onclose = () => {
+            console.warn('[WS] Closed, reconnecting...');
+            setTimeout(initWebSocket, 3000);
+        };
+    }
+    
+    function sendWebSocket(data) {
+        if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(data)); 
         }
-        document.getElementById('stream-category').innerHTML = `<i class="fas fa-gamepad"></i><span> ${live.category || '-'}</span>`;
     }
-}
-
-function renderList(id, list, deleteFn, editFn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = list.length ? list.map(item => `
-        <div class="item-card card">
-            <div class="item-info">
-                <b>${ui.esc(item.triggers ? item.triggers[0] : item.trigger)}</b>
-                <span>${ui.esc(item.response || item.message)}</span>
-            </div>
-            <div class="item-actions">
-                <button class="btn-icon" onclick="window.${editFn}('${item.id || item.trigger}')"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon btn-danger" onclick="window.${deleteFn}('${item.id || item.trigger}')"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`).join('') : '<div class="empty-state">내용이 없습니다.</div>';
-}
-
-function renderSongUI(state) {
-    const list = document.getElementById('song-queue-list');
-    if (list) list.innerHTML = state.queue.length ? state.queue.map(s => `
-        <div class="queue-item">
-            <img src="${s.thumbnail || ''}" style="width:40px; height:40px; border-radius:4px;">
-            <div class="q-info"><b>${ui.esc(s.title)}</b><br><small>${ui.esc(s.requester)}</small></div>
-        </div>`).join('') : '<div class="empty-state">대기열 비어있음</div>';
     
-    if (state.currentSong) {
-        const thumb = document.getElementById('current-song-thumbnail');
-        if (thumb) thumb.src = state.currentSong.thumbnail || '';
-        document.getElementById('current-song').textContent = state.currentSong.title;
+    function handleMessage(data) {
+        console.log('[WS] Msg:', data.type);
+        switch (data.type) {
+            case 'connectResult': 
+                botConnected = data.success;
+                updateBotStatusUI(botConnected, isChatEnabled);
+                if(data.channelInfo) renderStreamerStatus(data.channelInfo, data.liveStatus);
+                break;
+            case 'settingsUpdate': syncSettings(data.payload); break;
+            case 'overlaySettingsUpdate': syncOverlay(data.payload); break;
+            case 'commandsUpdate': window.dashboardData.commands = data.payload; renderList('commands-list', data.payload, 'deleteCommand', 'editCommand'); break;
+            case 'macrosUpdate': window.dashboardData.macros = data.payload; renderList('macros-list', data.payload, 'deleteMacro', 'editMacro'); break;
+            case 'countersUpdate': window.dashboardData.counters = data.payload; renderList('counters-list', data.payload, 'deleteCounter', 'editCounter'); break;
+            case 'songStateUpdate': renderSongUI(data.payload); break;
+            case 'participationStateUpdate': renderParticipationUI(data.payload); break;
+            case 'greetStateUpdate': syncGreet(data.payload); break;
+            case 'newChat': renderChatLine(data.payload); break;
+            case 'error': ui.notify(data.message, 'error'); break;
+        }
     }
-    document.getElementById('queue-count').textContent = state.queue.length;
-}
-
-function renderParticipationUI(state) {
-    document.getElementById('waiting-count').textContent = state.queue.length;
-    document.getElementById('active-count').textContent = state.participants.length;
-    const waitList = document.getElementById('waiting-queue');
-    if (waitList) waitList.innerHTML = state.queue.map(p => `<div class="participant-item"><span>${ui.esc(p.nickname)}</span><button class="btn-sm btn-primary" onclick="window.approveParticipant('${p.userIdHash}')">승인</button></div>`).join('');
-    const activeList = document.getElementById('active-participants');
-    if (activeList) activeList.innerHTML = state.participants.map(p => `<div class="participant-item"><i class="fas fa-user-check"></i> ${ui.esc(p.nickname)}</div>`).join('');
-}
-
-function renderChatLine(chat) {
-    const box = document.getElementById('chat-messages');
-    if (!box) return;
+    
+    // ============================================
+    // Renderers
+    // ============================================
+    function renderUserBasics(user) {
+        const avatarEls = document.querySelectorAll('#sidebar-avatar, #header-avatar, #main-channel-avatar');
+        avatarEls.forEach(el => {
+            if (user.channelImageUrl) el.style.backgroundImage = `url(${user.channelImageUrl})`; 
+        });
+        document.getElementById('sidebar-name').textContent = user.channelName;
+        document.getElementById('header-username').textContent = user.channelName;
+        document.getElementById('header-profile').style.display = 'flex';
+        document.getElementById('sidebar-profile').style.display = 'flex';
+    }
+    
+    function renderStreamerStatus(info, live) {
+        document.getElementById('channel-name').textContent = info.channelName;
+        document.getElementById('follower-count').innerHTML = `<i class="fas fa-heart"></i><span> ${info.followerCount?.toLocaleString()} 팔로워</span>`;
+        
+        if (live) {
+            document.getElementById('stream-title').textContent = live.liveTitle || '-';
+            document.getElementById('viewer-count').textContent = `${live.concurrentUserCount?.toLocaleString() || 0}명`;
+            const badge = document.querySelector('#stream-status-box .status-badge');
+            if (badge) {
+                badge.className = `status-badge ${live.status === 'OPEN' ? 'live' : 'offline'}`;
+                badge.textContent = live.status === 'OPEN' ? 'LIVE' : 'OFFLINE';
+            }
+            document.getElementById('stream-category').innerHTML = `<i class="fas fa-gamepad"></i><span> ${live.category || '-'}</span>`;
+        }
+    }
+    
+    function renderList(id, list, deleteFn, editFn) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = list.length ? list.map(item => `
+            <div class="item-card card">
+                <div class="item-info">
+                    <b>${ui.esc(item.triggers ? item.triggers[0] : item.trigger)}</b>
+                    <span>${ui.esc(item.response || item.message)}</span>
+                </div>
+                <div class="item-actions">
+                    <button class="btn-icon" onclick="window.${editFn}('${item.id || item.trigger}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-danger" onclick="window.${deleteFn}('${item.id || item.trigger}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`).join('') : '<div class="empty-state">내용이 없습니다.</div>';
+    }
+    
+    function renderSongUI(state) {
+        const list = document.getElementById('song-queue-list');
+        if (list) list.innerHTML = state.queue.length ? state.queue.map(s => `
+            <div class="queue-item">
+                <img src="${s.thumbnail || ''}" style="width:40px; height:40px; border-radius:4px;">
+                <div class="q-info"><b>${ui.esc(s.title)}</b><br><small>${ui.esc(s.requester)}</small></div>
+            </div>`).join('') : '<div class="empty-state">대기열 비어있음</div>';
+        
+        if (state.currentSong) {
+            const thumb = document.getElementById('current-song-thumbnail');
+            if (thumb) thumb.src = state.currentSong.thumbnail || '';
+            document.getElementById('current-song').textContent = state.currentSong.title;
+        }
+        document.getElementById('queue-count').textContent = state.queue.length;
+    }
+    
+    function renderParticipationUI(state) {
+        document.getElementById('waiting-count').textContent = state.queue.length;
+        document.getElementById('active-count').textContent = state.participants.length;
+        const waitList = document.getElementById('waiting-queue');
+        if (waitList) waitList.innerHTML = state.queue.map(p => `<div class="participant-item"><span>${ui.esc(p.nickname)}</span><button class="btn-sm btn-primary" onclick="window.approveParticipant('${p.userIdHash}')">승인</button></div>`).join('');
+        const activeList = document.getElementById('active-participants');
+        if (activeList) activeList.innerHTML = state.participants.map(p => `<div class="participant-item"><i class="fas fa-user-check"></i> ${ui.esc(p.nickname)}</div>`).join('');
+    }
+    
+    function renderChatLine(chat) {
+        if (!chat || !chat.profile || !chat.message) return;
+        const box = document.getElementById('chat-messages');    if (!box) return;
     if (box.querySelector('.chat-empty')) box.innerHTML = '';
     const div = document.createElement('div');
     div.className = 'chat-line';
