@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Terminal, Plus, Settings, Trash2, Search, Zap, Calculator, Sliders, Info, Edit3 } from 'lucide-react';
+import { Terminal, Plus, Settings, Trash2, Search, Zap, Calculator, Clock, Edit3, Info } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from './Modals';
@@ -17,9 +17,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   const [cmdData, setCmdData] = useState({ trigger: '', response: '' });
   const [cntData, setCntData] = useState({ trigger: '', response: '', oncePerDay: false });
 
-  const getFirstTrigger = (cmd: CommandItem) => {
-    return cmd.triggers?.[0] || cmd.trigger || '';
-  };
+  const getFirstTrigger = (cmd: CommandItem) => cmd.triggers?.[0] || cmd.trigger || '';
 
   const handleOpenEdit = (cmd: CommandItem) => {
     const trigger = getFirstTrigger(cmd);
@@ -49,7 +47,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
           <input value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white/5 border border-white/5 pl-14 pr-6 py-5 rounded-[2rem] outline-none focus:border-emerald-500/50 transition-all text-white" placeholder="검색어 입력..." />
         </div>
         <div className="flex gap-4 w-full lg:w-auto">
-          <button onClick={() => { setModalMode('add'); setIsModalOpen(true); }} className="flex-1 lg:flex-none bg-emerald-500 text-black px-10 py-5 rounded-[2rem] font-black hover:scale-105 transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3"><Zap size={20} fill="currentColor" /> 명령어 추가</button>
+          <button onClick={() => { setModalMode('add'); setIsModalOpen(true); }} className="flex-1 lg:flex-none bg-emerald-500 text-black px-10 py-5 rounded-[2rem] font-black hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-3"><Zap size={20} fill="currentColor" /> 명령어 추가</button>
           <button onClick={() => { setModalMode('counter'); setIsModalOpen(true); }} className="flex-1 lg:flex-none bg-white/5 border border-white/10 px-10 py-5 rounded-[2rem] font-black hover:bg-white/10 transition-all flex items-center justify-center gap-3 text-white"><Calculator size={20} /> 카운터 추가</button>
         </div>
       </header>
@@ -57,14 +55,11 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <AnimatePresence>
           {commands.filter(c => getFirstTrigger(c).includes(search)).map((cmd, i) => (
-            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={cmd.id || i} className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
+            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={i} className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
               <div className="flex items-center gap-8">
                 <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center text-emerald-500"><Terminal size={32} /></div>
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-white font-black text-2xl tracking-tighter">!{getFirstTrigger(cmd)}</span>
-                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black rounded-full uppercase">Command</span>
-                  </div>
+                  <div className="flex items-center gap-3 mb-2"><span className="text-white font-black text-2xl">!{getFirstTrigger(cmd)}</span><span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black rounded-full uppercase">Command</span></div>
                   <p className="text-gray-500 font-medium text-lg line-clamp-1">{cmd.response}</p>
                 </div>
               </div>
