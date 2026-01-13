@@ -1,4 +1,4 @@
-// dashboard.js - Professional Final Stable Version (No Duplicates)
+// dashboard.js - Professional Final Stable Version (Corrected)
 
 let socket = null;
 let botConnected = false;
@@ -31,13 +31,13 @@ window.ui = ui;
 window.utils = utils;
 
 // ============================================
-// Core Logic Handlers
+// Logic Handlers (DEFINED ONCE)
 // ============================================
 function sendWebSocket(data) { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); }
 window.sendWebSocket = sendWebSocket;
 
 function handleMessage(data) {
-    console.log('[WS] Recv:', data.type);
+    console.log('[WS] Sync:', data.type);
     switch (data.type) {
         case 'connectResult': 
             botConnected = data.success;
@@ -58,12 +58,11 @@ function handleMessage(data) {
 }
 
 // ============================================
-// Renderers
+// UI Renderers
 // ============================================
 function renderUserBasics(user) {
-    document.querySelectorAll('#sidebar-avatar, #header-avatar, #main-channel-avatar').forEach(el => {
-        if (user.channelImageUrl) el.style.backgroundImage = `url(${user.channelImageUrl})`;
-    });
+    const avatarEls = document.querySelectorAll('#sidebar-avatar, #header-avatar, #main-channel-avatar');
+    avatarEls.forEach(el => { if (user.channelImageUrl) el.style.backgroundImage = `url(${user.channelImageUrl})`; });
     document.getElementById('sidebar-name').textContent = user.channelName;
     document.getElementById('header-username').textContent = user.channelName;
     document.getElementById('header-profile').style.display = 'flex';
@@ -118,11 +117,6 @@ function renderParticipationUI(state) {
     if (waitList) waitList.innerHTML = state.queue.map(p => `<div class="participant-item"><span>${ui.esc(p.nickname)}</span><button class="btn-sm btn-primary" onclick="window.approveParticipant('${p.userIdHash}')">승인</button></div>`).join('');
     const activeList = document.getElementById('active-participants');
     if (activeList) activeList.innerHTML = state.participants.map(p => `<div class="participant-item"><i class="fas fa-user-check"></i> ${ui.esc(p.nickname)}</div>`).join('');
-    const toggleBtn = document.getElementById('toggle-participation-btn');
-    if (toggleBtn) {
-        toggleBtn.innerHTML = state.isParticipationActive ? '<i class="fas fa-stop"></i> 참여 마감' : '<i class="fas fa-play"></i> 참여 시작';
-        toggleBtn.className = state.isParticipationActive ? 'btn btn-danger' : 'btn btn-primary';
-    }
 }
 
 function renderChatLine(chat) {
@@ -139,7 +133,7 @@ function renderChatLine(chat) {
 }
 
 // ============================================
-// Sync Helpers
+// Sync Functions
 // ============================================
 function syncSettings(s) {
     if (s.chatEnabled !== undefined) {
@@ -165,8 +159,6 @@ function syncOverlay(os) {
     const op = document.getElementById('overlay-opacity'); if (op) { op.value = os.backgroundOpacity || 70; document.getElementById('overlay-opacity-value').textContent = op.value+'%'; }
     const ah = document.getElementById('overlay-auto-hide'); if (ah) { ah.value = (os.autoHideDelay || 5000) / 1000; document.getElementById('overlay-auto-hide-value').textContent = ah.value+'초'; }
     if (os.themeColor) document.getElementById('overlay-color').value = os.themeColor;
-    const baseUrl = window.location.origin;
-    document.getElementById('overlay-url').value = `${baseUrl}/vote_overlay.html?token=${localStorage.getItem(SESSION_KEY)}`;
 }
 
 function syncGreet(p) {
@@ -187,59 +179,20 @@ function updateBotStatusUI(connected, chatEnabled) {
 }
 
 // ============================================
-// Actions
-// ============================================
-window.updatePreview = (srcId, preId) => {
-    const src = document.getElementById(srcId);
-    const pre = document.getElementById(preId);
-    if (!src || !pre) return;
-    const map = { '/user': '무거미', '/uptime': '02:15:30', '/viewer': '120', '/random': '결과A', '/since': '365일', '/count': '1', '{user}': '무거미' };
-    let val = src.value || '미리보기가 표시됩니다.';
-    Object.keys(map).forEach(key => { val = val.split(key).join(`<span style="color:#00ff94; font-weight:bold">${map[key]}</span>`); });
-    pre.innerHTML = `봇: ${val}`;
-};
-
-window.insertFunction = (targetId, func) => {
-    const el = document.getElementById(targetId);
-    if (!el) return;
-    const start = el.selectionStart;
-    el.value = el.value.substring(0, start) + func + el.value.substring(el.selectionEnd);
-    el.focus();
-    const preId = targetId.includes('command') ? 'cmd-preview' : targetId.includes('macro') ? 'macro-preview' : 'counter-preview';
-    window.updatePreview(targetId, preId);
-};
-
-window.addCommand = () => {
-    const t = document.getElementById('new-command-trigger').value.trim();
-    const r = document.getElementById('new-command-response').value.trim();
-    if (t && r) { sendWebSocket({ type: 'addCommand', data: { trigger: t, response: r } }); ui.modal('add-command-modal', false); }
-};
-
-window.addMacro = () => {
-    const i = document.getElementById('new-macro-interval').value;
-    const m = document.getElementById('new-macro-message').value.trim();
-    if (m) { sendWebSocket({ type: 'addMacro', data: { interval: parseInt(i), message: m } }); ui.modal('add-macro-modal', false); }
-};
-
-window.addCounter = () => {
-    const t = document.getElementById('new-counter-trigger').value.trim();
-    const r = document.getElementById('new-counter-response').value.trim();
-    const once = document.getElementById('new-counter-once').checked;
-    if (t && r) { sendWebSocket({ type: 'addCounter', data: { trigger: t, response: r, oncePerDay: once } }); ui.modal('add-counter-modal', false); }
-};
-
-// ============================================
 // Initialization
 // ============================================
 async function initAuth() {
+    console.log('[Auth] Initializing...');
     const params = new URLSearchParams(window.location.search);
     const session = params.get('session');
+    
     if (session) {
         localStorage.setItem(SESSION_KEY, session);
         window.history.replaceState({}, document.title, window.location.pathname);
-        ui.notify('성공적으로 로그인되었습니다.', 'success');
+        ui.notify('로그인 중...', 'info');
         await new Promise(r => setTimeout(r, 2000));
     }
+    
     const token = localStorage.getItem(SESSION_KEY);
     if (!token) return (window.location.href = '/');
 
@@ -249,17 +202,23 @@ async function initAuth() {
         if (data.authenticated) {
             currentUser = data.user;
             renderUserBasics(currentUser);
-        } else window.location.href = '/?error=expired';
-    } catch (e) { window.location.href = '/'; }
+        } else {
+            window.location.href = '/?error=expired';
+        }
+    } catch (e) { 
+        window.location.href = '/?error=error'; 
+    }
 }
 
 function initWebSocket() {
     const token = localStorage.getItem(SESSION_KEY);
+    if (!token) return;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${window.location.host}/?token=${token}`);
     window.socket = socket;
 
     socket.onopen = () => {
+        console.log('[WS] Connected');
         sendWebSocket({ type: 'connect', data: { channel: currentUser?.channelId } });
         sendWebSocket({ type: 'requestData' });
     };
@@ -274,9 +233,14 @@ function initWebSocket() {
     socket.onclose = () => setTimeout(initWebSocket, 3000);
 }
 
+// ============================================
+// Main & Global Actions
+// ============================================
 async function main() {
     await initAuth();
     initWebSocket();
+    
+    // Mouse Effect
     document.addEventListener('mousemove', (e) => {
         const cards = document.querySelectorAll('.card');
         cards.forEach(card => {
@@ -285,6 +249,7 @@ async function main() {
             card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
         });
     });
+
     document.getElementById('bot-chat-toggle')?.addEventListener('change', (e) => sendWebSocket({ type: 'updateSettings', data: { chatEnabled: e.target.checked } }));
     document.getElementById('max-participants-slider')?.addEventListener('input', (e) => document.getElementById('max-participants-value').textContent = e.target.value);
     
@@ -297,18 +262,38 @@ async function main() {
         };
     });
 }
+
 document.addEventListener('DOMContentLoaded', main);
 
-// Window Exposed Functions
+// Window Exposed Functions (All Actions Restored)
 window.showModal = ui.modal;
 window.hideModal = (id) => ui.modal(id, false);
 window.openPlayer = () => window.open('/player.html', '_blank', 'width=850,height=650');
 window.handleLogout = () => { localStorage.removeItem(SESSION_KEY); window.location.href = '/'; };
 window.copyOverlayUrl = () => { const el = document.getElementById('overlay-url'); el.select(); document.execCommand('copy'); ui.notify('URL 복사 완료!', 'success'); };
 window.syncRangeValue = (el, id) => document.getElementById(id).textContent = el.id.includes('opacity') ? el.value+'%' : el.value+'초';
+
+window.addCommand = () => {
+    const t = document.getElementById('new-command-trigger').value.trim();
+    const r = document.getElementById('new-command-response').value.trim();
+    if (t && r) { sendWebSocket({ type: 'addCommand', data: { trigger: t, response: r } }); ui.modal('add-command-modal', false); }
+};
+window.addMacro = () => {
+    const i = document.getElementById('new-macro-interval').value;
+    const m = document.getElementById('new-macro-message').value.trim();
+    if (m) { sendWebSocket({ type: 'addMacro', data: { interval: parseInt(i), message: m } }); ui.modal('add-macro-modal', false); }
+};
+window.addCounter = () => {
+    const t = document.getElementById('new-counter-trigger').value.trim();
+    const r = document.getElementById('new-counter-response').value.trim();
+    const once = document.getElementById('new-counter-once').checked;
+    if (t && r) { sendWebSocket({ type: 'addCounter', data: { trigger: t, response: r, oncePerDay: once } }); ui.modal('add-counter-modal', false); }
+};
+
 window.editCommand = (t) => { const c = window.dashboardData.commands.find(x => x.trigger === t); if(c){ document.getElementById('new-command-trigger').value = c.trigger; document.getElementById('new-command-response').value = c.response; window.showModal('add-command-modal'); } };
 window.editMacro = (id) => { const m = window.dashboardData.macros.find(x => x.id === id); if(m){ document.getElementById('new-macro-interval').value = m.interval; document.getElementById('new-macro-message').value = m.message; window.showModal('add-macro-modal'); } };
 window.editCounter = (t) => { const c = window.dashboardData.counters.find(x => x.trigger === t); if(c){ document.getElementById('new-counter-trigger').value = c.trigger; document.getElementById('new-counter-response').value = c.response; window.showModal('add-counter-modal'); } };
+
 window.deleteCommand = deleteCommand;
 window.deleteMacro = deleteMacro;
 window.deleteCounter = deleteCounter;
@@ -322,3 +307,5 @@ window.approveParticipant = (id) => sendWebSocket({ type: 'moveToParticipants', 
 window.saveGreetSettings = () => { const type = document.querySelector('input[name="greetType"]:checked').value; sendWebSocket({ type: 'updateGreetSettings', data: { type: parseInt(type) } }); ui.notify('저장 완료', 'success'); };
 window.saveGreetEditor = () => { const msg = document.getElementById('edit-greet-input').value; sendWebSocket({ type: 'updateGreetSettings', data: { message: msg } }); window.hideModal('edit-greet-modal'); };
 window.resetGreetHistory = () => confirm('기록을 초기화할까요?') && sendWebSocket({ type: 'resetGreetHistory' });
+window.insertFunction = insertFunction;
+window.updatePreview = updatePreview;

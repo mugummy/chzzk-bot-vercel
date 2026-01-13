@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot Dashboard - Expert Edition</title>
+    <title>Chzzk Bot Dashboard - Ultimate Fixed</title>
     <script src="/config.js"></script>
     <script src="/api-adapter.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -34,17 +34,17 @@
         </div>
         <div class="header-right" id="header-profile" style="display: none;">
             <div class="header-profile-info">
-                <div class="header-avatar" id="header-avatar"></div>
+                <div class="header-avatar" id="header-avatar" style="width:32px; height:32px; border-radius:50%; background-size:cover; border:1px solid #00ff94;"></div>
                 <span class="header-username" id="header-username"></span>
             </div>
-            <button class="header-logout" onclick="window.handleLogout()"><i class="fas fa-sign-out-alt"></i></button>
+            <button class="header-logout" onclick="window.handleLogout()" title="로그아웃"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </header>
 
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
-                <div class="sidebar-avatar" id="sidebar-avatar"></div>
+                <div class="sidebar-avatar" id="sidebar-avatar" style="width:48px; height:48px; border-radius:12px; background-size:cover; border:2px solid #00ff94;"></div>
                 <div class="sidebar-info">
                     <div class="sidebar-name" id="sidebar-name">사용자</div>
                     <div class="sidebar-status"><span class="status-dot"></span><span id="sidebar-status-text">연결됨</span></div>
@@ -107,19 +107,15 @@
             </div>
         </div>
 
-        <!-- 2. Commands Tab -->
+        <!-- Lists (Commands, Macros, Counters) -->
         <div id="commands-tab" class="tab-content">
             <div class="tab-header"><h2>명령어 관리</h2><button class="btn btn-primary" onclick="window.showModal('add-command-modal')">추가</button></div>
             <div class="card"><div id="commands-list" class="item-list"></div></div>
         </div>
-
-        <!-- 3. Macros Tab -->
         <div id="macros-tab" class="tab-content">
             <div class="tab-header"><h2>매크로 관리</h2><button class="btn btn-primary" onclick="window.showModal('add-macro-modal')">추가</button></div>
             <div class="card"><div id="macros-list" class="item-list"></div></div>
         </div>
-
-        <!-- 4. Counters Tab -->
         <div id="counters-tab" class="tab-content">
             <div class="tab-header"><h2>카운터 관리</h2><button class="btn btn-primary" onclick="window.showModal('add-counter-modal')">추가</button></div>
             <div class="card"><div id="counters-list" class="item-list"></div></div>
@@ -301,7 +297,7 @@
 
     <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 설정</h2><button class="modal-close" onclick="window.hideModal('add-macro-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-macro-id"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" oninput="window.updatePreview('new-macro-message','macro-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/uptime')">/uptime</span><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/viewer')">/viewer</span></div></div><div class="preview-box" id="macro-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addMacro()">저장</button></div></div></div>
     <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 설정</h2><button class="modal-close" onclick="window.hideModal('add-counter-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-counter-id"><div class="form-group"><label>트리거</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea" oninput="window.updatePreview('new-counter-response','counter-preview')"></textarea></div><div class="form-group" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px;"><label style="margin:0">하루 한 번만 실행</label><label class="toggle-switch small"><input type="checkbox" id="new-counter-once"><span class="slider round"></span></label></div><div class="preview-box mt-20" id="counter-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addCounter()">저장</button></div></div></div>
-    <div id="edit-greet-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>인사 문구 수정</h2><button class="modal-close" onclick="window.hideModal('edit-greet-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>인사 메시지</label><textarea id="edit-greet-input" class="form-textarea" rows="4" oninput="window.updatePreview('edit-greet-input','greet-preview')"></small></div><div class="preview-box" id="greet-preview">봇: 응답 예시...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.saveGreetEditor()">적용</button></div></div></div>
+    <div id="edit-greet-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>인사 문구 수정</h2><button class="modal-close" onclick="window.hideModal('edit-greet-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>인사 메시지</label><textarea id="edit-greet-input" class="form-textarea" rows="4" oninput="window.updatePreview('edit-greet-input','greet-preview')"></textarea><small class="form-help">{user} 변수 사용 가능</small></div><div class="preview-box" id="greet-preview">봇: 응답 예시...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.saveGreetEditor()">적용</button></div></div></div>
 
     <div id="notification-container"></div>
     <script src="/dashboard.js"></script>
