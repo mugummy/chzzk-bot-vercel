@@ -33,31 +33,15 @@ export default function DashboardPage() {
     return process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
   };
 
-  const connectWS = useCallback((token: string) => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      store.setBotStatus(true, false);
-      ws.send(JSON.stringify({ type: 'connect' }));
-      ws.send(JSON.stringify({ type: 'requestData' }));
-    };
-
-    ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handleIncomingData(data);
-      } catch (err) {}
-    };
-
-    ws.onclose = () => {
-      store.setBotStatus(false, true);
-      setTimeout(() => connectWS(token), 3000);
-    };
-
-    setSocket(ws);
-  }, [store]);
+  const speak = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (lastSpokenMsgRef.current === text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    window.speechSynthesis.speak(utterance);
+    lastSpokenMsgRef.current = text;
+  };
 
   const handleIncomingData = useCallback((data: any) => {
     switch (data.type) {
@@ -92,15 +76,31 @@ export default function DashboardPage() {
     }
   }, [store, winner]);
 
-  const speak = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    if (lastSpokenMsgRef.current === text) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    window.speechSynthesis.speak(utterance);
-    lastSpokenMsgRef.current = text;
-  };
+  const connectWS = useCallback((token: string) => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      store.setBotStatus(true, false);
+      ws.send(JSON.stringify({ type: 'connect' }));
+      ws.send(JSON.stringify({ type: 'requestData' }));
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        handleIncomingData(data);
+      } catch (err) {}
+    };
+
+    ws.onclose = () => {
+      store.setBotStatus(false, true);
+      setTimeout(() => connectWS(token), 3000);
+    };
+
+    setSocket(ws);
+  }, [store, handleIncomingData]);
 
   const closeWinnerPopup = () => {
     setWinner(null);
@@ -115,11 +115,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('chzzk_session_token');
-    
-    if (!token) {
-      window.location.href = '/';
-      return;
-    }
+    if (!token) { window.location.href = '/'; return; }
     
     fetch(`https://${getServerUrl()}/api/auth/session`, { 
       headers: { 'Authorization': `Bearer ${token}` } 
@@ -127,16 +123,10 @@ export default function DashboardPage() {
       if (data.authenticated) {
         store.setAuth(data.user);
         connectWS(token);
-      } else {
-        window.location.href = '/';
-      }
-    }).catch(() => {
-      window.location.href = '/';
-    });
+      } else { window.location.href = '/'; }
+    }).catch(() => { window.location.href = '/'; });
 
-    return () => {
-      if (socket) socket.close();
-    };
+    return () => { if (socket) socket.close(); };
   }, [connectWS]);
 
   if (isLoading && !store.currentUser) {
@@ -159,12 +149,12 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] z-50`}>
         <div className="p-8 flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
             <Activity className="text-black" size={28} />
           </div>
-          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter">BUZZK</h1>}
+          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter">BUZZK PRO</h1>}
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-8">
@@ -179,7 +169,7 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300">
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300">
             <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
@@ -216,14 +206,14 @@ export default function DashboardPage() {
         <AnimatePresence>
           {winner && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 pointer-events-none">
-              <motion.div initial={{ opacity: 0, scale: 0.8, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 100 }} className="w-full max-w-2xl bg-black/90 backdrop-blur-3xl border border-emerald-500/30 rounded-[4rem] p-12 shadow-2xl pointer-events-auto text-center relative">
+              <motion.div initial={{ opacity: 0, scale: 0.8, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 100 }} className="w-full max-w-2xl bg-black/90 backdrop-blur-3xl border border-emerald-500/30 rounded-[4rem] p-12 shadow-2xl pointer-events-auto text-center relative overflow-hidden">
                 <button onClick={closeWinnerPopup} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full hover:bg-red-500 transition-all"><X size={24} /></button>
                 <div className="w-32 h-32 bg-emerald-500 rounded-full mx-auto mb-8 flex items-center justify-center"><Users size={64} className="text-black" /></div>
                 <h2 className="text-6xl font-black tracking-tighter text-white mb-12">{winner.nickname}</h2>
-                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-left h-40 overflow-y-auto space-y-4 custom-scrollbar">
+                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-left h-40 overflow-y-auto space-y-4 pr-4 custom-scrollbar">
                   {winnerChats.map((chat, i) => (
                     <div key={i} className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
-                      <p className="text-emerald-400 text-sm font-bold">{chat.message}</p>
+                      <p className="text-emerald-400 text-sm font-bold leading-relaxed">{chat.message}</p>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, LayoutGrid, MessageSquare, Heart, Gamepad2, Zap, MonitorPlay } from 'lucide-react';
+import { Users, LayoutGrid, MessageSquare, Heart, Gamepad2, Zap, MonitorPlay, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -10,8 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function DashboardHome({ store }: { store: any }) {
   return (
     <div className="grid grid-cols-12 gap-8">
-      {/* 1. 방송 라이브 카드 (가장 큰 비중) */}
-      <div className="col-span-12 lg:col-span-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-[3.5rem] p-12 text-black relative overflow-hidden group shadow-2xl shadow-emerald-500/10 border border-white/10">
+      {/* 1. 방송 라이브 카드 */}
+      <div className="col-span-12 lg:col-span-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-[3.5rem] p-12 text-black relative overflow-hidden group shadow-2xl border border-white/10">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
             <div className="px-5 py-2 bg-black/10 rounded-full text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3 border border-black/5 backdrop-blur-sm">
@@ -25,7 +25,6 @@ export default function DashboardHome({ store }: { store: any }) {
           </h2>
 
           <div className="flex flex-wrap gap-5">
-            {/* 시청자 수 */}
             <div className="bg-black/90 px-10 py-5 rounded-[2.5rem] text-white font-black flex items-center gap-5 shadow-2xl hover:bg-black transition-colors">
               <Users size={28} className="text-emerald-400" />
               <div className="flex flex-col">
@@ -34,7 +33,6 @@ export default function DashboardHome({ store }: { store: any }) {
               </div>
             </div>
             
-            {/* 카테고리 */}
             <div className="bg-black/10 backdrop-blur-md px-10 py-5 rounded-[2.5rem] font-black flex items-center gap-5 border border-white/10">
               <Gamepad2 size={28} />
               <div className="flex flex-col">
@@ -43,7 +41,6 @@ export default function DashboardHome({ store }: { store: any }) {
               </div>
             </div>
 
-            {/* 팔로워 수 */}
             <div className="bg-black/10 backdrop-blur-md px-10 py-5 rounded-[2.5rem] font-black flex items-center gap-5 border border-white/10">
               <Heart size={28} className="text-red-600 fill-current" />
               <div className="flex flex-col">
@@ -54,13 +51,12 @@ export default function DashboardHome({ store }: { store: any }) {
           </div>
         </div>
         
-        {/* Decorative Background Icon */}
         <div className="absolute -top-20 -right-20 p-12 opacity-10 rotate-12 pointer-events-none group-hover:rotate-0 transition-transform duration-[2000ms] ease-out">
           <MonitorPlay size={600} strokeWidth={0.5} />
         </div>
       </div>
 
-      {/* 2. 실시간 채팅 모니터 (우측 사이드) */}
+      {/* 2. 실시간 채팅 모니터 */}
       <div className="col-span-12 lg:col-span-4 bg-[#0a0a0a] rounded-[3.5rem] border border-white/5 p-10 flex flex-col shadow-2xl relative group hover:border-white/10 transition-all duration-500">
         <div className="flex items-center justify-between mb-10">
           <div>
@@ -108,9 +104,6 @@ export default function DashboardHome({ store }: { store: any }) {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Status Glow */}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-emerald-500/5 to-transparent rounded-b-[3.5rem] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
       </div>
     </div>
   );
