@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { 
   Home, Terminal, Clock, Calculator, Music, HandHelping, 
   Poll, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight
@@ -8,9 +8,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
 
-// 모든 탭 컴포넌트 임포트 (100% 교체된 리액트 버전)
+// 모든 탭 컴포넌트 (100% 리액트 이식 완료)
 import DashboardHome from '@/components/dashboard/DashboardHome';
 import CommandTab from '@/components/dashboard/CommandTab';
+import MacroTab from '@/components/dashboard/MacroTab';
 import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import VotePanel from '@/components/dashboard/VotePanel';
@@ -24,17 +25,13 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // WebSocket 연결 매커니즘 (재시도 및 상태 동기화)
+  // WebSocket 연결 매커니즘 (Full-Sync)
   const connectWS = useCallback((token: string) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Railway 서버 주소와 통일
     const wsUrl = `wss://web-production-19eef.up.railway.app/?token=${token}`;
-    
-    console.log('[Dashboard] Connecting to WS:', wsUrl);
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('[Dashboard] WebSocket Connected Successfully');
       ws.send(JSON.stringify({ type: 'connect' }));
       ws.send(JSON.stringify({ type: 'requestData' }));
     };
@@ -43,19 +40,14 @@ export default function DashboardPage() {
       try {
         const data = JSON.parse(e.data);
         handleIncomingData(data);
-      } catch (err) { console.error('[WS] Sync Error:', err); }
+      } catch (err) { console.error('[WS] Data Error', err); }
     };
 
-    ws.onclose = () => {
-      console.warn('[WS] Connection Lost. Retrying in 3s...');
-      setTimeout(() => connectWS(token), 3000);
-    };
-
+    ws.onclose = () => setTimeout(() => connectWS(token), 3000);
     setSocket(ws);
   }, []);
 
   const handleIncomingData = (data: any) => {
-    console.log('[WS] Received:', data.type);
     switch (data.type) {
       case 'connectResult': 
         store.setBotStatus(data.success);
@@ -70,22 +62,15 @@ export default function DashboardPage() {
       case 'participationStateUpdate': store.updateParticipation(data.payload); break;
       case 'greetStateUpdate': store.updateGreet(data.payload); break;
       case 'newChat': store.addChat(data.payload); break;
-      case 'error': 
-        // 전역 알림 시스템 연동 (window.ui.notify)
-        if(window.ui) window.ui.notify(data.message, 'error');
-        break;
     }
   };
 
   const send = (msg: any) => {
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(msg));
-    } else {
-      console.error('[WS] Send failed: Socket not connected');
     }
   };
 
-  // 초기 로드 및 세션 검증
   useEffect(() => {
     const token = localStorage.getItem('chzzk_session_token');
     const params = new URLSearchParams(window.location.search);
@@ -105,26 +90,12 @@ export default function DashboardPage() {
 
     fetch('https://web-production-19eef.up.railway.app/api/auth/session', { 
       headers: { 'Authorization': `Bearer ${token}` } 
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          store.setAuth(data.user);
-          connectWS(token);
-        } else {
-          window.location.href = '/';
-        }
-      })
-      .catch(() => window.location.href = '/');
-
-    // 윈도우 전역 헬퍼 설정 (기존 vote-system.js 등과의 호환성)
-    (window as any).sendWebSocket = send;
-    (window as any).ui = {
-      notify: (msg: string, type: string) => {
-        // 커스텀 알림 로직 (React 상태로 처리 가능)
-        console.log(`[Notify] ${type}: ${msg}`);
-      }
-    };
+    }).then(res => res.json()).then(data => {
+      if (data.authenticated) {
+        store.setAuth(data.user);
+        connectWS(token);
+      } else window.location.href = '/';
+    }).catch(() => window.location.href = '/');
 
     return () => socket?.close();
   }, [connectWS]);
@@ -133,14 +104,14 @@ export default function DashboardPage() {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
         <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Syncing with Server...</p>
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Establishing Secure Uplink...</p>
       </div>
     );
   }
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-emerald-500/30">
-      {/* Sidebar: Premium Glass Design */}
+      {/* Sidebar Navigation */}
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] relative z-50`}>
         <div className="p-8 flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/20 shrink-0">
@@ -157,6 +128,7 @@ export default function DashboardPage() {
         <nav className="flex-1 px-4 space-y-2 mt-8">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="songs" icon={<Music size={22}/>} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="greet" icon={<HandHelping size={22}/>} label="인사 관리" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="votes" icon={<Poll size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
@@ -167,26 +139,21 @@ export default function DashboardPage() {
         <div className="p-6 mt-auto">
           <button 
             onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300 group"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300"
           >
-            <LogOut size={22} className="group-hover:rotate-12 transition-transform" />
+            <LogOut size={22} />
             {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
 
-        {/* Sidebar Toggle */}
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#111] border border-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-white transition-colors z-50"
-        >
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#111] border border-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-white z-50 transition-colors">
           {isSidebarOpen ? <Menu size={14} /> : <ChevronRight size={14} />}
         </button>
       </aside>
 
-      {/* Main Content Viewport */}
+      {/* Main Viewport */}
       <main className="flex-1 overflow-y-auto custom-scrollbar relative">
         <div className="p-12 max-w-[1400px] mx-auto">
-          {/* Dashboard Header */}
           <header className="flex justify-between items-end mb-16">
             <div>
               <div className="flex items-center gap-2 text-emerald-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4">
@@ -196,12 +163,9 @@ export default function DashboardPage() {
             </div>
             
             <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
-              <div 
-                className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl"
-                style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl})` }}
-              />
+              <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl})` }} />
               <div>
-                <p className="text-white font-black text-2xl tracking-tight leading-none mb-2">{store.currentUser?.channelName || 'Syncing...'}</p>
+                <p className="text-white font-black text-2xl tracking-tight leading-none mb-2">{store.currentUser?.channelName}</p>
                 <div className="flex items-center gap-3">
                   <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
                   <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Server Online' : 'Connecting...'}</span>
@@ -210,17 +174,11 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          {/* Dynamic Tab Content with Animation */}
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            >
+            <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               {activeTab === 'dashboard' && <DashboardHome store={store} />}
               {activeTab === 'commands' && <CommandTab onSend={send} />}
+              {activeTab === 'macros' && <MacroTab onSend={send} />}
               {activeTab === 'songs' && <SongTab onControl={(a) => send({type:'controlMusic', action: a})} />}
               {activeTab === 'greet' && <GreetTab onSend={send} />}
               {activeTab === 'votes' && <VotePanel onSend={send} />}
@@ -237,15 +195,8 @@ export default function DashboardPage() {
 function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
   return (
-    <button
-      onClick={() => setter(id)}
-      className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 group relative ${
-        isActive 
-          ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' 
-          : 'text-gray-500 hover:text-white hover:bg-white/5'
-      }`}
-    >
-      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors duration-300`}>{icon}</span>
+    <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+      <span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>
       {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
     </button>
   );
