@@ -1,4 +1,4 @@
-// 데이터 무결성을 위한 전역 타입 정의 (TypeScript)
+// chzzk-bot-v2/src/types/bot.ts - Expert Type Definitions
 
 export interface BotSettings {
   chatEnabled: boolean;
@@ -14,7 +14,8 @@ export interface BotSettings {
 
 export interface CommandItem {
   id?: string;
-  triggers: string[];
+  triggers?: string[]; // 복수형 (배열)
+  trigger?: string;    // 단수형 (레거시 대응용)
   response: string;
   enabled: boolean;
 }
@@ -22,7 +23,7 @@ export interface CommandItem {
 export interface GreetData {
   settings: {
     enabled: boolean;
-    type: 1 | 2; // 1: 최초, 2: 매일
+    type: 1 | 2;
     message: string;
   };
   historyCount: number;
@@ -30,21 +31,14 @@ export interface GreetData {
 
 export interface BotState {
   isConnected: boolean;
-  channelInfo: {
-    channelId: string;
-    channelName: string;
-    channelImageUrl: string;
-    followerCount: number;
-  } | null;
-  liveStatus: {
-    liveTitle: string;
-    status: 'OPEN' | 'CLOSE';
-    concurrentUserCount: number;
-    category: string;
-  } | null;
+  isReconnecting: boolean;
+  currentUser: any | null;
+  channelInfo: any | null;
+  liveStatus: any | null;
   commands: CommandItem[];
   macros: any[];
   counters: any[];
+  votes: any[];
   songs: {
     queue: any[];
     current: any | null;
@@ -54,7 +48,9 @@ export interface BotState {
     active: any[];
     isActive: boolean;
     max: number;
+    ranking: any[];
   };
   greet: GreetData;
   points: { [userId: string]: any };
+  chatHistory: any[];
 }
