@@ -31,7 +31,9 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
     const token = localStorage.getItem('chzzk_session_token');
     const url = `${window.location.origin}/overlay/${path}?token=${token}`;
     navigator.clipboard.writeText(url);
-    window.ui.notify('URL이 복사되었습니다.', 'success');
+    if (typeof window !== 'undefined' && (window as any).ui) {
+      (window as any).ui.notify('URL이 복사되었습니다.', 'success');
+    }
   };
 
   const currentVote = store.votes[0];

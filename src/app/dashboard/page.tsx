@@ -82,9 +82,13 @@ export default function DashboardPage() {
         }
         break;
       case 'drawWinnerResult':
-        setWinner(data.payload.winners[0]);
+        const winPlayer = data.payload.winners[0];
+        setWinner(winPlayer);
         setWinnerChats([]);
-        if(window.ui) window.ui.notify(`${data.payload.winners[0].nickname}님이 당첨되었습니다!`, 'success');
+        // 타입 에러 방지를 위해 window.ui 존재 확인 후 호출
+        if (typeof window !== 'undefined' && (window as any).ui) {
+          (window as any).ui.notify(`${winPlayer.nickname}님이 당첨되었습니다!`, 'success');
+        }
         break;
     }
   };
