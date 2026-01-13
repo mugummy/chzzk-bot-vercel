@@ -236,12 +236,22 @@ async function main() {
     document.getElementById('bot-chat-toggle')?.addEventListener('change', (e) => {
         sendWebSocket({ type: 'updateSettings', data: { chatEnabled: e.target.checked } });
     });
-    document.querySelectorAll('.nav-item').forEach(i => i.onclick = () => {
-        document.querySelectorAll('.nav-item').forEach(ni => ni.classList.toggle('active', ni === i));
-        document.querySelectorAll('.tab-content').forEach(tc => ni.classList.toggle('active', tc.id === `${i.dataset.tab}-tab`));
-        // Simple tab switch logic
-        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-        document.getElementById(`${i.dataset.tab}-tab`).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const targetTab = item.dataset.tab;
+            
+            // 네비게이션 활성화
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            
+            // 탭 콘텐츠 전환
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            const targetContent = document.getElementById(`${targetTab}-tab`);
+            if (targetContent) targetContent.classList.add('active');
+        });
     });
 }
 
