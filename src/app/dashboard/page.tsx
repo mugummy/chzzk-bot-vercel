@@ -103,6 +103,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    // [중요] URL에서 세션 파라미터 추출 처리
+    const params = new URLSearchParams(window.location.search);
+    const sessionFromUrl = params.get('session');
+    
+    if (sessionFromUrl) {
+      localStorage.setItem('chzzk_session_token', sessionFromUrl);
+      // 깨끗한 URL로 변경 (무한 재로딩 방지)
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     const token = localStorage.getItem('chzzk_session_token');
     
     if (!token) {
@@ -110,16 +121,24 @@ export default function DashboardPage() {
       return;
     }
     
-    fetch(`https://${getServerUrl()}/api/auth/session`, { 
+    // 세션 검증 요청 (캐시 방지 위해 timestamp 추가)
+    fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { 
       headers: { 'Authorization': `Bearer ${token}` } 
-    }).then(res => res.json()).then(data => {
-      if (data.authenticated) {
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.authenticated && data.user) {
         store.setAuth(data.user);
         connectWS(token);
       } else {
+        // [핵심] 인증 실패 시 토큰 삭제하여 루프 차단
+        console.warn('[Auth] Invalid session, clearing token...');
+        localStorage.removeItem('chzzk_session_token');
         window.location.href = '/';
       }
-    }).catch(() => {
+    })
+    .catch(() => {
+      localStorage.removeItem('chzzk_session_token');
       window.location.href = '/';
     });
 
@@ -206,7 +225,6 @@ export default function DashboardPage() {
               <motion.div initial={{ opacity: 0, scale: 0.8, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 100 }} className="w-full max-w-2xl bg-black/90 backdrop-blur-3xl border border-emerald-500/30 rounded-[4rem] p-12 shadow-2xl pointer-events-auto text-center relative overflow-hidden">
                 <button onClick={() => setWinner(null)} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full hover:bg-red-500 transition-all"><X size={24} /></button>
                 <div className="w-32 h-32 bg-emerald-500 rounded-full mx-auto mb-8 flex items-center justify-center shadow-2xl"><Users size={64} className="text-black" /></div>
-                <h3 className="text-sm font-black text-emerald-500 uppercase tracking-[0.5em] mb-4">Winner</h3>
                 <h2 className="text-6xl font-black tracking-tighter text-white mb-12">{winner.nickname}</h2>
                 <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-left h-40 overflow-y-auto space-y-4 pr-4 custom-scrollbar">
                   {winnerChats.map((chat, i) => (
