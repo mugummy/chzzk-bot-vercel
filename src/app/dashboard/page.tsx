@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle
+  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
@@ -72,7 +72,6 @@ export default function DashboardPage() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
     
-    console.log('[WS] Initializing Secure Uplink...');
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
     
@@ -148,7 +147,7 @@ export default function DashboardPage() {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6 text-center">
         <AlertCircle className="text-red-500 animate-bounce" size={64} />
-        <h2 className="text-3xl font-black">{authError}</h2>
+        <h2 className="text-3xl font-black text-white">{authError}</h2>
         <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-emerald-500 transition-all">다시 시도</button>
       </div>
     );
@@ -157,8 +156,8 @@ export default function DashboardPage() {
   if (isLoading && !store.currentUser) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Syncing gummybot Data...</p>
+        <RefreshCw className="text-pink-500 animate-spin" size={48} />
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot...</p>
       </div>
     );
   }
@@ -167,16 +166,16 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
       <AnimatePresence>
         {store.isReconnecting && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6 text-center p-10">
             <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting gummybot...</p>
+            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Connecting to Gummy Services...</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl">
+          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20">
             <Zap className="text-white" size={28} fill="currentColor" />
           </div>
           {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
@@ -203,8 +202,8 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-emerald-500/20 transition-all duration-500">
-            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-pink-500/20 transition-all duration-500">
+            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-pink-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
             <div>
               <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
               <div className="flex items-center gap-3">
