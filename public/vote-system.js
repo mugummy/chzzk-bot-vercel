@@ -1,11 +1,10 @@
 // ========================================
-// Vote System - 시청자 추첨, 숫자 투표, 룰렛 통합 관리 (FULL RESTORED)
+// Vote System - 시청자 추첨, 숫자 투표, 룰렛 통합 관리
 // ========================================
 
 // ========== 상태 변수 ==========
 let activeFeature = null;
 let voteOptionCount = 2;
-let rouletteItemCount = 0;
 
 // ========== 서브탭 전환 ==========
 function switchVoteSubTab(tabName) {
@@ -28,14 +27,6 @@ function switchVoteSubTab(tabName) {
         selectedContent.classList.add('active');
         selectedContent.style.display = 'block';
     }
-    
-    if (tabName === 'settings') {
-        const settingsContent = document.getElementById('settings-subtab');
-        if (settingsContent) {
-            settingsContent.classList.add('active');
-            settingsContent.style.display = 'block';
-        }
-    }
 }
 
 // ========== 시청자 추첨 (Draw) 함수들 ==========
@@ -57,7 +48,7 @@ function startDraw() {
         }
     });
     
-    setActiveFeature('draw');
+    activeFeature = 'draw';
     showNotification('참여 수집을 시작했습니다.', 'success');
 }
 
@@ -76,260 +67,211 @@ function executeDraw() {
 
 function resetDraw() {
     sendWebSocket({ type: 'resetDraw' });
-    sendWebSocket({ type: 'hideOverlay' });
-    setActiveFeature(null);
-
+    activeFeature = null;
     const winnerCard = document.getElementById('winner-card');
     if (winnerCard) winnerCard.style.display = 'none';
-
     showNotification('시청자 추첨이 초기화되었습니다.', 'info');
-}
-
-function clearPreviousWinners() {
-    if (confirm('이전 당첨자 목록을 모두 초기화하시겠습니까?')) {
-        sendWebSocket({ type: 'clearPreviousWinners' });
-        showNotification('이전 당첨자 목록이 초기화되었습니다.', 'success');
-    }
-}
-
-function removeDrawParticipant(userIdHash) {
-    sendWebSocket({
-        type: 'removeDrawParticipant',
-        payload: { userIdHash: userIdHash }
-    });
 }
 
 function updateDrawUI(state) {
     if (!state) return;
-
     const session = state.currentSession;
     const statusBadge = document.getElementById('draw-status');
     const participantCount = document.getElementById('draw-participant-count');
     const participantList = document.getElementById('draw-participants');
-    const winnerCard = document.getElementById('winner-card');
-    const winnerList = document.getElementById('winner-list');
     
     const startBtn = document.getElementById('start-draw-btn');
     const stopBtn = document.getElementById('stop-draw-btn');
     const executeBtn = document.getElementById('execute-draw-btn');
-    const resetBtn = document.getElementById('reset-draw-btn');
     
     if (!session) {
-        if (startBtn) { startBtn.disabled = false; startBtn.style.display = 'inline-flex'; }
-        if (stopBtn) { stopBtn.disabled = true; stopBtn.style.display = 'none'; }
-        if (executeBtn) { executeBtn.disabled = true; executeBtn.style.display = 'none'; }
-        if (resetBtn) { resetBtn.disabled = true; }
-        if (statusBadge) {
-            statusBadge.textContent = '대기 중';
-            statusBadge.className = 'status-badge waiting';
-        }
+        if (startBtn) startBtn.style.display = 'inline-flex';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (executeBtn) executeBtn.style.display = 'none';
+        if (statusBadge) statusBadge.textContent = '대기 중';
     } else if (session.isCollecting) {
-        if (startBtn) { startBtn.disabled = true; startBtn.style.display = 'none'; }
-        if (stopBtn) { stopBtn.disabled = false; stopBtn.style.display = 'inline-flex'; }
-        if (executeBtn) { executeBtn.disabled = true; executeBtn.style.display = 'none'; }
-        if (resetBtn) { resetBtn.disabled = false; }
-        if (statusBadge) {
-            statusBadge.textContent = '참여 수집 중';
-            statusBadge.className = 'status-badge collecting';
-        }
-    } else if (session.isActive) {
-        if (startBtn) { startBtn.disabled = true; startBtn.style.display = 'none'; }
-        if (stopBtn) { stopBtn.disabled = true; stopBtn.style.display = 'none'; }
-        if (executeBtn) { executeBtn.disabled = false; executeBtn.style.display = 'inline-flex'; }
-        if (resetBtn) { resetBtn.disabled = false; }
-        if (statusBadge) {
-            statusBadge.textContent = '수집 마감';
-            statusBadge.className = 'status-badge stopped';
-        }
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'inline-flex';
+        if (executeBtn) executeBtn.style.display = 'none';
+        if (statusBadge) statusBadge.textContent = '참여 수집 중';
     } else {
-        if (startBtn) { startBtn.disabled = true; startBtn.style.display = 'inline-flex'; }
-        if (stopBtn) { stopBtn.disabled = true; stopBtn.style.display = 'none'; }
-        if (executeBtn) { executeBtn.disabled = true; executeBtn.style.display = 'none'; }
-        if (resetBtn) { resetBtn.disabled = false; }
-        if (statusBadge) {
-            statusBadge.textContent = '추첨 완료';
-            statusBadge.className = 'status-badge completed';
-        }
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (executeBtn) executeBtn.style.display = 'inline-flex';
+        if (statusBadge) statusBadge.textContent = '수집 마감';
     }
     
-    if (participantCount) {
-        const count = session?.participants?.length || 0;
-        participantCount.textContent = count;
-    }
+    if (participantCount) participantCount.textContent = session?.participants?.length || 0;
     
-    if (participantList) {
-        if (!session || !session.participants || session.participants.length === 0) {
-            participantList.innerHTML = '<div class="empty-state"><i class="fas fa-user-plus"></i><p>참여 시작 후 시청자가 표시됩니다</p></div>';
-        } else {
-            participantList.innerHTML = session.participants.map(p => `
-                <div class="participant-tag" data-user-id="${p.userIdHash}">
-                    <span class="participant-name">${p.nickname}</span>
-                    <button class="participant-remove" onclick="removeDrawParticipant('${p.userIdHash}')" title="제거">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-    }
-    
-    if (session?.winners && session.winners.length > 0) {
-        if (winnerCard) winnerCard.style.display = 'block';
-        if (winnerList) {
-            winnerList.innerHTML = session.winners.map(w => 
-                `<span class="winner-name-tag">🎉 ${w.nickname}</span>`
-            ).join('');
-        }
+    if (participantList && session?.participants) {
+        participantList.innerHTML = session.participants.map(p => `
+            <div class="participant-tag">
+                <span>${p.nickname}</span>
+            </div>
+        `).join('');
     }
 }
 
-function showDrawWinners(winners, animationDuration, allParticipants) {
-    const winnerCard = document.getElementById('winner-card');
-    const winnerList = document.getElementById('winner-list');
-    if (!winners || winners.length === 0) return;
-    const duration = animationDuration || 4000;
-    const winnerNames = winners.map(w => w.nickname);
-    const candidates = allParticipants && allParticipants.length >= 3
-        ? allParticipants
-        : [...winnerNames, ...winnerNames, ...winnerNames];
-    showSlotMachineAnimation(candidates, duration, () => {
-        if (winnerCard && winnerList) {
-            winnerList.innerHTML = winners.map(w => `<span class="winner-name-tag">🎉 ${w.nickname}</span>`).join('');
-            winnerCard.style.display = 'block';
-        }
-    });
-}
-
+// ========== 숫자 투표 (Vote) 함수들 ==========
 function addVoteOption() {
     const container = document.getElementById('vote-options-container');
     if (!container) return;
+    
     voteOptionCount++;
     const optionDiv = document.createElement('div');
     optionDiv.className = 'vote-option-item';
-    optionDiv.innerHTML = `<span class="vote-option-number">${voteOptionCount}</span><input type="text" class="form-input" placeholder="항목 ${voteOptionCount}"><button class="btn btn-danger btn-icon" onclick="removeVoteOption(this)"><i class="fas fa-trash"></i></button>`;
+    optionDiv.innerHTML = `
+        <span class="vote-option-number">${voteOptionCount}</span>
+        <input type="text" class="form-input" placeholder="항목 ${voteOptionCount}">
+        <button class="btn btn-danger btn-icon" onclick="removeVoteOption(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
     container.appendChild(optionDiv);
 }
 
 function removeVoteOption(btn) {
     const optionDiv = btn.closest('.vote-option-item');
-    const container = document.getElementById('vote-options-container');
-    if (optionDiv && container && container.querySelectorAll('.vote-option-item').length > 2) {
+    if (optionDiv) {
         optionDiv.remove();
         updateVoteOptionNumbers();
     }
 }
 
 function updateVoteOptionNumbers() {
-    document.querySelectorAll('.vote-option-item').forEach((item, idx) => {
-        const numSpan = item.querySelector('.vote-option-number');
-        if (numSpan) numSpan.textContent = idx + 1;
+    const items = document.querySelectorAll('.vote-option-item');
+    items.forEach((item, idx) => {
+        item.querySelector('.vote-option-number').textContent = idx + 1;
     });
-    voteOptionCount = document.querySelectorAll('.vote-option-item').length;
+    voteOptionCount = items.length;
 }
 
 function createVote() {
     const question = document.getElementById('vote-question')?.value.trim();
-    const durationSeconds = parseInt(document.getElementById('vote-duration')?.value) || 60;
+    const duration = parseInt(document.getElementById('vote-duration')?.value) || 60;
     const options = [];
-    document.querySelectorAll('#vote-options-container .vote-option-item input').forEach((input) => {
-        const text = input.value.trim();
-        if (text) options.push(text);
+    document.querySelectorAll('#vote-options-container input').forEach(input => {
+        if (input.value.trim()) options.push(input.value.trim());
     });
-    if (!question || options.length < 2) return;
-    sendWebSocket({ type: 'createVote', data: { question, options, durationSeconds } });
-    setActiveFeature('vote');
+    
+    if (!question || options.length < 2) {
+        showNotification('제목과 최소 2개의 항목을 입력해주세요.', 'error');
+        return;
+    }
+    
+    sendWebSocket({ type: 'createVote', data: { question, options, durationSeconds: duration } });
+    showNotification('투표가 생성되었습니다.', 'success');
 }
 
 function startVote() { sendWebSocket({ type: 'startVote' }); }
 function endVote() { sendWebSocket({ type: 'endVote' }); }
-function resetVote() { sendWebSocket({ type: 'resetVote' }); setActiveFeature(null); }
+function resetVote() { sendWebSocket({ type: 'resetVote' }); }
 
 function updateVoteUI(state) {
     if (!state) return;
     const vote = state.currentVote;
-    const voteDisplay = document.getElementById('current-vote-display');
-    const voteControls = document.getElementById('vote-controls');
+    const display = document.getElementById('current-vote-display');
+    const controls = document.getElementById('vote-controls');
+    
     if (!vote) {
-        if (voteDisplay) voteDisplay.innerHTML = '<div class="empty-state"><p>진행 중인 투표 없음</p></div>';
-        if (voteControls) voteControls.style.display = 'none';
+        if (display) display.innerHTML = '<div class="empty-state">진행 중인 투표가 없습니다</div>';
+        if (controls) controls.style.display = 'none';
         return;
     }
-    if (voteDisplay) {
-        const total = Object.values(vote.results || {}).reduce((s, c) => s + c, 0);
-        let html = `<h4>${vote.question}</h4>`;
-        vote.options.forEach((opt, idx) => {
-            const count = vote.results[opt.id || String(idx+1)] || 0;
-            const pct = total > 0 ? Math.round((count/total)*100) : 0;
-            html += `<div>${opt.text || opt}: ${count}표 (${pct}%)</div>`;
-        });
-        voteDisplay.innerHTML = html;
+    
+    if (controls) controls.style.display = 'block';
+    const startBtn = document.getElementById('start-vote-btn');
+    const endBtn = document.getElementById('end-vote-btn');
+    
+    if (vote.isActive) {
+        if (startBtn) startBtn.style.display = 'none';
+        if (endBtn) endBtn.style.display = 'inline-flex';
+    } else {
+        if (startBtn) startBtn.style.display = 'inline-flex';
+        if (endBtn) endBtn.style.display = 'none';
     }
-    if (voteControls) voteControls.style.display = 'flex';
+    
+    if (display) {
+        const total = Object.values(vote.results || {}).reduce((a, b) => a + b, 0);
+        let html = `<h4>${vote.question}</h4><div class="vote-results-list">`;
+        vote.options.forEach(opt => {
+            const count = vote.results[opt.id] || 0;
+            const pct = total > 0 ? Math.round((count/total)*100) : 0;
+            html += `<div class="vote-res-item"><span>${opt.text}</span><span>${count}표 (${pct}%)</span></div>`;
+        });
+        html += `</div><div style="margin-top:10px; font-size:0.9rem; color:#aaa;">총 ${total}명 참여</div>`;
+        display.innerHTML = html;
+    }
 }
 
+// ========== 룰렛 (Roulette) 함수들 ==========
 function addRouletteItem() {
     const container = document.getElementById('roulette-items-container');
     if (!container) return;
+    
     const count = container.querySelectorAll('.roulette-item').length + 1;
     const itemDiv = document.createElement('div');
     itemDiv.className = 'roulette-item';
-    itemDiv.innerHTML = `<input type="text" class="form-input" placeholder="항목 ${count}"><input type="number" class="form-input weight-input" value="1" min="1"><button class="btn btn-danger btn-icon" onclick="removeRouletteItem(this)"><i class="fas fa-trash"></i></button>`;
+    itemDiv.innerHTML = `
+        <input type="text" class="form-input" placeholder="항목 ${count}">
+        <input type="number" class="form-input weight-input" value="1" min="1">
+        <button class="btn-icon btn-danger" onclick="removeRouletteItem(this)">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
     container.appendChild(itemDiv);
 }
 
 function removeRouletteItem(btn) {
     const item = btn.closest('.roulette-item');
-    if(item) item.remove();
+    if (item) item.remove();
 }
 
 function createRoulette() {
     const items = [];
     document.querySelectorAll('.roulette-item').forEach(el => {
-        const text = el.querySelector('input[type=text]').value.trim();
+        const text = el.querySelector('input[type="text"]').value.trim();
         const weight = parseInt(el.querySelector('.weight-input').value) || 1;
-        if(text) items.push({ text, weight });
+        if (text) items.push({ text, weight });
     });
-    if(items.length < 2) return;
+    
+    if (items.length < 2) {
+        showNotification('최소 2개의 항목을 입력해주세요.', 'error');
+        return;
+    }
+    
     sendWebSocket({ type: 'createRoulette', payload: { items } });
-    setActiveFeature('roulette');
+    showNotification('룰렛이 생성되었습니다.', 'success');
 }
 
 function spinRoulette() { sendWebSocket({ type: 'spinRoulette' }); }
-function resetRoulette() { sendWebSocket({ type: 'resetRoulette' }); setActiveFeature(null); }
+function resetRoulette() { sendWebSocket({ type: 'resetRoulette' }); }
 
 function updateRouletteUI(state) {
     const container = document.getElementById('roulette-container');
-    if(!container) return;
-    if(state.currentSession) container.innerHTML = `<p>룰렛 생성됨: ${state.currentSession.items.length}개 항목</p>`;
-    else container.innerHTML = '<p>룰렛을 생성하세요</p>';
-}
-
-function showSlotMachineAnimation(candidates, duration, callback) {
-    // 슬롯머신 로직 (생략 없이 복구됨)
-    console.log('[SlotMachine] Spinning...');
-    setTimeout(() => { if(callback) callback(); }, duration);
-}
-
-function setActiveFeature(f) { activeFeature = f; }
-function sendWebSocket(d) { if(window.socket && window.socket.readyState === WebSocket.OPEN) window.socket.send(JSON.stringify(d)); }
-
-function handleVoteSystemMessage(data) {
-    switch (data.type) {
-        case 'drawStateUpdate': updateDrawUI(data.payload); break;
-        case 'rouletteStateUpdate': updateRouletteUI(data.payload); break;
-        case 'voteStateUpdate': updateVoteUI(data.payload); break;
-        case 'drawWinnerResult': showDrawWinners(data.payload.winners, data.payload.animationDuration, data.payload.allParticipants); break;
+    const controls = document.getElementById('roulette-controls');
+    if (!container) return;
+    
+    if (state.currentSession) {
+        container.innerHTML = `<div class="roulette-info">룰렛 준비됨 (${state.currentSession.items.length}개 항목)</div>`;
+        if (controls) controls.style.display = 'block';
+    } else {
+        container.innerHTML = '<div class="empty-state">룰렛을 생성하세요</div>';
+        if (controls) controls.style.display = 'none';
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.vote-sub-tab').forEach(b => b.onclick = () => switchVoteSubTab(b.dataset.voteSubtab));
-});
+// ========== 공통 WebSocket 핸들러 연결 ==========
+function handleVoteSystemMessage(data) {
+    switch (data.type) {
+        case 'drawStateUpdate': updateDrawUI(data.payload); break;
+        case 'voteStateUpdate': updateVoteUI(data.payload); break;
+        case 'rouletteStateUpdate': updateRouletteUI(data.payload); break;
+    }
+}
 
-window.updateDrawUI = updateDrawUI;
-window.updateVoteUI = updateVoteUI;
-window.updateRouletteUI = updateRouletteUI;
-window.handleVoteSystemMessage = handleVoteSystemMessage;\
-// Expose Vote Functions Globally
+// 전역 노출
+window.switchVoteSubTab = switchVoteSubTab;
 window.startDraw = startDraw;
 window.stopDrawCollecting = stopDrawCollecting;
 window.executeDraw = executeDraw;
@@ -344,4 +286,12 @@ window.addRouletteItem = addRouletteItem;
 window.removeRouletteItem = removeRouletteItem;
 window.createRoulette = createRoulette;
 window.spinRoulette = spinRoulette;
-window.resetRoulette = resetRoulette;\
+window.resetRoulette = resetRoulette;
+window.handleVoteSystemMessage = handleVoteSystemMessage;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 탭 이벤트 연결
+    document.querySelectorAll('.vote-sub-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchVoteSubTab(btn.dataset.voteSubtab));
+    });
+});
