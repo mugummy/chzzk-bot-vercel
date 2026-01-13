@@ -21,6 +21,7 @@ import ToastContainer from '@/components/ui/Toast';
 export default function DashboardPage() {
   const store = useBotStore();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -33,10 +34,8 @@ export default function DashboardPage() {
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
-  // [1] 안정화된 메시지 핸들러 (의존성 없음)
   const handleIncomingData = useCallback((data: any) => {
     const { type, payload } = data;
-    // Zustand의 getState()를 사용하여 최신 상태에 접근 (리렌더링 유발 방지)
     const currentStore = useBotStore.getState();
 
     switch (type) {
@@ -67,7 +66,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // [2] 안정화된 연결 로직 (의존성 최소화)
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
@@ -79,7 +77,6 @@ export default function DashboardPage() {
     socketRef.current = ws;
     
     ws.onopen = () => {
-      console.log('[WS] Connection Established');
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
       ws.send(JSON.stringify({ type: 'requestData' }));
@@ -90,10 +87,8 @@ export default function DashboardPage() {
     };
 
     ws.onclose = () => {
-      console.warn('[WS] Connection Severed');
       useBotStore.getState().setBotStatus(false, true);
       socketRef.current = null;
-      // 3초 후 재연결 시도
       setTimeout(() => {
         const currentToken = localStorage.getItem('chzzk_session_token');
         if (currentToken) connectWS(currentToken);
@@ -107,7 +102,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // [3] 통합 초기화 (단 한 번만 실행)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -124,7 +118,6 @@ export default function DashboardPage() {
       return;
     }
     
-    // 세션 검증
     fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { 
       headers: { 'Authorization': `Bearer ${token}` } 
     })
@@ -144,12 +137,12 @@ export default function DashboardPage() {
 
     return () => {
       if (socketRef.current) {
-        socketRef.current.onclose = null; // 재연결 방지
+        socketRef.current.onclose = null;
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, []); // 의존성 비움으로 무한 루프 원천 차단
+  }, [connectWS]);
 
   if (authError) {
     return (
@@ -165,7 +158,7 @@ export default function DashboardPage() {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
         <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Estabishing Secure Connection...</p>
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Syncing gummybot Data...</p>
       </div>
     );
   }
@@ -176,17 +169,17 @@ export default function DashboardPage() {
         {store.isReconnecting && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
             <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse">서버와 통신이 끊겼습니다. 복구 중...</p>
+            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting gummybot...</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/20">
-            <Activity className="text-black" size={28} />
+          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl">
+            <Zap className="text-white" size={28} fill="currentColor" />
           </div>
-          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">Buzzk Pro</h1>}
+          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-8">
@@ -201,8 +194,8 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300">
-            <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300 group">
+            <LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
       </aside>
@@ -210,23 +203,20 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl hover:border-white/10 transition-colors group">
-            <div 
-              className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl group-hover:scale-105 transition-transform duration-500" 
-              style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} 
-            />
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-emerald-500/20 transition-all duration-500">
+            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
             <div>
-              <p className="text-white font-black text-2xl mb-2 leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
+              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
               <div className="flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
-                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>
+                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Server Online' : 'Offline'}</span>
               </div>
             </div>
           </div>
         </header>
 
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
@@ -248,7 +238,7 @@ function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
   return (
     <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors`}>{icon}</span>
+      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors duration-300`}>{icon}</span>
       {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
     </button>
   );
