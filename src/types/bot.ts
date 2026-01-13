@@ -1,4 +1,4 @@
-// chzzk-bot-v2/src/types/bot.ts - Expert Enterprise Standard
+// chzzk-bot-v2/src/types/bot.ts - The Absolute Type Authority
 
 export interface BotSettings {
   chatEnabled: boolean;
@@ -28,6 +28,22 @@ export interface SongItem {
   requestedAt: number;
 }
 
+export interface VoteOption {
+  id: string;
+  text: string;
+}
+
+export interface VoteSession {
+  id: string;
+  question: string;
+  options: VoteOption[];
+  results: { [optionId: string]: number };
+  isActive: boolean;
+  settings: any;
+  startTime: number | null;
+  totalVotes: number;
+}
+
 export interface BotState {
   isConnected: boolean;
   isReconnecting: boolean;
@@ -42,7 +58,7 @@ export interface BotState {
   commands: CommandItem[];
   counters: any[];
   macros: any[];
-  votes: any[];
+  votes: VoteSession[]; // VoteSession 사용 보장
   songs: {
     queue: SongItem[];
     current: SongItem | null;
@@ -58,6 +74,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
-  points: { [userId: string]: { nickname: string; points: number; lastMessageTime: number } };
+  points: { [userId: string]: any };
   chatHistory: any[];
 }
