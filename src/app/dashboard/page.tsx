@@ -33,39 +33,35 @@ export default function DashboardPage() {
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
-  // [수정] 실시간 채팅 및 정보 수신 로직 완성
+  // [수정] 수신 데이터 정밀 매핑 및 로그 강화
   const handleIncomingData = useCallback((data: any) => {
     const { type, payload } = data;
     const currentStore = useBotStore.getState();
 
+    console.log(`[WS] Received: ${type}`, payload);
+
     switch (type) {
       case 'connectResult': 
         currentStore.setBotStatus(data.success);
-        if (data.channelInfo) {
-          currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
-        }
+        if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
         setIsLoading(false);
+        // 연결 직후 데이터 강제 동기화
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'requestData' }));
+        }
         break;
       case 'settingsUpdate': currentStore.updateSettings(payload); break;
-      case 'commandsUpdate': currentStore.updateCommands(payload); break;
+      case 'commandsUpdate': 
+        console.log('[Sync] Updating Commands:', payload.length);
+        currentStore.updateCommands(payload); 
+        break;
       case 'countersUpdate': currentStore.updateCounters(payload); break;
       case 'macrosUpdate': currentStore.updateMacros(payload); break;
       case 'songStateUpdate': currentStore.updateSongs(payload); break;
       case 'participationStateUpdate': currentStore.updateParticipation(payload); break;
+      case 'participationRankingUpdate': currentStore.updateParticipationRanking(payload); break;
       case 'greetStateUpdate': currentStore.updateGreet(payload); break;
-      case 'newChat': 
-        // [중요] 채팅 데이터 실시간 스토어 주입
-        currentStore.addChat(payload); 
-        
-        // 당첨자 채팅 필터링 (TTS)
-        if (winner && payload.profile.userIdHash === winner.userIdHash) {
-          setWinnerChats(prev => [payload, ...prev].slice(0, 10));
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(payload.message));
-          }
-        }
-        break;
+      case 'newChat': store.addChat(payload); break;
       case 'drawWinnerResult':
         const winPlayer = payload.winners[0];
         setWinner(winPlayer);
@@ -75,7 +71,7 @@ export default function DashboardPage() {
         }
         break;
     }
-  }, [winner]);
+  }, []);
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
@@ -83,14 +79,14 @@ export default function DashboardPage() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
     
-    console.log('[WS] Initializing Secure Uplink...');
+    console.log('[WS] Connecting...');
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
     
     ws.onopen = () => {
+      console.log('[WS] Connected');
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
-      ws.send(JSON.stringify({ type: 'requestData' }));
     };
 
     ws.onmessage = (e) => {
@@ -134,7 +130,7 @@ export default function DashboardPage() {
     .then(res => res.json())
     .then(data => {
       if (data.authenticated && data.user) {
-        useBotStore.getState().setAuth(data.user);
+        store.setAuth(data.user);
         connectWS(token);
       } else {
         localStorage.removeItem('chzzk_session_token');
@@ -167,8 +163,8 @@ export default function DashboardPage() {
   if (isLoading && !store.currentUser) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <RefreshCw className="text-pink-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot Data...</p>
+        <RefreshCw className="text-emerald-500 animate-spin" size={48} />
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic">Establishing Connection...</p>
       </div>
     );
   }
@@ -179,12 +175,12 @@ export default function DashboardPage() {
         {store.isReconnecting && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
             <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting gummybot...</p>
+            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">서버와 재연결 시도 중...</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
         <div className="p-8 flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20">
             <Zap className="text-white" size={28} fill="currentColor" />
@@ -204,8 +200,8 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300 group">
-            <LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300">
+            <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
       </aside>
@@ -216,10 +212,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-pink-500/20 transition-all duration-500">
             <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-pink-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
             <div>
-              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
+              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName}</p>
               <div className="flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
-                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Server Online' : 'Offline'}</span>
+                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>
               </div>
             </div>
           </div>
