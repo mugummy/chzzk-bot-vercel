@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
 
 /**
- * Final Bot Store: 이 파일은 빌드 에러를 방지하기 위해 엄격한 타입을 준수합니다.
+ * Global Bot Store: 채팅 기록 100개 보존 및 전역 상태 관리
  */
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -35,7 +35,7 @@ export const useBotStore = create<BotStore>((set) => ({
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
   points: {},
-  chatHistory: [],
+  chatHistory: [], // [중요] 탭 이동 시에도 유지되는 전역 채팅 기록
 
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
@@ -51,7 +51,15 @@ export const useBotStore = create<BotStore>((set) => ({
   updateParticipation: (payload) => set((state) => ({ 
     participation: { ...state.participation, queue: payload.queue, active: payload.participants, isActive: payload.isParticipationActive, max: payload.maxParticipants }
   })),
-  updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
+  updateParticipationRanking: (ranking) => set((state) => ({ 
+    participation: { ...state.participation, ranking }
+  })),
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
-  addChat: (chat) => set((state) => ({ chatHistory: [chat, ...state.chatHistory].slice(0, 50) })),
+  
+  // [수정] 채팅 100개 제한 및 누적 로직
+  addChat: (chat) => set((state) => {
+    const newHistory = [...state.chatHistory, chat];
+    if (newHistory.length > 100) newHistory.shift(); // 100개 초과 시 앞(오래된 것)부터 제거
+    return { chatHistory: newHistory };
+  }),
 }));

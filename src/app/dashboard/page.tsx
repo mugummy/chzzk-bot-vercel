@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap, MessageSquareOff
+  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
@@ -17,6 +17,7 @@ import VotePanel from '@/components/dashboard/VotePanel';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
 import ToastContainer from '@/components/ui/Toast';
+import Toggle from '@/components/ui/Toggle'; // 커스텀 토글 도입
 
 export default function DashboardPage() {
   const store = useBotStore();
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const [winner, setWinner] = useState<any | null>(null);
   const [winnerChats, setWinnerChats] = useState<any[]>([]);
@@ -38,7 +40,7 @@ export default function DashboardPage() {
 
     switch (type) {
       case 'connectResult': 
-        currentStore.setBotStatus(data.success);
+        currentStore.setBotStatus(payload);
         if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
         setIsLoading(false);
         break;
@@ -48,10 +50,9 @@ export default function DashboardPage() {
       case 'macrosUpdate': currentStore.updateMacros(payload); break;
       case 'songStateUpdate': currentStore.updateSongs(payload); break;
       case 'participationStateUpdate': currentStore.updateParticipation(payload); break;
+      case 'participationRankingUpdate': currentStore.updateParticipationRanking(payload); break;
       case 'greetStateUpdate': currentStore.updateGreet(payload); break;
-      case 'newChat': 
-        currentStore.addChat(payload); 
-        break;
+      case 'newChat': currentStore.addChat(payload); break;
       case 'drawWinnerResult':
         const winPlayer = payload.winners[0];
         setWinner(winPlayer);
@@ -65,29 +66,21 @@ export default function DashboardPage() {
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
-    
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
-    
     ws.onopen = () => {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
       ws.send(JSON.stringify({ type: 'requestData' }));
     };
-
-    ws.onmessage = (e) => {
-      try { handleIncomingData(JSON.parse(e.data)); } catch (err) {}
-    };
-
+    ws.onmessage = (e) => { try { handleIncomingData(JSON.parse(e.data)); } catch (err) {} };
     ws.onclose = () => {
       useBotStore.getState().setBotStatus(false, true);
       socketRef.current = null;
       setTimeout(() => connectWS(token), 3000);
     };
-
     setSocket(ws);
   }, [handleIncomingData]);
 
@@ -97,33 +90,24 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // 채팅 연동 토글 핸들러
-  const toggleChat = (enabled: boolean) => {
+  // [수정] 봇 마스터 스위치 핸들러 보정
+  const handleToggleChat = (enabled: boolean) => {
     send({ type: 'updateSettings', data: { chatEnabled: enabled } });
-    window.ui.notify(enabled ? '봇 채팅 응답이 활성화되었습니다.' : '봇 채팅 응답이 비활성화되었습니다.', enabled ? 'success' : 'info');
   };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
     const params = new URLSearchParams(window.location.search);
     const sessionFromUrl = params.get('session');
     if (sessionFromUrl) {
       localStorage.setItem('chzzk_session_token', sessionFromUrl);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
     const token = localStorage.getItem('chzzk_session_token');
-    if (!token) {
-      window.location.href = '/';
-      return;
-    }
+    if (!token) { window.location.href = '/'; return; }
     
-    fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { 
-      headers: { 'Authorization': `Bearer ${token}` } 
-    })
-    .then(res => res.json())
-    .then(data => {
+    fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${token}` } })
+    .then(res => res.json()).then(data => {
       if (data.authenticated && data.user) {
         store.setAuth(data.user);
         connectWS(token);
@@ -131,70 +115,33 @@ export default function DashboardPage() {
         localStorage.removeItem('chzzk_session_token');
         window.location.href = '/';
       }
-    })
-    .catch(() => {
-      console.error('Auth check failed');
-    });
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.onclose = null;
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
+    }).catch(() => setAuthError('서버 통신 장애'));
+    return () => { if (socketRef.current) socketRef.current.close(); };
   }, [connectWS]);
 
-  if (isLoading && !store.currentUser) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Synchronizing gummybot...</p>
-      </div>
-    );
-  }
+  if (isLoading && !store.currentUser) return <div className="h-screen bg-black flex items-center justify-center animate-pulse"><Zap size={48} className="text-emerald-500" /></div>;
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      <AnimatePresence>
-        {store.isReconnecting && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
-            <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic text-sm">Reconnecting...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AnimatePresence>{store.isReconnecting && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black uppercase animate-pulse">Reconnecting...</p></motion.div>}</AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20">
-            <Zap className="text-white" size={28} fill="currentColor" />
-          </div>
+          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20"><Zap className="text-white" size={28} fill="currentColor" /></div>
           {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
         </div>
 
-        {/* [수정] 봇 마스터 스위치 섹션 */}
+        {/* [수정] 새로운 프리미엄 토글 적용 */}
         <div className="px-6 py-4">
-          <div className={`bg-white/5 p-4 rounded-3xl border border-white/5 transition-all ${!store.settings?.chatEnabled ? 'opacity-50 grayscale' : ''}`}>
+          <div className={`bg-white/5 p-5 rounded-[2rem] border border-white/5 transition-all ${!(store.settings?.chatEnabled) ? 'opacity-50' : ''}`}>
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-red-500'}`} />
-                {isSidebarOpen && <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>}
+                {isSidebarOpen && <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{store.isConnected ? 'Live' : 'Off'}</span>}
               </div>
-              <label className="toggle-switch small">
-                <input 
-                  type="checkbox" 
-                  checked={store.settings?.chatEnabled ?? true} 
-                  onChange={(e) => toggleChat(e.target.checked)}
-                />
-                <span className="slider round"></span>
-              </label>
+              <Toggle checked={store.settings?.chatEnabled ?? true} onChange={handleToggleChat} />
             </div>
-            {isSidebarOpen && (
-              <p className="text-xs font-bold text-gray-200">
-                {store.settings?.chatEnabled ? '채팅 응답 활성화됨' : '채팅 응답 일시 중지'}
-              </p>
-            )}
+            {isSidebarOpen && <p className="text-[11px] font-black text-gray-400 uppercase tracking-tight">{store.settings?.chatEnabled ? 'Chat Active' : 'Chat Paused'}</p>}
           </div>
         </div>
 
@@ -210,9 +157,7 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300 group">
-            <LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}
-          </button>
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300 group"><LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}</button>
         </div>
       </aside>
 
@@ -221,18 +166,12 @@ export default function DashboardPage() {
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
           <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-pink-500/20 transition-all duration-500">
             <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-pink-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
-            <div>
-              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
-              <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
-                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>
-              </div>
-            </div>
+            <div><p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName}</p><div className="flex items-center gap-3"><div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} /><span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Connected' : 'Offline'}</span></div></div>
           </div>
         </header>
 
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
@@ -243,7 +182,6 @@ export default function DashboardPage() {
             {activeTab === 'points' && <PointTab onSend={send} />}
           </motion.div>
         </AnimatePresence>
-
         <ToastContainer />
       </main>
     </div>
@@ -252,10 +190,5 @@ export default function DashboardPage() {
 
 function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
-  return (
-    <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors duration-300`}>{icon}</span>
-      {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
-    </button>
-  );
+  return (<button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}><span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors duration-300`}>{icon}</span>{!collapsed && <span className="tracking-tighter text-lg">{label}</span>}</button>);
 }
