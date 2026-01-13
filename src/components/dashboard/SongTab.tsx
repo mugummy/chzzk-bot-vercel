@@ -24,17 +24,30 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
     }
   }, [settings]);
 
-  const handleSaveSettings = () => {
-    onSend({ 
-      type: 'updateSettings', 
-      data: { 
-        songRequestMode: mode, 
-        songRequestCooldown: cooldown, 
-        minDonationAmount: minDonation 
-      } 
-    });
+  // [Helper] 알림 띄우기
+  const notify = (msg: string, type: 'success' | 'info' = 'success') => {
     if (typeof window !== 'undefined' && (window as any).ui?.notify) {
-      (window as any).ui.notify('신청곡 설정이 저장되었습니다.', 'success');
+      (window as any).ui.notify(msg, type);
+    }
+  };
+
+  const handleSaveSettings = () => {
+    onSend({ type: 'updateSettings', data: { songRequestMode: mode, songRequestCooldown: cooldown, minDonationAmount: minDonation } });
+    notify('신청곡 설정이 저장되었습니다.');
+  };
+
+  // [수정] 컨트롤 액션에 알림 추가
+  const handleControl = (action: string, index?: number) => {
+    onControl(action, index);
+    
+    if (action === 'togglePlayPause') {
+      notify(songs.isPlaying ? '노래를 일시정지했습니다.' : '노래를 재생합니다.', 'info');
+    } else if (action === 'skip') {
+      notify('노래를 스킵했습니다.', 'success');
+    } else if (action === 'playNext') {
+      notify('선택한 곡을 즉시 재생합니다.', 'success');
+    } else if (action === 'remove') {
+      notify('대기열에서 삭제했습니다.', 'info');
     }
   };
 
@@ -67,14 +80,10 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
           ))}
         </div>
 
-        {/* [수정] 조건부 렌더링에 애니메이션 적용 */}
         <AnimatePresence mode="wait">
           {mode === 'cooldown' && (
             <motion.div 
-              key="cooldown"
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: 'auto' }} 
-              exit={{ opacity: 0, height: 0 }}
+              key="cooldown" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden"
             >
               <Clock className="text-emerald-500 shrink-0" />
@@ -90,15 +99,12 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
 
           {mode === 'donation' && (
             <motion.div 
-              key="donation"
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: 'auto' }} 
-              exit={{ opacity: 0, height: 0 }}
+              key="donation" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden"
             >
               <DollarSign className="text-emerald-500 shrink-0" />
               <div className="flex-1">
-                <label className="text-xs font-black text-gray-500 uppercase tracking-widest">후원 금액 (치즈)</label>
+                <label className="text-xs font-black text-gray-500 uppercase tracking-widest">최소 후원 금액 (치즈)</label>
                 <input type="number" value={minDonation} onChange={e => setMinDonation(parseInt(e.target.value))} className="w-full bg-transparent border-b border-white/20 text-xl font-bold py-2 outline-none focus:border-emerald-500 transition-all text-white mt-1" />
               </div>
             </motion.div>
@@ -107,7 +113,6 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* Current Song Card */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col items-center text-center shadow-2xl relative overflow-hidden group">
           <div className="relative mb-10 z-10">
             <div className="absolute inset-0 bg-pink-500/20 blur-[100px] rounded-full group-hover:bg-pink-500/30 transition-all duration-700" />
@@ -125,15 +130,17 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
           </div>
           
           <div className="relative z-10 flex flex-wrap justify-center gap-4">
-            <button onClick={() => onControl('togglePlayPause')} className="w-20 h-20 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-black hover:scale-110 active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
+            <button onClick={() => handleControl('togglePlayPause')} className="w-20 h-20 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-black hover:scale-110 active:scale-95 transition-all shadow-xl shadow-emerald-500/20">
               {songs.isPlaying ? <Pause fill="currentColor" size={32} /> : <Play fill="currentColor" size={32} />}
             </button>
-            <button onClick={() => onControl('skip')} className="w-20 h-20 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all"><SkipForward size={32} /></button>
-            <button onClick={() => window.open('/overlay/player?token=' + localStorage.getItem('chzzk_session_token'), '_blank')} className="px-10 bg-white/5 rounded-[2rem] border border-white/10 font-black text-white hover:bg-white/10 transition-all flex items-center gap-3"><ExternalLink size={20} className="text-emerald-500" /><span>플레이어 열기</span></button>
+            <button onClick={() => handleControl('skip')} className="w-20 h-20 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all"><SkipForward size={32} /></button>
+            <button onClick={() => {
+              window.open('/overlay/player?token=' + localStorage.getItem('chzzk_session_token'), '_blank');
+              notify('플레이어를 새 탭에서 열었습니다.');
+            }} className="px-10 bg-white/5 rounded-[2rem] border border-white/10 font-black text-white hover:bg-white/10 transition-all flex items-center gap-3"><ExternalLink size={20} className="text-emerald-500" /><span>플레이어 열기</span></button>
           </div>
         </div>
 
-        {/* Queue Card */}
         <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col shadow-2xl">
           <div className="flex justify-between items-center mb-10">
             <h3 className="text-2xl font-black flex items-center gap-3 text-white"><Music className="text-emerald-500" /> 대기열 <span className="text-emerald-500/50">{songs.queue.length}</span></h3>
@@ -158,8 +165,8 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-wider">{song.requester}</p>
                   </div>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                    <button onClick={() => onControl('playNext')} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" title="지금 바로 재생"><Play size={18} /></button>
-                    <button onClick={() => onControl('remove', i)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg" title="삭제"><Trash2 size={18} /></button>
+                    <button onClick={() => handleControl('playNext', i)} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg" title="지금 바로 재생"><Play size={18} /></button>
+                    <button onClick={() => handleControl('remove', i)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg" title="삭제"><Trash2 size={18} /></button>
                   </div>
                 </div>
               ))

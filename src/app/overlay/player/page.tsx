@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, User, SkipForward, ListMusic, Volume2, AlertCircle, Play, Pause, Volume1, VolumeX } from 'lucide-react';
+import { Music, User, SkipForward, SkipBack, ListMusic, Volume2, AlertCircle, Play, Pause, Trash2 } from 'lucide-react';
 
 export default function OverlayPlayer() {
   const store = useBotStore();
@@ -14,10 +14,10 @@ export default function OverlayPlayer() {
   const [needsInteraction, setNeedsInteraction] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(50);
-  const [isMuted, setIsMuted] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
   const playerRef = useRef<any>(null);
+  const retryTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. WebSocket 및 YouTube API 로드
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -40,21 +40,17 @@ export default function OverlayPlayer() {
     };
 
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === 'songStateUpdate' || data.type === 'connectResult') {
-        store.updateSongs(data.payload || { queue: [], currentSong: null });
-        if (data.payload.isPlaying !== undefined) setIsPlaying(data.payload.isPlaying);
-      }
-      if (data.type === 'playerControl') {
-        if (data.action === 'play') {
-          playerRef.current?.playVideo();
-          setIsPlaying(true);
+      try {
+        const data = JSON.parse(e.data);
+        if (data.payload && (data.type === 'songStateUpdate' || data.type === 'connectResult')) {
+          store.updateSongs(data.payload);
+          if (data.payload.isPlaying !== undefined) setIsPlaying(data.payload.isPlaying);
         }
-        if (data.action === 'pause') {
-          playerRef.current?.pauseVideo();
-          setIsPlaying(false);
+        if (data.type === 'playerControl') {
+          if (data.action === 'play') safePlay();
+          if (data.action === 'pause') safePause();
         }
-      }
+      } catch (err) {}
     };
     setSocket(ws);
 
@@ -68,31 +64,41 @@ export default function OverlayPlayer() {
       setIsReady(true);
     }
 
-    return () => {
-      ws.close();
-      bc.close();
-    };
+    return () => { ws.close(); bc.close(); if(retryTimeout.current) clearTimeout(retryTimeout.current); };
   }, []);
 
-  // 2. 플레이어 제어 로직
-  useEffect(() => {
-    // [중요] videoId가 없으면 절대 실행하지 않음
-    if (!isReady || !currentSong || !currentSong.videoId || !(window as any).YT) return;
+  const safePlay = () => {
+    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
+      playerRef.current.playVideo();
+      setIsPlaying(true);
+    }
+  };
 
-    const loadVideo = () => {
-      if (!playerRef.current) {
-        try {
+  const safePause = () => {
+    if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+      playerRef.current.pauseVideo();
+      setIsPlaying(false);
+    }
+  };
+
+  // [핵심] 자가 치유(Self-Healing) 재생 로직
+  useEffect(() => {
+    if (!isReady || !currentSong?.videoId || !(window as any).YT) return;
+
+    setHistory(prev => {
+      const last = prev[prev.length - 1];
+      if (last?.videoId !== currentSong.videoId) return [...prev, currentSong];
+      return prev;
+    });
+
+    const initPlayer = () => {
+      try {
+        if (!playerRef.current) {
           playerRef.current = new (window as any).YT.Player('yt-player', {
             height: '100%',
             width: '100%',
             videoId: currentSong.videoId,
-            playerVars: { 
-              'autoplay': 1, 
-              'controls': 0, 
-              'disablekb': 1, 
-              'modestbranding': 1, 
-              'rel': 0 
-            },
+            playerVars: { 'autoplay': 1, 'controls': 0, 'disablekb': 1, 'modestbranding': 1, 'rel': 0 },
             events: {
               'onReady': (event: any) => {
                 event.target.setVolume(volume);
@@ -103,7 +109,7 @@ export default function OverlayPlayer() {
                 setIsPlaying(true);
               },
               'onStateChange': (event: any) => {
-                if (event.data === (window as any).YT.PlayerState.ENDED) {
+                if (event.data === 0) { 
                   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
                 }
                 setIsPlaying(event.data === 1);
@@ -113,85 +119,75 @@ export default function OverlayPlayer() {
               }
             }
           });
-        } catch (e) { console.error(e); }
-      } else {
-        if (typeof playerRef.current.loadVideoById === 'function') {
-          const currentId = playerRef.current.getVideoData?.()?.video_id;
-          if (currentId !== currentSong.videoId) {
-            playerRef.current.loadVideoById(currentSong.videoId);
-            setIsPlaying(true);
-          } else if (store.songs.isPlaying) {
-            playerRef.current.playVideo();
+        } else {
+          // [보강] 메서드가 없으면 에러가 나지 않게 체크하고 재시도
+          if (typeof playerRef.current.loadVideoById === 'function') {
+            const currentId = playerRef.current.getVideoData?.()?.video_id;
+            if (currentId !== currentSong.videoId) {
+              playerRef.current.loadVideoById(currentSong.videoId);
+              setIsPlaying(true);
+            } else if (store.songs.isPlaying) {
+              // 이미 로드된 상태에서 서버가 재생 중이라면 재생 시도
+              const state = playerRef.current.getPlayerState();
+              if (state !== 1 && state !== 3) playerRef.current.playVideo();
+            }
+          } else {
+            // 메서드가 아직 없다면 1초 뒤 재시도
+            console.warn('[Player] API Not Ready - Retrying...');
+            retryTimeout.current = setTimeout(initPlayer, 1000);
           }
         }
+      } catch (e) {
+        console.error('[Player] Init Error - Retrying...', e);
+        retryTimeout.current = setTimeout(initPlayer, 1000);
       }
     };
 
-    loadVideo();
+    initPlayer();
   }, [isReady, currentSong]);
 
-  // [신규] 컨트롤러 액션
   const togglePlay = () => {
-    if (!playerRef.current) return;
     if (isPlaying) {
-      playerRef.current.pauseVideo();
-      socket?.send(JSON.stringify({ type: 'controlMusic', action: 'togglePlayPause' })); // 서버 상태 동기화
+      safePause();
+      socket?.send(JSON.stringify({ type: 'controlMusic', action: 'togglePlayPause' }));
     } else {
-      playerRef.current.playVideo();
+      safePlay();
       socket?.send(JSON.stringify({ type: 'controlMusic', action: 'togglePlayPause' }));
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSkip = () => {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
+  };
+
+  const handlePrev = () => {
+    if (playerRef.current) playerRef.current.seekTo(0);
+  };
+
+  const handleQueueRemove = (index: number) => {
     if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
-    }
-  };
-
-  const handleVolume = (e: any) => {
-    const newVol = parseInt(e.target.value);
-    setVolume(newVol);
-    if (playerRef.current) playerRef.current.setVolume(newVol);
-    if (newVol > 0 && isMuted) {
-      setIsMuted(false);
-      playerRef.current?.unMute();
-    }
-  };
-
-  const toggleMute = () => {
-    if (!playerRef.current) return;
-    if (isMuted) {
-      playerRef.current.unMute();
-      setIsMuted(false);
-    } else {
-      playerRef.current.mute();
-      setIsMuted(true);
+      socket.send(JSON.stringify({ type: 'controlMusic', action: 'remove', index }));
     }
   };
 
   const handleInteraction = () => {
     setNeedsInteraction(false);
-    if (playerRef.current) {
+    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
       playerRef.current.unMute();
       playerRef.current.playVideo();
       setIsPlaying(true);
     }
   };
 
-  if (!currentSong) return (
-    <div className="h-screen bg-black flex items-center justify-center p-10 text-white font-black italic text-3xl">
-      <Music className="animate-pulse mr-4" size={48} /> Jukebox Ready...
-    </div>
-  );
+  if (!currentSong) return <div className="h-screen bg-black flex items-center justify-center text-white text-3xl font-black"><Music className="animate-pulse mr-4"/> Jukebox Ready...</div>;
 
   return (
     <div className="h-screen bg-[#050505] text-white font-sans p-10 overflow-hidden relative">
       <AnimatePresence>
         {needsInteraction && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleInteraction} className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center cursor-pointer">
-            <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-black mb-8 animate-bounce shadow-2xl"><Play size={48} fill="currentColor" /></div>
-            <h2 className="text-4xl font-black mb-4">Click to Start</h2>
+            <Play size={64} className="mb-4 text-emerald-500 animate-bounce" />
+            <h2 className="text-4xl font-black">Click to Start</h2>
           </motion.div>
         )}
       </AnimatePresence>
@@ -211,41 +207,27 @@ export default function OverlayPlayer() {
               <p className="text-gray-500 font-bold text-lg flex items-center gap-2"><User size={18} className="text-emerald-500"/> Requested by {currentSong.requester}</p>
             </div>
 
-            {/* [신규] 플레이어 컨트롤러 UI */}
             <div className="flex items-center gap-6 bg-white/5 p-4 rounded-[2rem] border border-white/5 backdrop-blur-md w-fit">
-              <button onClick={togglePlay} className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-black hover:scale-110 transition-all shadow-lg shadow-emerald-500/20">
-                {isPlaying ? <Pause fill="currentColor" size={24} /> : <Play fill="currentColor" size={24} />}
+              <button onClick={handlePrev} className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all"><SkipBack size={24} /></button>
+              <button onClick={togglePlay} className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-black hover:scale-110 transition-all shadow-lg shadow-emerald-500/20">
+                {isPlaying ? <Pause fill="currentColor" size={28} /> : <Play fill="currentColor" size={28} />}
               </button>
-              <button onClick={handleSkip} className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                <SkipForward size={24} />
-              </button>
-              
+              <button onClick={handleSkip} className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all"><SkipForward size={24} /></button>
               <div className="h-8 w-[1px] bg-white/10 mx-2" />
-              
-              <div className="flex items-center gap-3 group/vol">
-                <button onClick={toggleMute} className="text-gray-400 hover:text-white transition-colors">
-                  {isMuted || volume === 0 ? <VolumeX size={24} /> : (volume < 50 ? <Volume1 size={24} /> : <Volume2 size={24} />)}
-                </button>
-                <input 
-                  type="range" min="0" max="100" value={isMuted ? 0 : volume} onChange={handleVolume}
-                  className="w-24 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 opacity-50 group-hover/vol:opacity-100 transition-opacity"
-                />
-              </div>
+              <input type="range" min="0" max="100" value={volume} onChange={(e) => { setVolume(parseInt(e.target.value)); playerRef.current?.setVolume(parseInt(e.target.value)); }} className="w-24 h-1.5 bg-gray-700 rounded-lg accent-emerald-500" />
             </div>
           </div>
         </div>
 
         <div className="col-span-4 flex flex-col pt-20">
           <div className="bg-white/5 border border-white/5 rounded-[3rem] p-10 flex-1 flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex justify-between items-center mb-10 shrink-0">
-              <h3 className="text-2xl font-black flex items-center gap-3 italic"><ListMusic className="text-emerald-500" /> Queue</h3>
-              <span className="px-4 py-1.5 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500">{queue.length}</span>
-            </div>
-            <div className="flex-1 space-y-6 overflow-y-auto pr-4 custom-scrollbar">
+            <div className="flex justify-between items-center mb-10 shrink-0"><h3 className="text-2xl font-black flex items-center gap-3 italic"><ListMusic className="text-emerald-500" /> Queue</h3><span className="px-4 py-1.5 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-500">{queue.length} Songs</span></div>
+            <div className="flex-1 space-y-4 overflow-y-auto pr-4 custom-scrollbar">
               {queue.map((song, i) => (
-                <div key={i} className="flex items-center gap-5 group">
-                  <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center shrink-0 font-black text-emerald-500 border border-white/5 group-hover:bg-emerald-500 group-hover:text-black transition-all">{i + 1}</div>
-                  <div className="flex-1 min-w-0"><p className="font-bold text-white truncate text-sm mb-1">{song.title}</p><p className="text-[10px] text-gray-500 font-black uppercase">{song.requester}</p></div>
+                <div key={i} className="flex items-center gap-4 bg-white/[0.02] p-4 rounded-2xl group hover:bg-white/10 transition-all">
+                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center shrink-0 font-black text-emerald-500 border border-white/5">{i + 1}</div>
+                  <div className="flex-1 min-w-0"><p className="font-bold text-white truncate text-xs mb-1">{song.title}</p><p className="text-[9px] text-gray-500 font-black uppercase">{song.requester}</p></div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all"><button onClick={() => handleQueueRemove(i)} className="p-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white"><Trash2 size={14}/></button></div>
                 </div>
               ))}
             </div>
