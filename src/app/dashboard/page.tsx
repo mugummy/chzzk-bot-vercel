@@ -30,18 +30,20 @@ export default function DashboardPage() {
   const [winnerChats, setWinnerChats] = useState<any[]>([]);
   
   const socketRef = useRef<WebSocket | null>(null);
-  const lastSpokenMsgRef = useRef<string>('');
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
+  // [수정] 실시간 채팅 및 정보 수신 로직 완성
   const handleIncomingData = useCallback((data: any) => {
     const { type, payload } = data;
     const currentStore = useBotStore.getState();
 
     switch (type) {
       case 'connectResult': 
-        currentStore.setBotStatus(payload);
-        if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
+        currentStore.setBotStatus(data.success);
+        if (data.channelInfo) {
+          currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
+        }
         setIsLoading(false);
         break;
       case 'settingsUpdate': currentStore.updateSettings(payload); break;
@@ -50,10 +52,19 @@ export default function DashboardPage() {
       case 'macrosUpdate': currentStore.updateMacros(payload); break;
       case 'songStateUpdate': currentStore.updateSongs(payload); break;
       case 'participationStateUpdate': currentStore.updateParticipation(payload); break;
-      case 'participationRankingUpdate': currentStore.updateParticipationRanking(payload); break;
       case 'greetStateUpdate': currentStore.updateGreet(payload); break;
       case 'newChat': 
+        // [중요] 채팅 데이터 실시간 스토어 주입
         currentStore.addChat(payload); 
+        
+        // 당첨자 채팅 필터링 (TTS)
+        if (winner && payload.profile.userIdHash === winner.userIdHash) {
+          setWinnerChats(prev => [payload, ...prev].slice(0, 10));
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(payload.message));
+          }
+        }
         break;
       case 'drawWinnerResult':
         const winPlayer = payload.winners[0];
@@ -64,7 +75,7 @@ export default function DashboardPage() {
         }
         break;
     }
-  }, []);
+  }, [winner]);
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
@@ -72,6 +83,7 @@ export default function DashboardPage() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
     
+    console.log('[WS] Initializing Secure Uplink...');
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
     
@@ -88,11 +100,10 @@ export default function DashboardPage() {
     ws.onclose = () => {
       useBotStore.getState().setBotStatus(false, true);
       socketRef.current = null;
-      setTimeout(() => {
-        const currentToken = localStorage.getItem('chzzk_session_token');
-        if (currentToken) connectWS(currentToken);
-      }, 3000);
+      setTimeout(() => connectWS(token), 3000);
     };
+
+    setSocket(ws);
   }, [handleIncomingData]);
 
   const send = useCallback((msg: any) => {
@@ -147,7 +158,7 @@ export default function DashboardPage() {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6 text-center">
         <AlertCircle className="text-red-500 animate-bounce" size={64} />
-        <h2 className="text-3xl font-black text-white">{authError}</h2>
+        <h2 className="text-3xl font-black">{authError}</h2>
         <button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-emerald-500 transition-all">다시 시도</button>
       </div>
     );
@@ -157,7 +168,7 @@ export default function DashboardPage() {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
         <RefreshCw className="text-pink-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot...</p>
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot Data...</p>
       </div>
     );
   }
@@ -166,9 +177,9 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
       <AnimatePresence>
         {store.isReconnecting && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6 text-center p-10">
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6">
             <RefreshCw className="text-emerald-500 animate-spin" size={48} />
-            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Connecting to Gummy Services...</p>
+            <p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting gummybot...</p>
           </motion.div>
         )}
       </AnimatePresence>
