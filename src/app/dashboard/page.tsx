@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  Poll, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight
+  Poll, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
 
-// 모든 탭 컴포넌트 (100% 리액트 이식 완료)
 import DashboardHome from '@/components/dashboard/DashboardHome';
 import CommandTab from '@/components/dashboard/CommandTab';
 import MacroTab from '@/components/dashboard/MacroTab';
@@ -23,13 +22,15 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Winner Popup & TTS States
+  const [winner, setWinner] = useState<any | null>(null);
+  const [winnerChats, setWinnerChats] = useState<any[]>([]);
+  const lastSpokenMsgRef = useRef<string>('');
 
-  // WebSocket 연결 매커니즘 (Full-Sync)
   const connectWS = useCallback((token: string) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `wss://web-production-19eef.up.railway.app/?token=${token}`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(`wss://web-production-19eef.up.railway.app/?token=${token}`);
     
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'connect' }));
@@ -40,7 +41,7 @@ export default function DashboardPage() {
       try {
         const data = JSON.parse(e.data);
         handleIncomingData(data);
-      } catch (err) { console.error('[WS] Data Error', err); }
+      } catch (err) {}
     };
 
     ws.onclose = () => setTimeout(() => connectWS(token), 3000);
@@ -52,7 +53,6 @@ export default function DashboardPage() {
       case 'connectResult': 
         store.setBotStatus(data.success);
         if (data.channelInfo) store.setStreamInfo(data.channelInfo, data.liveStatus);
-        setIsLoading(false);
         break;
       case 'settingsUpdate': store.updateSettings(data.payload); break;
       case 'commandsUpdate': store.updateCommands(data.payload); break;
@@ -61,33 +61,44 @@ export default function DashboardPage() {
       case 'songStateUpdate': store.updateSongs(data.payload); break;
       case 'participationStateUpdate': store.updateParticipation(data.payload); break;
       case 'greetStateUpdate': store.updateGreet(data.payload); break;
-      case 'newChat': store.addChat(data.payload); break;
+      case 'newChat': 
+        store.addChat(data.payload); 
+        // 당첨자 채팅 필터링 및 TTS
+        if (winner && data.payload.profile.userIdHash === winner.userIdHash) {
+          setWinnerChats(prev => [data.payload, ...prev].slice(0, 10));
+          speak(data.payload.message);
+        }
+        break;
+      case 'drawWinnerResult': // 서버에서 당첨자 정보 수신
+        setWinner(data.payload.winners[0]);
+        setWinnerChats([]);
+        break;
     }
   };
 
+  const speak = (text: string) => {
+    if (lastSpokenMsgRef.current === text) return;
+    window.speechSynthesis.cancel(); // 이전 음성 중단
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    utterance.rate = 1.0;
+    window.speechSynthesis.speak(utterance);
+    lastSpokenMsgRef.current = text;
+  };
+
+  const closeWinnerPopup = () => {
+    setWinner(null);
+    window.speechSynthesis.cancel(); // TTS 즉시 중단
+  };
+
   const send = (msg: any) => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(msg));
-    }
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
   };
 
   useEffect(() => {
     const token = localStorage.getItem('chzzk_session_token');
-    const params = new URLSearchParams(window.location.search);
-    const session = params.get('session');
-
-    if (session) {
-      localStorage.setItem('chzzk_session_token', session);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      window.location.reload();
-      return;
-    }
-
-    if (!token) {
-      window.location.href = '/';
-      return;
-    }
-
+    if (!token) return (window.location.href = '/');
+    
     fetch('https://web-production-19eef.up.railway.app/api/auth/session', { 
       headers: { 'Authorization': `Bearer ${token}` } 
     }).then(res => res.json()).then(data => {
@@ -95,34 +106,19 @@ export default function DashboardPage() {
         store.setAuth(data.user);
         connectWS(token);
       } else window.location.href = '/';
-    }).catch(() => window.location.href = '/');
+    });
 
     return () => socket?.close();
   }, [connectWS]);
 
-  if (isLoading && !store.currentUser) {
-    return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
-        <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Establishing Secure Uplink...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-emerald-500/30">
-      {/* Sidebar Navigation */}
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] relative z-50`}>
+    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/20 shrink-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
             <Activity className="text-black" size={28} />
           </div>
-          {isSidebarOpen && (
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-              <h1 className="font-black text-2xl tracking-tighter leading-none">BUZZK</h1>
-              <p className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.2em] mt-1">Pro System</p>
-            </motion.div>
-          )}
+          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter">BUZZK</h1>}
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-8">
@@ -137,56 +133,80 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button 
-            onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300"
-          >
-            <LogOut size={22} />
-            {isSidebarOpen && <span>로그아웃</span>}
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300">
+            <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
-
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#111] border border-white/10 rounded-full flex items-center justify-center text-gray-500 hover:text-white z-50 transition-colors">
-          {isSidebarOpen ? <Menu size={14} /> : <ChevronRight size={14} />}
-        </button>
       </aside>
 
-      {/* Main Viewport */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative">
-        <div className="p-12 max-w-[1400px] mx-auto">
-          <header className="flex justify-between items-end mb-16">
+      <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
+        <header className="flex justify-between items-end mb-16">
+          <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
+            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl})` }} />
             <div>
-              <div className="flex items-center gap-2 text-emerald-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4">
-                <ShieldCheck size={14} /> <span>Admin Secured Access</span>
-              </div>
-              <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-            </div>
-            
-            <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
-              <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl})` }} />
-              <div>
-                <p className="text-white font-black text-2xl tracking-tight leading-none mb-2">{store.currentUser?.channelName}</p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
-                  <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Server Online' : 'Connecting...'}</span>
-                </div>
+              <p className="text-white font-black text-2xl mb-2">{store.currentUser?.channelName}</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
+                <span className="text-[11px] text-gray-400 font-black uppercase">{store.isConnected ? 'Server Online' : 'Offline'}</span>
               </div>
             </div>
-          </header>
+          </div>
+        </header>
 
-          <AnimatePresence mode="wait">
-            <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
-              {activeTab === 'dashboard' && <DashboardHome store={store} />}
-              {activeTab === 'commands' && <CommandTab onSend={send} />}
-              {activeTab === 'macros' && <MacroTab onSend={send} />}
-              {activeTab === 'songs' && <SongTab onControl={(a) => send({type:'controlMusic', action: a})} />}
-              {activeTab === 'greet' && <GreetTab onSend={send} />}
-              {activeTab === 'votes' && <VotePanel onSend={send} />}
-              {activeTab === 'participation' && <ParticipationTab onSend={send} />}
-              {activeTab === 'points' && <PointTab onSend={send} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+            {activeTab === 'dashboard' && <DashboardHome store={store} />}
+            {activeTab === 'commands' && <CommandTab onSend={send} />}
+            {activeTab === 'macros' && <MacroTab onSend={send} />}
+            {activeTab === 'songs' && <SongTab onControl={(a) => send({type:'controlMusic', action: a})} />}
+            {activeTab === 'greet' && <GreetTab onSend={send} />}
+            {activeTab === 'votes' && <VotePanel onSend={send} />}
+            {activeTab === 'participation' && <ParticipationTab onSend={send} />}
+            {activeTab === 'points' && <PointTab onSend={send} />}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* [FINAL PIECE] WINNER POPUP WITH TTS */}
+        <AnimatePresence>
+          {winner && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 pointer-events-none">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 100 }}
+                className="w-full max-w-2xl bg-black/90 backdrop-blur-3xl border border-emerald-500/30 rounded-[4rem] p-12 shadow-[0_0_100px_rgba(16,185,129,0.2)] pointer-events-auto text-center relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+                <button onClick={closeWinnerPopup} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full hover:bg-red-500 transition-all group">
+                  <X size={24} className="group-hover:scale-110" />
+                </button>
+                <div className="relative z-10">
+                  <div className="w-32 h-32 bg-emerald-500 rounded-full mx-auto mb-8 flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.5)]">
+                    <Users size={64} className="text-black" />
+                  </div>
+                  <h3 className="text-sm font-black text-emerald-500 uppercase tracking-[0.5em] mb-4 animate-pulse">Winner Detected</h3>
+                  <h2 className="text-6xl font-black tracking-tighter text-white mb-12">{winner.nickname}</h2>
+                  
+                  <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-left space-y-6">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Live Winner Chat & TTS Active
+                    </p>
+                    <div className="h-40 overflow-y-auto space-y-4 pr-4 custom-scrollbar">
+                      {winnerChats.length === 0 ? (
+                        <p className="text-gray-600 font-bold italic py-10 text-center">당첨자의 채팅을 기다리는 중...</p>
+                      ) : (
+                        winnerChats.map((chat, i) => (
+                          <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} key={i} className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+                            <p className="text-emerald-400 text-sm leading-relaxed font-bold">{chat.message}</p>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
