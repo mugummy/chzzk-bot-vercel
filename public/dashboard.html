@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chzzk Bot Dashboard - Ultimate Stable</title>
+    <title>Chzzk Bot Dashboard - Ultimate Restoration</title>
+    <!-- Server Integration -->
     <script src="/config.js"></script>
     <script src="/api-adapter.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Styles -->
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/modern-ui.css">
     <link rel="stylesheet" href="/vote-ui-enhanced.css">
@@ -20,15 +22,18 @@
         .current-song-container { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         #current-song-thumbnail { width: 100%; max-width: 320px; aspect-ratio: 16/9; border-radius: 12px; background: #000; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
         .mt-20 { margin-top: 20px; }
-        .mb-20 { margin-bottom: 20px; }
         .mt-30 { margin-top: 30px; }
+        .mb-20 { margin-bottom: 20px; }
         .btn-block { width: 100%; }
+        .vote-option-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
     </style>
 </head>
 <body>
+    <!-- Background -->
     <div class="background-wrapper"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
     <div class="noise-overlay"></div>
 
+    <!-- Header -->
     <header class="header">
         <div class="header-left">
             <button class="sidebar-toggle" id="sidebar-toggle"><i class="fas fa-bars"></i></button>
@@ -43,6 +48,7 @@
         </div>
     </header>
 
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-profile" id="sidebar-profile" style="display: none;">
@@ -70,12 +76,8 @@
                 <li class="nav-item" data-tab="points"><i class="fas fa-coins"></i><span>포인트</span></li>
             </ul>
         </nav>
-        
         <div class="sidebar-footer">
-            <button class="logout-btn" id="logout-btn" onclick="window.handleLogout()">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>로그아웃</span>
-            </button>
+            <button class="logout-btn" id="logout-btn" onclick="window.handleLogout()"><i class="fas fa-sign-out-alt"></i><span>로그아웃</span></button>
         </div>
     </aside>
 
@@ -107,7 +109,7 @@
                     </div>
                 </div>
                 <div class="card chat-card">
-                    <div class="card-header"><h3 class="card-title">실시간 채팅</h3></div>
+                    <div class="card-header"><h3>실시간 채팅</h3></div>
                     <div class="chat-messages" id="chat-messages"></div>
                 </div>
             </div>
@@ -217,93 +219,16 @@
             </div>
             <div id="vote-subtab" class="vote-subtab">
                 <div class="flex-row-group mt-20">
-                    <!-- 투표 생성 카드 -->
-                    <div class="card vote-creation-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-plus-circle"></i> 투표 시스템 설정</h3>
+                    <div class="card"><h3>투표 생성</h3>
+                        <div class="form-group"><label>질문</label><input type="text" id="vote-question" class="form-input"></div>
+                        <div id="vote-options-container">
+                            <div class="vote-option-item"><input type="text" class="form-input" placeholder="항목 1"></div>
+                            <div class="vote-option-item"><input type="text" class="form-input" placeholder="항목 2"></div>
                         </div>
-                        <div class="form-group mt-20">
-                            <label>질문 및 선택지</label>
-                            <input type="text" id="vote-question" class="form-input" placeholder="질문을 입력하세요">
-                            <div id="vote-options-container" class="mt-10">
-                                <div class="vote-option-item" style="display:flex; gap:10px; margin-bottom:10px;">
-                                    <div style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:#00ff94; color:#000; border-radius:8px; font-weight:900;">1</div>
-                                    <input type="text" class="form-input" placeholder="옵션 1">
-                                </div>
-                                <div class="vote-option-item" style="display:flex; gap:10px; margin-bottom:10px;">
-                                    <div style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:#00ff94; color:#000; border-radius:8px; font-weight:900;">2</div>
-                                    <input type="text" class="form-input" placeholder="옵션 2">
-                                </div>
-                            </div>
-                            <button class="btn btn-secondary btn-sm" onclick="window.addVoteOption()">+ 옵션 추가</button>
-                        </div>
-
-                        <div class="vote-divider"></div>
-
-                        <div class="form-group mt-20">
-                            <label>투표 모드</label>
-                            <div class="radio-group">
-                                <label class="radio-label"><input type="radio" name="voteMode" value="any" checked><span>자유 (숫자 포함 시)</span></label>
-                                <label class="radio-label"><input type="radio" name="voteMode" value="command"><span>명령어 (!1 형태)</span></label>
-                            </div>
-                        </div>
-
-                        <div class="flex-row-group mt-20" style="grid-template-columns: 1.2fr 1fr;">
-                            <div class="form-group">
-                                <label class="checkbox-label" style="margin:0">
-                                    <span>후원 투표 활성화</span>
-                                    <input type="checkbox" id="vote-allow-donation" checked>
-                                    <div class="toggle-indicator"></div>
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>가중치 (원당 1표)</label>
-                                <input type="number" id="vote-donation-weight" class="form-input" value="100">
-                            </div>
-                        </div>
-
-                        <div class="flex-row-group mt-20">
-                            <div class="form-group">
-                                <label class="checkbox-label" style="margin:0">
-                                    <span>구독자 전용</span>
-                                    <input type="checkbox" id="vote-subscriber-only">
-                                    <div class="toggle-indicator"></div>
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label>시간제한 (초)</label>
-                                <input type="number" id="vote-duration" class="form-input" value="60">
-                            </div>
-                        </div>
-
-                        <button class="btn btn-primary btn-block mt-30" onclick="window.createVote()">
-                            <i class="fas fa-play"></i> 투표 생성 및 시작
-                        </button>
+                        <button class="btn-sm mt-10" onclick="window.addVoteOption()">+ 항목 추가</button>
+                        <button class="btn btn-primary mt-20 btn-block" onclick="window.createVote()">투표 시작</button>
                     </div>
-
-                    <!-- 실시간 결과 카드 -->
-                    <div class="card vote-results-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-chart-bar"></i> 실시간 투표 현황</h3>
-                            <div id="vote-status-badge" class="status-badge offline">대기 중</div>
-                        </div>
-                        <div id="current-vote-display" class="mt-20">
-                            <div class="empty-state">
-                                <i class="fas fa-poll"></i>
-                                <p>진행 중인 투표가 없습니다.</p>
-                            </div>
-                        </div>
-                        <div id="vote-controls" class="mt-30" style="display:none">
-                            <div class="flex-row-group" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <button class="btn btn-danger" onclick="window.endVote()">
-                                    <i class="fas fa-stop"></i> 투표 종료
-                                </button>
-                                <button class="btn btn-secondary" onclick="window.resetVote()">
-                                    <i class="fas fa-redo"></i> 초기화
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card"><h3>결과</h3><div id="current-vote-display"></div><div id="vote-controls" style="display:none" class="mt-20"><button class="btn btn-danger btn-block" onclick="window.endVote()">종료</button><button class="btn btn-secondary btn-block mt-10" onclick="window.resetVote()">초기화</button></div></div>
                 </div>
             </div>
             <div id="roulette-subtab" class="vote-subtab">
@@ -312,7 +237,7 @@
                         <div class="vote-option-item"><input type="text" class="form-input" value="항목 1"><input type="number" class="form-input" style="width:70px" value="1"></div>
                         <div class="vote-option-item"><input type="text" class="form-input" value="항목 2"><input type="number" class="form-input" style="width:70px" value="1"></div>
                     </div><button class="btn-sm" onclick="window.addRouletteItem()">+ 추가</button><button class="btn btn-primary mt-20 btn-block" onclick="window.createRoulette()">룰렛 생성</button></div>
-                    <div class="card"><h3>실행</h3><div id="roulette-container"></div><button class="btn btn-primary mt-20 btn-block" id="spin-roulette-btn" style="display:none" onclick="window.spinRoulette()">돌리기!</button><button class="btn btn-secondary mt-10 btn-block" onclick="window.resetRoulette()">룰렛 초기화</button></div>
+                    <div class="card"><h3>룰렛</h3><div id="roulette-container"></div><button class="btn btn-primary mt-20 btn-block" id="spin-roulette-btn" style="display:none" onclick="window.spinRoulette()">돌리기!</button><button class="btn btn-secondary mt-10 btn-block" onclick="window.resetRoulette()">룰렛 초기화</button></div>
                 </div>
             </div>
             <div id="settings-subtab" class="vote-subtab">
@@ -385,28 +310,6 @@
     <div id="add-macro-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>매크로 설정</h2><button class="modal-close" onclick="window.hideModal('add-macro-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-macro-id"><div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div><div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" oninput="window.updatePreview('new-macro-message','macro-preview')"></textarea></div><div class="form-group"><label>함수 칩</label><div class="function-chips"><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/uptime')">/uptime</span><span class="fn-chip" onclick="window.insertFunction('new-macro-message','/viewer')">/viewer</span></div></div><div class="preview-box" id="macro-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addMacro()">저장</button></div></div></div>
     <div id="add-counter-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>카운터 설정</h2><button class="modal-close" onclick="window.hideModal('add-counter-modal')">×</button></div><div class="modal-body"><input type="hidden" id="edit-counter-id"><div class="form-group"><label>트리거</label><input type="text" id="new-counter-trigger" class="form-input"></div><div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea" oninput="window.updatePreview('new-counter-response','counter-preview')"></textarea></div><div class="form-group" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px;"><label style="margin:0">하루 한 번만 실행</label><label class="toggle-switch small"><input type="checkbox" id="new-counter-once"><span class="slider round"></span></label></div><div class="preview-box mt-20" id="counter-preview">미리보기...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.addCounter()">저장</button></div></div></div>
     <div id="edit-greet-modal" class="modal-overlay"><div class="modal"><div class="modal-header"><h2>인사 문구 수정</h2><button class="modal-close" onclick="window.hideModal('edit-greet-modal')">×</button></div><div class="modal-body"><div class="form-group"><label>인사 메시지</label><textarea id="edit-greet-input" class="form-textarea" rows="4" oninput="window.updatePreview('edit-greet-input','greet-preview')"></textarea><small class="form-help">{user} 변수 사용 가능</small></div><div class="preview-box" id="greet-preview">봇: 응답 예시...</div></div><div class="modal-footer"><button class="btn btn-primary" onclick="window.saveGreetEditor()">적용</button></div></div></div>
-
-    <!-- Winner Chat Popup (Expert) -->
-    <div id="winner-chat-modal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 id="winner-title">🎉 당첨자 채팅 모니터링</h2>
-                <button class="modal-close" onclick="window.closeWinnerPopup()">×</button>
-            </div>
-            <div class="modal-body">
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div id="winner-avatar" style="width:80px; height:80px; border-radius:50%; margin:0 auto 10px; background-size:cover; border:3px solid #00ff94;"></div>
-                    <h3 id="winner-nickname" style="font-size:1.5rem; color:#00ff94;">닉네임</h3>
-                </div>
-                <div id="winner-chat-log" style="height:200px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:12px; padding:15px; border:1px solid rgba(255,255,255,0.05);">
-                    <!-- 당첨자의 채팅만 여기에 실시간으로 올라옵니다 -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-block" onclick="window.closeWinnerPopup()">닫기 및 TTS 중단</button>
-            </div>
-        </div>
-    </div>
 
     <div id="notification-container"></div>
     <script src="/dashboard.js"></script>
