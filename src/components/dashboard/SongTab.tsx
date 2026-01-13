@@ -1,24 +1,107 @@
 'use client';
 
-import { Play, SkipForward, Trash2, ExternalLink, Music, Disc } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, SkipForward, Trash2, ExternalLink, Music, Disc, Settings2, Save, DollarSign, Clock } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
 export default function SongTab({ onControl }: { onControl: (action: string, index?: number) => void }) {
-  const { songs } = useBotStore();
+  const store = useBotStore();
+  const { songs, settings } = store;
   const fallbackImg = "https://placehold.co/600x400/111/00ff94?text=gummybot+Music";
 
-  const openPlayer = () => {
-    // 팝업이 아닌 새 탭으로 열기
-    window.open('/overlay/player?token=' + localStorage.getItem('chzzk_session_token'), '_blank');
+  // 로컬 설정 상태
+  const [mode, setMode] = useState<'all' | 'cooldown' | 'donation' | 'off'>('all');
+  const [cooldown, setCooldown] = useState(30);
+  const [minDonation, setMinDonation] = useState(1000);
+
+  useEffect(() => {
+    if (settings) {
+      setMode(settings.songRequestMode);
+      setCooldown(settings.songRequestCooldown);
+      setMinDonation(settings.minDonationAmount);
+    }
+  }, [settings]);
+
+  const handleSaveSettings = () => {
+    store.updateSettings({ // 스토어 즉시 반영 (낙관적 업데이트)
+      songRequestMode: mode,
+      songRequestCooldown: cooldown,
+      minDonationAmount: minDonation
+    });
+    // 서버 전송 (실제 저장)
+    // 여기서는 onControl 대신 socket.send를 직접 하거나, 상위 page.tsx의 send 함수를 prop으로 더 받아와야 함.
+    // 하지만 구조상 onControl은 노래 제어용이므로, updateSettings 액션을 수행하는 별도 prop이 필요함.
+    // 임시로 window.sendWebSocket (global helper) 사용 또는 onControl을 확장하여 사용.
+    // *가장 깔끔한 방법: useBotStore의 액션은 상태만 바꾸므로, page.tsx에서 내려준 send 함수를 사용해야 함.
+    // 현재 onControl만 있으므로, 이를 통해 우회하거나 page.tsx 수정을 최소화하기 위해
+    // window.sendWebSocket을 활용 (page.tsx에서 정의됨).
+    if (typeof window !== 'undefined' && (window as any).sendWebSocket) {
+      (window as any).sendWebSocket({ 
+        type: 'updateSettings', 
+        data: { songRequestMode: mode, songRequestCooldown: cooldown, minDonationAmount: minDonation } 
+      });
+      if ((window as any).ui?.notify) (window as any).ui.notify('신청곡 설정이 저장되었습니다.', 'success');
+    }
   };
 
   return (
     <div className="space-y-10">
+      {/* 1. 설정 패널 (신규 추가) */}
+      <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 space-y-8 shadow-2xl">
+        <header className="flex justify-between items-center">
+          <h3 className="text-2xl font-black flex items-center gap-3 text-white">
+            <Settings2 className="text-emerald-500" /> 신청곡 시스템 설정
+          </h3>
+          <button onClick={handleSaveSettings} className="bg-emerald-500 text-black px-8 py-3 rounded-2xl font-black hover:scale-105 transition-all flex items-center gap-2">
+            <Save size={20} /> 저장
+          </button>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {['all', 'cooldown', 'donation', 'off'].map((m) => (
+            <button 
+              key={m}
+              onClick={() => setMode(m as any)}
+              className={`p-6 rounded-3xl border transition-all text-center font-bold uppercase tracking-widest ${
+                mode === m ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
+              }`}
+            >
+              {m === 'all' && '전체 허용'}
+              {m === 'cooldown' && '쿨타임'}
+              {m === 'donation' && '후원 전용'}
+              {m === 'off' && '기능 끄기'}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'cooldown' && (
+          <div className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
+            <Clock className="text-emerald-500" />
+            <div className="flex-1">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest">재신청 대기 시간 (초)</label>
+              <input type="range" min="10" max="300" step="10" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="w-full accent-emerald-500 mt-2" />
+            </div>
+            <span className="text-2xl font-black w-20 text-center">{cooldown}s</span>
+          </div>
+        )}
+
+        {mode === 'donation' && (
+          <div className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5">
+            <DollarSign className="text-emerald-500" />
+            <div className="flex-1">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest">최소 후원 금액 (치즈)</label>
+              <input type="number" value={minDonation} onChange={e => setMinDonation(parseInt(e.target.value))} className="w-full bg-transparent border-b border-white/20 text-xl font-bold py-2 outline-none focus:border-emerald-500 transition-all" />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         
-        {/* Current Song */}
+        {/* Current Song Card */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col items-center text-center shadow-2xl relative overflow-hidden group">
+          {/* ... (기존 플레이어 UI 유지) ... */}
           <div className="relative mb-10 z-10">
             <div className="absolute inset-0 bg-pink-500/20 blur-[100px] rounded-full group-hover:bg-pink-500/30 transition-all duration-700" />
             <motion.div animate={songs.current ? { rotate: 360 } : {}} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="relative z-10">
@@ -37,11 +120,11 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
           <div className="relative z-10 flex flex-wrap justify-center gap-4">
             <button onClick={() => onControl('togglePlayPause')} className="w-20 h-20 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-black hover:scale-110 active:scale-95 transition-all shadow-xl shadow-emerald-500/20"><Play fill="currentColor" size={32} /></button>
             <button onClick={() => onControl('skip')} className="w-20 h-20 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all"><SkipForward size={32} /></button>
-            <button onClick={openPlayer} className="px-10 bg-white/5 rounded-[2rem] border border-white/10 font-black text-white hover:bg-white/10 transition-all flex items-center gap-3"><ExternalLink size={20} className="text-emerald-500" /><span>플레이어 열기</span></button>
+            <button onClick={() => window.open('/overlay/player?token=' + localStorage.getItem('chzzk_session_token'), '_blank')} className="px-10 bg-white/5 rounded-[2rem] border border-white/10 font-black text-white hover:bg-white/10 transition-all flex items-center gap-3"><ExternalLink size={20} className="text-emerald-500" /><span>플레이어 열기</span></button>
           </div>
         </div>
 
-        {/* Queue */}
+        {/* Queue Card */}
         <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col shadow-2xl">
           <div className="flex justify-between items-center mb-10">
             <h3 className="text-2xl font-black flex items-center gap-3 text-white"><Music className="text-emerald-500" /> 대기열 <span className="text-emerald-500/50">{songs.queue.length}</span></h3>

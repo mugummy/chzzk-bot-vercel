@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
 
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -14,7 +14,7 @@ interface BotStore extends BotState {
   updateParticipation: (payload: any) => void;
   updateParticipationRanking: (ranking: any[]) => void;
   updateGreet: (payload: any) => void;
-  setChatHistory: (history: any[]) => void; // [추가] 과거 기록 로드용
+  setChatHistory: (history: any[]) => void;
   addChat: (chat: any) => void;
 }
 
@@ -38,22 +38,36 @@ export const useBotStore = create<BotStore>((set) => ({
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
+  
+  // [핵심] 불변성을 유지하며 새로운 객체 할당 -> 리렌더링 유발
   updateSettings: (newSettings) => set((state) => ({ 
     settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
   })),
-  updateCommands: (cmds) => set({ commands: cmds }),
-  updateCounters: (counters) => set({ counters }),
-  updateMacros: (macros) => set({ macros }),
+  
+  updateCommands: (cmds) => set({ commands: [...cmds] }), // 배열 복사
+  updateCounters: (counters) => set({ counters: [...counters] }),
+  updateMacros: (macros) => set({ macros: [...macros] }),
+  
   updateVotes: (payload) => set({ votes: payload.currentVote ? [payload.currentVote] : [] }),
-  updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong } }),
+  updateSongs: (payload) => set({ songs: { queue: [...payload.queue], current: payload.currentSong } }),
+  
   updateParticipation: (payload) => set((state) => ({ 
-    participation: { ...state.participation, queue: payload.queue, active: payload.participants, isActive: payload.isParticipationActive, max: payload.maxParticipants }
+    participation: { 
+      ...state.participation, 
+      queue: [...payload.queue], 
+      active: [...payload.participants], 
+      isActive: payload.isParticipationActive, 
+      max: payload.maxParticipants 
+    }
   })),
-  updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
+  
+  updateParticipationRanking: (ranking) => set((state) => ({ 
+    participation: { ...state.participation, ranking: [...ranking] }
+  })),
+  
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
   
-  // [수정] 과거 채팅 기록 일괄 로드
-  setChatHistory: (history) => set({ chatHistory: history }),
+  setChatHistory: (history) => set({ chatHistory: [...history] }),
   
   addChat: (chat) => set((state) => {
     const newHistory = [...state.chatHistory, chat];
