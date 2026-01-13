@@ -15,13 +15,11 @@ export default function OverlayPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<any>(null);
 
-  // 1. WebSocket 및 YouTube API 로드
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (!token) return;
 
-    // 중복 실행 방지
     const bc = new BroadcastChannel('gummybot_player_channel');
     bc.postMessage('new_player_opened');
     bc.onmessage = (event) => {
@@ -72,57 +70,59 @@ export default function OverlayPlayer() {
     };
   }, []);
 
-  // [핵심] 재생 로직 강화 (첫 곡 자동 재생 포함)
   useEffect(() => {
-    if (!isReady || !currentSong || !(window as any).YT) return;
+    // [수정] videoId 유효성 검사 강화
+    if (!isReady || !currentSong || !currentSong.videoId || !(window as any).YT) return;
 
     const loadVideo = () => {
-      // 플레이어 객체 생성
       if (!playerRef.current) {
-        playerRef.current = new (window as any).YT.Player('yt-player', {
-          height: '100%',
-          width: '100%',
-          videoId: currentSong.videoId,
-          playerVars: { 
-            'autoplay': 1, 
-            'controls': 0, 
-            'disablekb': 1, 
-            'modestbranding': 1, 
-            'rel': 0 
-          },
-          events: {
-            'onReady': (event: any) => {
-              event.target.playVideo();
-              setIsPlaying(true);
-              if (!needsInteraction) event.target.unMute();
+        try {
+          playerRef.current = new (window as any).YT.Player('yt-player', {
+            height: '100%',
+            width: '100%',
+            videoId: currentSong.videoId,
+            playerVars: { 
+              'autoplay': 1, 
+              'controls': 0, 
+              'disablekb': 1, 
+              'modestbranding': 1, 
+              'rel': 0 
             },
-            'onStateChange': (event: any) => {
-              if (event.data === (window as any).YT.PlayerState.ENDED) {
+            events: {
+              'onReady': (event: any) => {
+                event.target.playVideo();
+                setIsPlaying(true);
+                if (!needsInteraction) event.target.unMute();
+              },
+              'onStateChange': (event: any) => {
+                if (event.data === (window as any).YT.PlayerState.ENDED) {
+                  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
+                }
+                setIsPlaying(event.data === 1);
+              },
+              'onError': () => {
+                console.error('[Player] YouTube Error - Skipping');
                 if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
               }
-              setIsPlaying(event.data === 1);
-            },
-            'onError': () => {
-              if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
             }
-          }
-        });
+          });
+        } catch (e) {
+          console.error('[Player] Init Error:', e);
+        }
       } else {
-        // 이미 플레이어가 있다면 ID 비교 후 로드
         const currentId = playerRef.current.getVideoData?.()?.video_id;
         if (currentId !== currentSong.videoId) {
           playerRef.current.loadVideoById(currentSong.videoId);
           setIsPlaying(true);
         } else {
-            // [추가] 같은 곡이지만 재생이 멈춰있다면 다시 재생 시도 (첫 곡 등)
             const state = playerRef.current.getPlayerState();
-            if (state !== 1) playerRef.current.playVideo();
+            if (state !== 1 && state !== 3) playerRef.current.playVideo(); // 1: playing, 3: buffering
         }
       }
     };
 
     loadVideo();
-  }, [isReady, currentSong]); // currentSong이 바뀌면 무조건 실행
+  }, [isReady, currentSong]);
 
   const handleInteraction = () => {
     setNeedsInteraction(false);
@@ -155,7 +155,6 @@ export default function OverlayPlayer() {
           <div className="relative group">
             <div className="absolute inset-0 bg-emerald-500/20 blur-[120px] rounded-full group-hover:bg-emerald-500/30 transition-all duration-1000" />
             <div className="rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-black aspect-video relative z-10">
-              {/* [중요] key를 변경하여 DOM을 강제로 리셋하지 않고, 내부 로직으로 제어 */}
               <div id="yt-player" className="w-full h-full" />
             </div>
           </div>

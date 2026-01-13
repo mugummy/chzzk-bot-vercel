@@ -1,68 +1,44 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, SkipForward, Trash2, ExternalLink, Music, Disc, Settings2, Save, DollarSign, Clock } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
-export default function SongTab({ onControl }: { onControl: (action: string, index?: number) => void }) {
+export default function SongTab({ onControl, onSend }: { onControl: (action: string, index?: number) => void, onSend: (msg: any) => void }) {
   const store = useBotStore();
   const { songs, settings } = store;
   const fallbackImg = "https://placehold.co/600x400/111/00ff94?text=gummybot+Music";
 
-  // 로컬 설정 상태
   const [mode, setMode] = useState<'all' | 'cooldown' | 'donation' | 'off'>('all');
   const [cooldown, setCooldown] = useState(30);
   const [minDonation, setMinDonation] = useState(1000);
-  
-  // [핵심] 서버 데이터와 로컬 데이터의 동기화 플래그
-  const isSynced = useRef(false);
 
-  // 초기 로드 및 서버 데이터 변경 시에만 동기화 (사용자 입력 중 방해 금지)
   useEffect(() => {
-    if (settings && !isSynced.current) {
+    if (settings) {
       setMode(settings.songRequestMode);
       setCooldown(settings.songRequestCooldown);
       setMinDonation(settings.minDonationAmount);
-      isSynced.current = true; // 최초 1회 동기화 완료
-    }
-    // 서버 값이 외부에서 바뀌었을 때도 반영 (단, 내가 수정 중이 아닐 때)
-    if (settings && settings.songRequestMode !== mode) {
-        // 여기서는 강제 동기화보다 사용자 의도를 존중하거나, 알림을 띄우는 것이 좋으나
-        // UX상 서버 값을 따라가는 것이 안전함. 단, 입력 중 튀는 현상 방지 위해 저장 버튼 누를 때만 서버 전송.
     }
   }, [settings]);
 
   const handleSaveSettings = () => {
-    // 1. 서버에 저장 요청
-    if (typeof window !== 'undefined' && (window as any).sendWebSocket) {
-      (window as any).sendWebSocket({ 
-        type: 'updateSettings', 
-        data: { 
-          songRequestMode: mode, 
-          songRequestCooldown: cooldown, 
-          minDonationAmount: minDonation 
-        } 
-      });
-      
-      // 2. 알림 표시
-      if ((window as any).ui?.notify) (window as any).ui.notify('신청곡 설정이 저장되었습니다.', 'success');
-      
-      // 3. 동기화 플래그 리셋 (서버 응답을 다시 받아들이도록)
-      isSynced.current = false;
+    // [수정] onSend를 통해 직접 서버로 전송
+    onSend({ 
+      type: 'updateSettings', 
+      data: { 
+        songRequestMode: mode, 
+        songRequestCooldown: cooldown, 
+        minDonationAmount: minDonation 
+      } 
+    });
+    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
+      (window as any).ui.notify('신청곡 설정이 저장되었습니다.', 'success');
     }
-  };
-
-  const handleModeChange = (newMode: any) => {
-    setMode(newMode);
-    // 모드 변경은 즉시 저장하지 않고 '저장' 버튼을 눌러야 반영되도록 UX 변경 (실수 방지)
-    // 혹은 즉시 반영을 원하면 여기서 바로 sendWebSocket 호출 가능. 
-    // 사용자 경험상 '저장' 버튼이 있으므로 거기서 일괄 처리하는 것이 깔끔함.
   };
 
   return (
     <div className="space-y-10">
-      {/* 1. 설정 패널 */}
       <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 space-y-8 shadow-2xl">
         <header className="flex justify-between items-center">
           <h3 className="text-2xl font-black flex items-center gap-3 text-white">
@@ -77,7 +53,7 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
           {['all', 'cooldown', 'donation', 'off'].map((m) => (
             <button 
               key={m}
-              onClick={() => handleModeChange(m)}
+              onClick={() => setMode(m as any)}
               className={`p-6 rounded-3xl border transition-all text-center font-bold uppercase tracking-widest ${
                 mode === m ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
               }`}
@@ -115,8 +91,6 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        
-        {/* Current Song Card */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col items-center text-center shadow-2xl relative overflow-hidden group">
           <div className="relative mb-10 z-10">
             <div className="absolute inset-0 bg-pink-500/20 blur-[100px] rounded-full group-hover:bg-pink-500/30 transition-all duration-700" />
@@ -140,7 +114,6 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
           </div>
         </div>
 
-        {/* Queue Card */}
         <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col shadow-2xl">
           <div className="flex justify-between items-center mb-10">
             <h3 className="text-2xl font-black flex items-center gap-3 text-white"><Music className="text-emerald-500" /> 대기열 <span className="text-emerald-500/50">{songs.queue.length}</span></h3>
@@ -173,7 +146,6 @@ export default function SongTab({ onControl }: { onControl: (action: string, ind
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
