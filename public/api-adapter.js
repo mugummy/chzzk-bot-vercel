@@ -59,7 +59,9 @@
                  const separator = path.includes('?') ? '&' : '?';
                  const tokenQuery = token ? `${separator}token=${token}` : '';
                  
-                 const newUrl = wsBase + (path.startsWith('/') ? path : '/' + path) + tokenQuery;
+                 // 중복 슬래시 방지 로직 추가
+                 const cleanPath = path.startsWith('/') ? path : '/' + path;
+                 const newUrl = wsBase.replace(/\/$/, '') + cleanPath + tokenQuery;
                  
                  console.log(`[Adapter] WS Proxy: ${url} -> ${newUrl}`);
                  return new originalWebSocket(newUrl, protocols);

@@ -238,3 +238,57 @@ body {
     pointer-events: none;
     z-index: 0;
 }
+
+/* === Chzzk Vote Style Implementation === */
+.vote-result-container {
+    padding: 10px;
+}
+
+.vote-q-title {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 25px;
+    border-left: 4px solid var(--primary);
+    padding-left: 15px;
+}
+
+.bar-info-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.bar-label {
+    font-weight: 700;
+    color: #eee;
+}
+
+.bar-count {
+    color: var(--primary);
+    font-weight: 800;
+}
+
+.progress-bg.large {
+    height: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #00d4ff);
+    box-shadow: 0 0 15px var(--primary-glow);
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vote-total-info {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.vote-total-info b {
+    color: var(--primary);
+}
