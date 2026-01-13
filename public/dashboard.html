@@ -725,9 +725,58 @@
         </div>
     </main>
 
-    <!-- Modals (Add/Edit Command/Macro/Counter) ... (생략된 부분들은 index.html에서 가져옴) ... -->
-    
-    <!-- Notification Container -->
+    <!-- Modals -->
+    <div id="add-command-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>명령어 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-command-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>명령어</label><input type="text" id="new-command-trigger" class="form-input" placeholder="!명령어"></div>
+                <div class="form-group"><label>응답</label><textarea id="new-command-response" class="form-textarea" placeholder="응답 내용"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-command-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addCommand()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-macro-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>매크로 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-macro-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>간격(분)</label><input type="number" id="new-macro-interval" class="form-input" value="10"></div>
+                <div class="form-group"><label>메시지</label><textarea id="new-macro-message" class="form-textarea" placeholder="자동 전송할 메시지"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-macro-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addMacro()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-counter-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>카운터 추가</h2>
+                <button class="modal-close" onclick="hideModal('add-counter-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>명령어</label><input type="text" id="new-counter-trigger" class="form-input" placeholder="!죽음"></div>
+                <div class="form-group"><label>응답</label><textarea id="new-counter-response" class="form-textarea" placeholder="현재 {count}번 죽었습니다."></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-counter-modal')">취소</button>
+                <button class="btn btn-primary" onclick="addCounter()">저장</button>
+            </div>
+        </div>
+    </div>
+
     <div id="notification-container"></div>
 
     <!-- Scripts (순서 중요: dashboard -> vote-system) -->
