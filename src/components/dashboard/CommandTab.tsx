@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Terminal, Plus, Settings, Trash2, Search, Zap, Calculator, Edit3, Info, Sparkles, MessageSquare, HelpCircle } from 'lucide-react';
+import { Terminal, Plus, Settings, Trash2, Search, Zap, Calculator, Edit3, Info, Sparkles, HelpCircle } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from './Modals';
@@ -16,7 +16,7 @@ const HELPER_DATA: Record<string, any> = {
   "/random": { title: "/random", sub: "문장 중 하나를 무작위로 선택합니다.", tip: "문장 사이에 /random을 넣으세요.", input: "!메뉴", output: "치킨/random피자", msg: "피자" },
   "/count": { title: "/count", sub: "명령어 개인 실행 횟수를 기록합니다.", tip: "", input: "!죽음", output: "/count번 죽었습니다.", msg: "5번 죽었습니다." },
   "/countall": { title: "/countall", sub: "명령어 통합 실행 횟수를 기록합니다.", tip: "", input: "?", output: "/countall번 수집!", msg: "2057번 수집!" },
-  "/dday": { title: "/dday", sub: "특정 일자로부터의 기간을 가져옵니다.", tip: "/dday-YYYY-MM-DD 형식", input: "!기념일", output: "/dday-2024-01-01 일!", msg: "300 일!" },
+  "/dday": { title: "/dday", sub: "특정 일자로부터의 기간을 가져옵니다.", tip: "/dday-YYYY-MM-DD 형식", input: "!데뷔", output: "/dday-2024-01-01 일!", msg: "300 일!" },
   "/any": { title: "/any", sub: "문장 어디에나 키워드가 있어도 인식합니다.", tip: "명령어 끝에 붙이세요.", input: "?/any", output: "인식 성공!", msg: "인식 성공!" }
 };
 
@@ -33,8 +33,10 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const getFirstTrigger = (cmd: CommandItem) => cmd.triggers?.[0] || cmd.trigger || '';
+  // [Helper] 데이터 안전 추출
+  const getDisplayTrigger = (cmd: CommandItem) => cmd.triggers?.[0] || cmd.trigger || '';
 
+  // [Handler] 모달 닫기
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingOldTrigger(null);
@@ -42,13 +44,28 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
     setCntData({ trigger: '', response: '', oncePerDay: false });
   };
 
+  // [Handler] 수정 모달 열기
+  const handleOpenEdit = (cmd: CommandItem) => {
+    const trigger = getDisplayTrigger(cmd);
+    setCmdData({ trigger, response: cmd.response });
+    setEditingOldTrigger(trigger);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  // [Handler] 저장
   const handleSave = () => {
-    if (modalMode === 'edit') onSend({ type: 'updateCommand', data: { oldTrigger: editingOldTrigger, ...cmdData } });
-    else if (modalMode === 'add') onSend({ type: 'addCommand', data: cmdData });
-    else onSend({ type: 'addCounter', data: cntData });
+    if (modalMode === 'edit') {
+      onSend({ type: 'updateCommand', data: { oldTrigger: editingOldTrigger, ...cmdData } });
+    } else if (modalMode === 'add') {
+      onSend({ type: 'addCommand', data: cmdData });
+    } else {
+      onSend({ type: 'addCounter', data: cntData });
+    }
     handleCloseModal();
   };
 
+  // [Handler] 함수 삽입
   const insertFunction = (func: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -75,15 +92,15 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <AnimatePresence>
-          {commands.filter(c => getFirstTrigger(c).includes(search)).map((cmd, i) => (
+          {commands.filter(c => getDisplayTrigger(c).includes(search)).map((cmd, i) => (
             <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={`cmd-${i}`} className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] flex items-center justify-between group hover:border-emerald-500/30 transition-all">
               <div className="flex items-center gap-8">
                 <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center text-emerald-500"><Terminal size={32} /></div>
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-white font-black text-2xl tracking-tighter">{getFirstTrigger(cmd)}</span>
+                    <span className="text-white font-black text-2xl tracking-tighter">{getDisplayTrigger(cmd)}</span>
                     <label className="toggle-switch small">
-                      <input type="checkbox" checked={cmd.enabled} onChange={(e) => onSend({type:'toggleCommand', data:{trigger:getFirstTrigger(cmd), enabled:e.target.checked}})} />
+                      <input type="checkbox" checked={cmd.enabled} onChange={(e) => onSend({type:'toggleCommand', data:{trigger:getDisplayTrigger(cmd), enabled:e.target.checked}})} />
                       <span className="slider round"></span>
                     </label>
                   </div>
@@ -92,7 +109,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
               </div>
               <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all">
                 <button onClick={() => handleOpenEdit(cmd)} className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 text-gray-400"><Edit3 size={22} /></button>
-                <button onClick={() => { if(confirm('삭제할까요?')) onSend({ type: 'removeCommand', data: { trigger: getDisplayTrigger(cmd) } }); }} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 transition-all shadow-lg"><Trash2 size={22} /></button>
+                <button onClick={() => { if(confirm('삭제할까요?')) onSend({ type: 'removeCommand', data: { trigger: getDisplayTrigger(cmd) } }); }} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-lg"><Trash2 size={22} /></button>
               </div>
             </motion.div>
           ))}
@@ -111,7 +128,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
                   <p className="text-gray-500 font-medium line-clamp-1">{cnt.response}</p>
                 </div>
               </div>
-              <button onClick={() => onSend({ type: 'removeCounter', data: { trigger: cnt.trigger } })} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={22} /></button>
+              <button onClick={() => onSend({ type: 'removeCounter', data: { trigger: cnt.trigger } })} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-lg"><Trash2 size={22} /></button>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -119,22 +136,23 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={modalMode === 'counter' ? '카운터 설정' : (modalMode === 'edit' ? '명령어 수정' : '새 명령어 추가')} onSave={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-7 space-y-8">
+          <div className="lg:col-span-7 space-y-8 py-4">
             <input value={modalMode === 'counter' ? cntData.trigger : cmdData.trigger} onChange={e => modalMode === 'counter' ? setCntData({...cntData, trigger: e.target.value}) : setCmdData({...cmdData, trigger: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-black text-2xl text-white" placeholder="!키워드" />
-            <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
+            <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
             <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
               {Object.keys(HELPER_DATA).filter(f => modalMode !== 'counter' || !['/any'].includes(f)).map(f => (
                 <button key={f} onClick={() => insertFunction(f)} onMouseEnter={() => setActiveHelper(HELPER_DATA[f])} className="py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-gray-400 hover:bg-emerald-500 hover:text-black transition-all">{f}</button>
               ))}
             </div>
           </div>
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-black/40 border border-white/5 rounded-3xl p-8 h-full relative overflow-hidden">
-              <h4 className="text-xl font-black text-white mb-2">{activeHelper.title}</h4>
+          <div className="lg:col-span-5 py-4">
+            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 h-full relative overflow-hidden">
+              <h4 className="text-xl font-black text-white mb-2 tracking-tight">{activeHelper.title}</h4>
               <p className="text-emerald-400 text-sm font-bold mb-6">{activeHelper.sub}</p>
               <div className="space-y-4">
-                <div><span className="text-[9px] font-black text-gray-600 uppercase">Example</span><p className="bg-white/5 p-3 rounded-xl text-xs font-mono text-gray-400">{activeHelper.msg}</p></div>
+                <div><span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Example Response</span><p className="bg-white/5 p-4 rounded-2xl text-xs font-mono text-gray-400 leading-relaxed">{activeHelper.msg}</p></div>
               </div>
+              <HelpCircle className="absolute -bottom-10 -right-10 text-white/5" size={200} />
             </div>
           </div>
         </div>
