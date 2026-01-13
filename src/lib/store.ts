@@ -1,31 +1,15 @@
 import { create } from 'zustand';
-import { BotState, CommandItem } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
 
 /**
- * Global Store: 대시보드와 오버레이의 모든 상태를 하나로 통합 관리합니다.
- * 100% 완전 교체된 최종 버전입니다.
+ * Global Bot Store: 리액트 컴포넌트 간의 데이터 공유와 서버 동기화를 담당합니다.
  */
-interface BotStore {
-  isConnected: boolean;
-  isReconnecting: boolean;
-  currentUser: any | null;
-  channelInfo: any | null;
-  liveStatus: any | null;
-  commands: CommandItem[];
-  counters: any[];
-  macros: any[];
-  votes: any[];
-  songs: { queue: any[]; current: any | null };
-  participation: { queue: any[]; active: any[]; isActive: boolean; max: number; ranking: any[] };
-  greet: { settings: any; historyCount: number };
-  points: { [userId: string]: any };
-  chatHistory: any[];
-
+interface BotStore extends BotState {
   setAuth: (user: any) => void;
   setBotStatus: (connected: boolean, reconnecting?: boolean) => void;
   setStreamInfo: (info: any, live: any) => void;
-  updateSettings: (settings: any) => void;
-  updateCommands: (cmds: any[]) => void;
+  updateSettings: (settings: Partial<BotSettings>) => void;
+  updateCommands: (cmds: CommandItem[]) => void;
   updateCounters: (counters: any[]) => void;
   updateMacros: (macros: any[]) => void;
   updateVotes: (payload: any) => void;
@@ -37,11 +21,13 @@ interface BotStore {
 }
 
 export const useBotStore = create<BotStore>((set) => ({
+  // Initial States
   isConnected: false,
   isReconnecting: false,
   currentUser: null,
   channelInfo: null,
   liveStatus: null,
+  settings: null, // 초기값 null
   commands: [],
   counters: [],
   macros: [],
@@ -52,10 +38,13 @@ export const useBotStore = create<BotStore>((set) => ({
   points: {},
   chatHistory: [],
 
+  // Actions
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
-  updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  updateSettings: (newSettings) => set((state) => ({ 
+    settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
+  })),
   updateCommands: (cmds) => set({ commands: cmds }),
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),

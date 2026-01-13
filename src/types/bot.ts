@@ -1,4 +1,4 @@
-// chzzk-bot-v2/src/types/bot.ts - Expert Type Definitions
+// chzzk-bot-v2/src/types/bot.ts - Expert Type Standard
 
 export interface BotSettings {
   chatEnabled: boolean;
@@ -14,43 +14,77 @@ export interface BotSettings {
 
 export interface CommandItem {
   id?: string;
-  triggers?: string[]; // 복수형 (배열)
-  trigger?: string;    // 단수형 (레거시 대응용)
+  triggers?: string[];
+  trigger?: string;
   response: string;
   enabled: boolean;
 }
 
-export interface GreetData {
-  settings: {
-    enabled: boolean;
-    type: 1 | 2;
-    message: string;
-  };
-  historyCount: number;
+export interface SongItem {
+  videoId: string;
+  title: string;
+  thumbnail: string;
+  requester: string;
+  requestedAt: number;
+}
+
+export interface Participant {
+  userIdHash: string;
+  nickname: string;
+  joinedAt: number;
+}
+
+export interface VoteOption {
+  id: string;
+  text: string;
+}
+
+export interface VoteSession {
+  id: string;
+  question: string;
+  options: VoteOption[];
+  results: { [optionId: string]: number };
+  isActive: boolean;
+  settings: any;
+  startTime: number | null;
+  totalVotes: number;
 }
 
 export interface BotState {
   isConnected: boolean;
   isReconnecting: boolean;
   currentUser: any | null;
-  channelInfo: any | null;
-  liveStatus: any | null;
+  channelInfo: {
+    channelId: string;
+    channelName: string;
+    channelImageUrl: string;
+    followerCount: number;
+  } | null;
+  liveStatus: {
+    liveTitle: string;
+    status: 'OPEN' | 'CLOSE';
+    concurrentUserCount: number;
+    category: string;
+  } | null;
+  settings: BotSettings | null; // 누락되었던 필드 추가
   commands: CommandItem[];
-  macros: any[];
   counters: any[];
-  votes: any[];
+  macros: any[];
+  votes: VoteSession[];
   songs: {
-    queue: any[];
-    current: any | null;
+    queue: SongItem[];
+    current: SongItem | null;
   };
   participation: {
-    queue: any[];
-    active: any[];
+    queue: Participant[];
+    active: Participant[];
     isActive: boolean;
     max: number;
     ranking: any[];
   };
-  greet: GreetData;
-  points: { [userId: string]: any };
+  greet: {
+    settings: any;
+    historyCount: number;
+  };
   chatHistory: any[];
 }
