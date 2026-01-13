@@ -28,10 +28,9 @@ export default function DashboardPage() {
   const [winnerChats, setWinnerChats] = useState<any[]>([]);
   const lastSpokenMsgRef = useRef<string>('');
 
-  // 1. 서버 주소 동적 결정 (Expert Logic)
+  // 1. 서버 주소 동적 결정 (환경변수 또는 하드코딩)
   const getServerUrl = () => {
-    // Railway 주소로 고정하되, 로컬 개발 시에는 로컬 주소 사용
-    return 'web-production-19eef.up.railway.app';
+    return process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
   };
 
   const connectWS = useCallback((token: string) => {
