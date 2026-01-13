@@ -1,19 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false, // 봇 시스템의 특성상 이중 렌더링 방지를 위해 false 권장
+  reactStrictMode: false,
   swcMinify: true,
-  // 외부 이미지 허용 (치지직 프로필 이미지 등)
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'nng-phinf.pstatic.net',
-      },
-      {
-        protocol: 'https',
-        hostname: 'static-cp.pstatic.net',
-      }
+      { protocol: 'https', hostname: 'nng-phinf.pstatic.net' },
+      { protocol: 'https', hostname: 'static-cp.pstatic.net' }
     ],
+  },
+  // 프론트엔드의 /api 요청을 Railway 서버로 전달 (에러 원천 차단)
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://web-production-19eef.up.railway.app/api/:path*',
+      },
+    ];
   },
 };
 
