@@ -22,7 +22,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   const { commands, counters } = useBotStore();
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'counter'>('add');
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'counter' | 'edit_counter'>('add');
   const [editingOldTrigger, setEditingOldTrigger] = useState<string | null>(null);
   
   const [cmdData, setCmdData] = useState({ trigger: '', response: '' });
@@ -41,30 +41,31 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   };
 
   const handleOpenEdit = (cmd: CommandItem) => {
-    const trigger = getDisplayTrigger(cmd);
-    setCmdData({ trigger, response: cmd.response });
-    setEditingOldTrigger(trigger);
+    setCmdData({ trigger: getDisplayTrigger(cmd), response: cmd.response });
+    setEditingOldTrigger(getDisplayTrigger(cmd));
     setModalMode('edit');
     setIsModalOpen(true);
   };
 
-  // [수정] 저장 및 삭제 시 알림 추가
-  const notify = (msg: string) => {
-    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
-      (window as any).ui.notify(msg, 'success');
-    }
+  // [추가] 카운터 수정 핸들러
+  const handleOpenEditCounter = (cnt: any) => {
+    setCntData({ trigger: cnt.trigger, response: cnt.response, oncePerDay: cnt.oncePerDay });
+    setEditingOldTrigger(cnt.trigger);
+    setModalMode('edit_counter');
+    setIsModalOpen(true);
   };
 
   const handleSave = () => {
     if (modalMode === 'edit') {
       onSend({ type: 'updateCommand', data: { oldTrigger: editingOldTrigger, ...cmdData } });
-      notify('명령어가 수정되었습니다.');
+    } else if (modalMode === 'edit_counter') {
+      // 카운터 수정은 삭제 후 추가 방식으로 구현 (ID 유지보다 단순함)
+      onSend({ type: 'removeCounter', data: { trigger: editingOldTrigger } });
+      onSend({ type: 'addCounter', data: cntData });
     } else if (modalMode === 'add') {
       onSend({ type: 'addCommand', data: cmdData });
-      notify('새 명령어가 추가되었습니다.');
     } else {
       onSend({ type: 'addCounter', data: cntData });
-      notify('카운터가 추가되었습니다.');
     }
     handleCloseModal();
   };
@@ -72,7 +73,6 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   const handleDelete = (trigger: string, isCounter = false) => {
     if (confirm(`'${trigger}' 항목을 삭제하시겠습니까?`)) {
       onSend({ type: isCounter ? 'removeCounter' : 'removeCommand', data: { trigger } });
-      notify('삭제되었습니다.');
     }
   };
 
@@ -80,15 +80,17 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart, end = textarea.selectionEnd;
-    const text = modalMode === 'counter' ? cntData.response : cmdData.response;
+    const isCounter = modalMode === 'counter' || modalMode === 'edit_counter';
+    const text = isCounter ? cntData.response : cmdData.response;
     const result = text.substring(0, start) + func + text.substring(end);
-    if (modalMode === 'counter') setCntData({ ...cntData, response: result });
+    if (isCounter) setCntData({ ...cntData, response: result });
     else setCmdData({ ...cmdData, response: result });
     setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + func.length, start + func.length); }, 0);
   };
 
   const previewText = useMemo(() => {
-    const text = modalMode === 'counter' ? cntData.response : cmdData.response;
+    const isCounter = modalMode === 'counter' || modalMode === 'edit_counter';
+    const text = isCounter ? cntData.response : cmdData.response;
     if (!text) return "응답 미리보기가 여기에 표시됩니다.";
     let res = text;
     Object.keys(HELPER_DATA).forEach(key => {
@@ -142,19 +144,29 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
                   <p className="text-gray-500 font-medium line-clamp-1">{cnt.response}</p>
                 </div>
               </div>
-              <button onClick={() => handleDelete(cnt.trigger, true)} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={22} /></button>
+              <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                {/* [추가] 카운터 수정 버튼 */}
+                <button onClick={() => handleOpenEditCounter(cnt)} className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 text-gray-400"><Edit3 size={22} /></button>
+                <button onClick={() => handleDelete(cnt.trigger, true)} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 transition-all"><Trash2 size={22} /></button>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={modalMode === 'counter' ? '카운터 설정' : (modalMode === 'edit' ? '명령어 수정' : '새 명령어 추가')} onSave={handleSave}>
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={modalMode.includes('counter') ? '카운터 설정' : '명령어 설정'} onSave={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 space-y-8 py-4">
-            <input value={modalMode === 'counter' ? cntData.trigger : cmdData.trigger} onChange={e => modalMode === 'counter' ? setCntData({...cntData, trigger: e.target.value}) : setCmdData({...cmdData, trigger: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-black text-2xl text-white" placeholder="!키워드" />
-            <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
+            <input value={modalMode.includes('counter') ? cntData.trigger : cmdData.trigger} onChange={e => modalMode.includes('counter') ? setCntData({...cntData, trigger: e.target.value}) : setCmdData({...cmdData, trigger: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-black text-2xl text-white" placeholder="!키워드" />
+            <textarea ref={textareaRef} value={modalMode.includes('counter') ? cntData.response : cmdData.response} onChange={e => modalMode.includes('counter') ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
+            {modalMode.includes('counter') && (
+              <label className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 cursor-pointer hover:bg-white/10 transition-all">
+                <span className="font-black text-white">하루 한 번만 실행</span>
+                <input type="checkbox" checked={cntData.oncePerDay} onChange={e => setCntData({...cntData, oncePerDay: e.target.checked})} className="w-6 h-6 accent-emerald-500" />
+              </label>
+            )}
             <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
-              {Object.keys(HELPER_DATA).filter(f => modalMode !== 'counter' || !['/any'].includes(f)).map(f => (
+              {Object.keys(HELPER_DATA).filter(f => !modalMode.includes('counter') || !['/any'].includes(f)).map(f => (
                 <button key={f} onClick={() => insertFunction(f)} onMouseEnter={() => setActiveHelper({...HELPER_DATA[f], title: f})} className="py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-gray-400 hover:bg-emerald-500 hover:text-black transition-all">{f}</button>
               ))}
             </div>
