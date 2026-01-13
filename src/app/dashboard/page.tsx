@@ -29,9 +29,7 @@ export default function DashboardPage() {
   const [winnerChats, setWinnerChats] = useState<any[]>([]);
   const lastSpokenMsgRef = useRef<string>('');
 
-  const getServerUrl = () => {
-    return process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
-  };
+  const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
   const speak = (text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -88,10 +86,7 @@ export default function DashboardPage() {
     };
 
     ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handleIncomingData(data);
-      } catch (err) {}
+      try { handleIncomingData(JSON.parse(e.data)); } catch (err) {}
     };
 
     ws.onclose = () => {
@@ -102,20 +97,16 @@ export default function DashboardPage() {
     setSocket(ws);
   }, [store, handleIncomingData]);
 
-  const closeWinnerPopup = () => {
-    setWinner(null);
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  };
-
   const send = (msg: any) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
   };
 
   useEffect(() => {
     const token = localStorage.getItem('chzzk_session_token');
-    if (!token) { window.location.href = '/'; return; }
+    if (!token) {
+      window.location.href = '/';
+      return;
+    }
     
     fetch(`https://${getServerUrl()}/api/auth/session`, { 
       headers: { 'Authorization': `Bearer ${token}` } 
@@ -123,17 +114,23 @@ export default function DashboardPage() {
       if (data.authenticated) {
         store.setAuth(data.user);
         connectWS(token);
-      } else { window.location.href = '/'; }
-    }).catch(() => { window.location.href = '/'; });
+      } else {
+        window.location.href = '/';
+      }
+    }).catch(() => {
+      window.location.href = '/';
+    });
 
-    return () => { if (socket) socket.close(); };
+    return () => {
+      if (socket) socket.close();
+    };
   }, [connectWS]);
 
   if (isLoading && !store.currentUser) {
     return (
       <div className="h-screen bg-black flex flex-col items-center justify-center gap-6">
         <Activity className="text-emerald-500 animate-spin" size={48} />
-        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Estabishing Connection...</p>
+        <p className="text-gray-500 font-black tracking-widest uppercase animate-pulse">Estabishing Secure Uplink...</p>
       </div>
     );
   }
@@ -149,12 +146,12 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] z-50`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
         <div className="p-8 flex items-center gap-4">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
             <Activity className="text-black" size={28} />
           </div>
-          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter">BUZZK PRO</h1>}
+          {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase">Buzzk</h1>}
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-8">
@@ -169,7 +166,7 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300">
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300">
             <LogOut size={22} /> {isSidebarOpen && <span>로그아웃</span>}
           </button>
         </div>
@@ -178,10 +175,10 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl">
             <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl})` }} />
             <div>
-              <p className="text-white font-black text-2xl mb-2">{store.currentUser?.channelName}</p>
+              <p className="text-white font-black text-2xl mb-2 leading-none">{store.currentUser?.channelName}</p>
               <div className="flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
                 <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>
@@ -207,8 +204,9 @@ export default function DashboardPage() {
           {winner && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 pointer-events-none">
               <motion.div initial={{ opacity: 0, scale: 0.8, y: 100 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 100 }} className="w-full max-w-2xl bg-black/90 backdrop-blur-3xl border border-emerald-500/30 rounded-[4rem] p-12 shadow-2xl pointer-events-auto text-center relative overflow-hidden">
-                <button onClick={closeWinnerPopup} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full hover:bg-red-500 transition-all"><X size={24} /></button>
-                <div className="w-32 h-32 bg-emerald-500 rounded-full mx-auto mb-8 flex items-center justify-center"><Users size={64} className="text-black" /></div>
+                <button onClick={() => setWinner(null)} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full hover:bg-red-500 transition-all"><X size={24} /></button>
+                <div className="w-32 h-32 bg-emerald-500 rounded-full mx-auto mb-8 flex items-center justify-center shadow-2xl"><Users size={64} className="text-black" /></div>
+                <h3 className="text-sm font-black text-emerald-500 uppercase tracking-[0.5em] mb-4">Winner</h3>
                 <h2 className="text-6xl font-black tracking-tighter text-white mb-12">{winner.nickname}</h2>
                 <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-left h-40 overflow-y-auto space-y-4 pr-4 custom-scrollbar">
                   {winnerChats.map((chat, i) => (

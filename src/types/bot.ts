@@ -1,5 +1,3 @@
-// chzzk-bot-v2/src/types/bot.ts - Expert Type Standard
-
 export interface BotSettings {
   chatEnabled: boolean;
   songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -53,7 +51,11 @@ export interface VoteSession {
 export interface BotState {
   isConnected: boolean;
   isReconnecting: boolean;
-  currentUser: any | null;
+  currentUser: {
+    channelId: string;
+    channelName: string;
+    channelImageUrl: string;
+  } | null;
   channelInfo: {
     channelId: string;
     channelName: string;
@@ -66,7 +68,7 @@ export interface BotState {
     concurrentUserCount: number;
     category: string;
   } | null;
-  settings: BotSettings | null; // 누락되었던 필드 추가
+  settings: BotSettings | null;
   commands: CommandItem[];
   counters: any[];
   macros: any[];
@@ -86,5 +88,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
+  points: { [userId: string]: any };
   chatHistory: any[];
 }

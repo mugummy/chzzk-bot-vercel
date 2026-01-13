@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
 
-/**
- * Global Bot Store: 리액트 컴포넌트 간의 데이터 공유와 서버 동기화를 담당합니다.
- */
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
   setBotStatus: (connected: boolean, reconnecting?: boolean) => void;
@@ -21,13 +18,12 @@ interface BotStore extends BotState {
 }
 
 export const useBotStore = create<BotStore>((set) => ({
-  // Initial States
   isConnected: false,
   isReconnecting: false,
   currentUser: null,
   channelInfo: null,
   liveStatus: null,
-  settings: null, // 초기값 null
+  settings: null,
   commands: [],
   counters: [],
   macros: [],
@@ -38,7 +34,6 @@ export const useBotStore = create<BotStore>((set) => ({
   points: {},
   chatHistory: [],
 
-  // Actions
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
