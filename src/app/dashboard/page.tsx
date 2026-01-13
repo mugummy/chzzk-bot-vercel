@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
 
+// 모든 탭 컴포넌트 임포트
 import DashboardHome from '@/components/dashboard/DashboardHome';
 import CommandTab from '@/components/dashboard/CommandTab';
 import MacroTab from '@/components/dashboard/MacroTab';
@@ -33,7 +34,16 @@ export default function DashboardPage() {
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
-  // [수정] 소켓 메시지 처리 로직을 안정화 (의존성 최소화)
+  // [1] 전송 함수를 최상단에 정의하여 참조 에러 방지
+  const send = useCallback((msg: any) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(msg));
+    } else {
+      console.warn('[WS] Socket is not open. ReadyState:', socketRef.current?.readyState);
+    }
+  }, []);
+
+  // [2] 수신 메시지 핸들러
   const handleIncomingData = useCallback((data: any) => {
     const { type, payload } = data;
     switch (type) {
@@ -62,16 +72,16 @@ export default function DashboardPage() {
         }
         break;
     }
-  }, []); // 의존성 제거하여 함수 재생성 방지
+  }, [store]);
 
-  // [수정] WebSocket 연결 로직을 useRef 기반으로 변경 (무한 루프 방지)
+  // [3] WebSocket 연결 로직
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
     
-    console.log('[WS] Initializing connection...');
+    console.log('[WS] Initializing connection to:', wsUrl);
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
     
@@ -92,14 +102,9 @@ export default function DashboardPage() {
       socketRef.current = null;
       setTimeout(() => connectWS(token), 3000);
     };
-  }, [handleIncomingData]);
+  }, [handleIncomingData, store]);
 
-  const send = (msg: any) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(msg));
-    }
-  };
-
+  // [4] 인증 및 초기화
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -140,13 +145,14 @@ export default function DashboardPage() {
         socketRef.current = null;
       }
     };
-  }, []); // 빈 배열로 설정하여 단 한 번만 실행
+  }, [connectWS, store]);
 
   if (authError) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6 text-center">
-        <AlertCircle className="text-red-500 animate-bounce" size={48} />
-        <h2 className="text-2xl font-black">{authError}</h2>
+      <div className="h-screen bg-black flex flex-col items-center justify-center gap-6 text-center p-10">
+        <AlertCircle className="text-red-500 animate-bounce" size={64} />
+        <h2 className="text-3xl font-black text-white">{authError}</h2>
+        <p className="text-gray-500 font-bold">잠시 후 메인 페이지로 이동합니다.</p>
       </div>
     );
   }
@@ -201,10 +207,7 @@ export default function DashboardPage() {
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
           <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl">
-            <div 
-              className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" 
-              style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} 
-            />
+            <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-emerald-500/10 shadow-2xl" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
             <div>
               <p className="text-white font-black text-2xl mb-2 leading-none">{store.currentUser?.channelName || 'User'}</p>
               <div className="flex items-center gap-3">
@@ -238,7 +241,7 @@ function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
   return (
     <button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-      <span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>
+      <span className={`${isActive ? 'text-black' : 'text-gray-500 group-hover:text-emerald-500'} transition-colors`}>{icon}</span>
       {!collapsed && <span className="tracking-tighter text-lg">{label}</span>}
     </button>
   );
