@@ -3,9 +3,9 @@ import { BotState, CommandItem } from '@/types/bot';
 
 /**
  * Global Store: 대시보드와 오버레이의 모든 상태를 하나로 통합 관리합니다.
+ * 모든 업데이트 로직이 포함된 최종 버전입니다.
  */
 interface BotStore {
-  // States
   isConnected: boolean;
   currentUser: any | null;
   channelInfo: any | null;
@@ -17,10 +17,8 @@ interface BotStore {
   songs: { queue: any[]; current: any | null };
   participation: { queue: any[]; active: any[]; isActive: boolean; max: number };
   greet: { settings: any; historyCount: number };
-  points: { [userId: string]: any };
   chatHistory: any[];
 
-  // Actions
   setAuth: (user: any) => void;
   setBotStatus: (connected: boolean) => void;
   setStreamInfo: (info: any, live: any) => void;
@@ -47,7 +45,6 @@ export const useBotStore = create<BotStore>((set) => ({
   songs: { queue: [], current: null },
   participation: { queue: [], active: [], isActive: false, max: 10 },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
-  points: {},
   chatHistory: [],
 
   setAuth: (user) => set({ currentUser: user }),
@@ -55,8 +52,8 @@ export const useBotStore = create<BotStore>((set) => ({
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
   updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
   updateCommands: (cmds) => set({ commands: cmds }),
-  updateCounters: (counters) => set({ counters: counters }),
-  updateMacros: (macros) => set({ macros: macros }),
+  updateCounters: (counters) => set({ counters }),
+  updateMacros: (macros) => set({ macros }),
   updateVotes: (payload) => set({ votes: payload.currentVote ? [payload.currentVote] : [] }),
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong } }),
   updateParticipation: (payload) => set({ 
