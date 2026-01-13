@@ -25,8 +25,8 @@ export default function LandingPage() {
   };
 
   const handleDemo = () => {
-    // 데모 대시보드로 이동 (로그인 없이 구경만 하는 기능은 추후 구현 가능)
-    window.location.href = '/dashboard';
+    // 체험용 데모 페이지로 이동
+    window.location.href = '/demo';
   };
 
   return (
