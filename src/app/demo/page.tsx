@@ -62,7 +62,7 @@ export default function DemoPage() {
       const newVote = {
         question: msg.data.question,
         options: msg.data.options.map((o: string, i: number) => ({ id: String(i+1), text: o })),
-        results: msg.data.options.reduce((acc: any, _, i: number) => ({ ...acc, [String(i+1)]: 0 }), {}),
+        results: msg.data.options.reduce((acc: any, optionName: string, i: number) => ({ ...acc, [String(i+1)]: 0 }), {}),
         isActive: true
       };
       setMockStore((prev: any) => ({ ...prev, votes: [newVote] }));
