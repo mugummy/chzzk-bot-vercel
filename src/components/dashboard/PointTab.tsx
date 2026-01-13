@@ -5,14 +5,10 @@ import { Coins, Trophy, Settings2, Save, TrendingUp, User, Medal, Clock } from '
 import { useBotStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 
-/**
- * PointTab: 포인트 시스템 설정 및 실시간 랭킹 컴포넌트
- */
 export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
   const store = useBotStore();
   const { points, settings } = store;
   
-  // 포인트 랭킹 계산 (상위 10명)
   const ranking = Object.entries(points)
     .map(([id, data]) => ({ id, ...data }))
     .sort((a, b) => b.points - a.points)
@@ -24,7 +20,6 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
     pointsName: '포인트'
   });
 
-  // 스토어 데이터 변경 시 로컬 폼 상태 동기화
   useEffect(() => {
     if (settings) {
       setLocalSettings({
@@ -46,7 +41,6 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
     <div className="space-y-10">
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         
-        {/* 1. 포인트 정책 설정 카드 */}
         <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 space-y-10 shadow-2xl">
           <header className="flex justify-between items-center">
             <div>
@@ -75,12 +69,20 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">지급액</label>
                 <span className="text-amber-500 font-black text-lg">{localSettings.pointsPerChat}{localSettings.pointsName}</span>
               </div>
-              <input 
-                type="range" min="1" max="100"
-                value={localSettings.pointsPerChat}
-                onChange={e => setLocalSettings({...localSettings, pointsPerChat: parseInt(e.target.value)})}
-                className="w-full accent-amber-500"
-              />
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="range" min="1" max="100"
+                  value={localSettings.pointsPerChat}
+                  onChange={e => setLocalSettings({...localSettings, pointsPerChat: parseInt(e.target.value)})}
+                  className="w-full accent-amber-500"
+                />
+                <input 
+                  type="number" min="1"
+                  value={localSettings.pointsPerChat}
+                  onChange={e => setLocalSettings({...localSettings, pointsPerChat: parseInt(e.target.value)})}
+                  className="w-20 bg-white/5 border border-white/10 p-2 rounded-xl text-center font-bold text-white outline-none focus:border-amber-500"
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -88,12 +90,20 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">지급 간격</label>
                 <span className="text-amber-500 font-black text-lg">{localSettings.pointsCooldown}초</span>
               </div>
-              <input 
-                type="range" min="10" max="600" step="10"
-                value={localSettings.pointsCooldown}
-                onChange={e => setLocalSettings({...localSettings, pointsCooldown: parseInt(e.target.value)})}
-                className="w-full accent-amber-500"
-              />
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="range" min="10" max="600" step="10"
+                  value={localSettings.pointsCooldown}
+                  onChange={e => setLocalSettings({...localSettings, pointsCooldown: parseInt(e.target.value)})}
+                  className="w-full accent-amber-500"
+                />
+                <input 
+                  type="number" min="10" step="10"
+                  value={localSettings.pointsCooldown}
+                  onChange={e => setLocalSettings({...localSettings, pointsCooldown: parseInt(e.target.value)})}
+                  className="w-20 bg-white/5 border border-white/10 p-2 rounded-xl text-center font-bold text-white outline-none focus:border-amber-500"
+                />
+              </div>
             </div>
 
             <button onClick={handleSave} className="w-full py-6 bg-amber-500 text-black font-black rounded-3xl shadow-xl hover:scale-105 active:scale-95 transition-all text-lg flex items-center justify-center gap-3">
@@ -102,7 +112,6 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
         </div>
 
-        {/* 2. 랭킹 보드 카드 */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col shadow-2xl">
           <div className="flex justify-between items-center mb-12">
             <h3 className="text-2xl font-black flex items-center gap-3 text-white">

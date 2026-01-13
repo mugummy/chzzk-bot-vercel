@@ -34,13 +34,6 @@ export default function DashboardPage() {
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
-  // [Helper] 알림 띄우기
-  const notify = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
-    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
-      (window as any).ui.notify(msg, type);
-    }
-  };
-
   const handleIncomingData = useCallback((data: any) => {
     const { type, payload } = data;
     const currentStore = useBotStore.getState();
@@ -48,18 +41,11 @@ export default function DashboardPage() {
     switch (type) {
       case 'connectResult': 
         currentStore.setBotStatus(data.success);
-        // [중요] 채널 정보가 있으면 즉시 스토어에 반영
         if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
         setIsLoading(false);
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'requestData' }));
-        }
         break;
       case 'settingsUpdate': currentStore.updateSettings(payload); break;
-      case 'commandsUpdate': 
-        currentStore.updateCommands(payload); 
-        // notify('명령어 목록이 갱신되었습니다.'); // 너무 잦은 알림 방지 위해 주석
-        break;
+      case 'commandsUpdate': currentStore.updateCommands(payload); break;
       case 'countersUpdate': currentStore.updateCounters(payload); break;
       case 'macrosUpdate': currentStore.updateMacros(payload); break;
       case 'songStateUpdate': currentStore.updateSongs(payload); break;
@@ -67,31 +53,22 @@ export default function DashboardPage() {
       case 'participationRankingUpdate': currentStore.updateParticipationRanking(payload); break;
       case 'greetStateUpdate': currentStore.updateGreet(payload); break;
       case 'chatHistoryLoad': currentStore.setChatHistory(payload); break;
-      case 'newChat': 
-        currentStore.addChat(payload); 
-        if (winner && payload.profile.userIdHash === winner.userIdHash) {
-          setWinnerChats(prev => [payload, ...prev].slice(0, 10));
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(payload.message));
-          }
-        }
-        break;
+      case 'newChat': currentStore.addChat(payload); break;
       case 'drawWinnerResult':
         const winPlayer = payload.winners[0];
         setWinner(winPlayer);
         setWinnerChats([]);
-        notify(`${winPlayer.nickname}님이 당첨되었습니다!`, 'success');
+        if (typeof window !== 'undefined' && (window as any).ui?.notify) {
+          (window as any).ui.notify(`${winPlayer.nickname}님이 당첨되었습니다!`, 'success');
+        }
         break;
     }
-  }, [winner]);
+  }, []);
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
-    
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
     
@@ -99,44 +76,40 @@ export default function DashboardPage() {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
     };
-
-    ws.onmessage = (e) => {
-      try { handleIncomingData(JSON.parse(e.data)); } catch (err) {}
-    };
-
+    ws.onmessage = (e) => { try { handleIncomingData(JSON.parse(e.data)); } catch (err) {} };
     ws.onclose = () => {
       useBotStore.getState().setBotStatus(false, true);
       socketRef.current = null;
       setTimeout(() => connectWS(token), 3000);
     };
-
     setSocket(ws);
   }, [handleIncomingData]);
 
   const send = useCallback((msg: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(msg));
-      
-      // [추가] 토글 액션에 대한 즉각적인 피드백 알림 (클라이언트 측 예측)
-      if (msg.type === 'toggleCommand') notify(msg.data.enabled ? '명령어가 활성화되었습니다.' : '명령어가 비활성화되었습니다.');
-      if (msg.type === 'toggleCounter') notify(msg.data.enabled ? '카운터가 활성화되었습니다.' : '카운터가 비활성화되었습니다.');
-      if (msg.type === 'toggleMacro') notify(msg.data.enabled ? '매크로가 활성화되었습니다.' : '매크로가 비활성화되었습니다.');
     }
   }, []);
 
-  const handleToggleChat = (enabled: boolean) => {
-    send({ type: 'updateSettings', data: { chatEnabled: enabled } });
-    notify(enabled ? '봇 채팅 연동이 켜졌습니다.' : '봇 채팅 연동이 꺼졌습니다.', enabled ? 'success' : 'info');
-  };
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    // [중요] 사용자가 대시보드 탭을 다시 열었을 때 강제 갱신 트리거
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && socketRef.current?.readyState === WebSocket.OPEN) {
+        console.log('[Dashboard] Tab visible - Requesting fresh data...');
+        send({ type: 'requestData' });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const params = new URLSearchParams(window.location.search);
     const sessionFromUrl = params.get('session');
     if (sessionFromUrl) {
       localStorage.setItem('chzzk_session_token', sessionFromUrl);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
     const token = localStorage.getItem('chzzk_session_token');
     if (!token) { window.location.href = '/'; return; }
     
@@ -145,40 +118,27 @@ export default function DashboardPage() {
       if (data.authenticated && data.user) {
         store.setAuth(data.user);
         connectWS(token);
-      } else {
-        localStorage.removeItem('chzzk_session_token');
-        window.location.href = '/';
-      }
+      } else { window.location.href = '/'; }
     }).catch(() => setAuthError('서버 통신 장애'));
-    
-    return () => { if (socketRef.current) socketRef.current.close(); };
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (socketRef.current) socketRef.current.close();
+    };
   }, [connectWS]);
 
-  if (authError) return <div className="h-screen bg-black flex flex-col items-center justify-center gap-6"><AlertCircle className="text-red-500 animate-bounce" size={64} /><h2 className="text-3xl font-black">{authError}</h2><button onClick={() => window.location.reload()} className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-emerald-500 transition-all">다시 시도</button></div>;
-  if (isLoading && !store.currentUser) return <div className="h-screen bg-black flex flex-col items-center justify-center gap-6"><RefreshCw className="text-pink-500 animate-spin" size={48} /><p className="text-gray-500 font-black tracking-widest uppercase animate-pulse italic text-sm">Loading gummybot Data...</p></div>;
+  if (isLoading && !store.currentUser) return <div className="h-screen bg-black flex items-center justify-center"><Activity className="text-emerald-500 animate-spin" size={48} /></div>;
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      <AnimatePresence>{store.isReconnecting && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black tracking-widest uppercase animate-pulse italic">Reconnecting...</p></motion.div>}</AnimatePresence>
+      <AnimatePresence>{store.isReconnecting && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black uppercase animate-pulse italic">Reconnecting...</p></motion.div>}</AnimatePresence>
 
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50`}>
         <div className="p-8 flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-pink-500/20"><Zap className="text-white" size={28} fill="currentColor" /></div>
+          <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl"><Zap className="text-white" size={28} fill="currentColor" /></div>
           {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
         </div>
-        <div className="px-6 py-4">
-          <div className={`bg-white/5 p-5 rounded-[2rem] border border-white/5 transition-all ${!(store.settings?.chatEnabled) ? 'opacity-50' : ''}`}>
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-red-500'}`} />
-                {isSidebarOpen && <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{store.isConnected ? 'Online' : 'Offline'}</span>}
-              </div>
-              <Toggle checked={store.settings?.chatEnabled ?? true} onChange={handleToggleChat} />
-            </div>
-            {isSidebarOpen && <p className="text-[11px] font-black text-gray-400 uppercase tracking-tight">{store.settings?.chatEnabled ? 'Chat Active' : 'Chat Paused'}</p>}
-          </div>
-        </div>
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-4 space-y-2 mt-8">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
@@ -188,28 +148,20 @@ export default function DashboardPage() {
           <NavItem id="participation" icon={<Users size={22}/>} label="시청자 참여" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="points" icon={<Coins size={22}/>} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>
-        <div className="p-6 mt-auto">
-          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 hover:text-white transition-all duration-300 group"><LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}</button>
-        </div>
+        <div className="p-6 mt-auto"><button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/5 text-red-500 font-bold hover:bg-red-500 transition-all duration-300 group"><LogOut size={22} className="group-hover:rotate-12 transition-transform" /> {isSidebarOpen && <span>로그아웃</span>}</button></div>
       </aside>
 
       <main className="flex-1 overflow-y-auto custom-scrollbar relative p-12">
         <header className="flex justify-between items-end mb-16">
           <h2 className="text-7xl font-black tracking-tighter text-white capitalize">{activeTab}</h2>
-          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl group hover:border-pink-500/20 transition-all duration-500">
+          <div className="flex items-center gap-6 bg-white/5 p-3 pr-10 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-xl">
             <div className="w-20 h-20 rounded-[1.5rem] bg-cover bg-center ring-4 ring-pink-500/10 shadow-2xl group-hover:scale-105 transition-transform" style={{ backgroundImage: `url(${store.currentUser?.channelImageUrl || 'https://ssl.pstatic.net/static/nng/glstat/game/favicon.ico'})` }} />
-            <div>
-              <p className="text-white font-black text-2xl mb-2 tracking-tight leading-none">{store.currentUser?.channelName || 'Syncing...'}</p>
-              <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${store.isConnected ? 'bg-emerald-500 shadow-[0_0_15px_#10b981]' : 'bg-red-500 animate-pulse'}`} />
-                <span className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{store.isConnected ? 'Server Online' : 'Offline'}</span>
-              </div>
-            </div>
+            <div><p className="text-white font-black text-2xl mb-2">{store.currentUser?.channelName}</p></div>
           </div>
         </header>
 
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
@@ -228,5 +180,5 @@ export default function DashboardPage() {
 
 function NavItem({ id, icon, label, active, setter, collapsed }: any) {
   const isActive = active === id;
-  return (<button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl shadow-emerald-500/30 scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}><span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>{!collapsed && <span className="tracking-tighter text-lg">{label}</span>}</button>);
+  return (<button onClick={() => setter(id)} className={`w-full flex items-center gap-5 px-6 py-5 rounded-[1.5rem] transition-all duration-500 relative ${isActive ? 'bg-emerald-500 text-black font-black shadow-2xl scale-[1.02]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}><span className={`${isActive ? 'text-black' : 'text-gray-500'}`}>{icon}</span>{!collapsed && <span className="tracking-tighter text-lg">{label}</span>}</button>);
 }
