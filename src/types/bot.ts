@@ -1,4 +1,4 @@
-// chzzk-bot-v2/src/types/bot.ts - Expert Type Standard
+// chzzk-bot-v2/src/types/bot.ts - Expert Global Standard
 
 export interface BotSettings {
   chatEnabled: boolean;
@@ -28,28 +28,6 @@ export interface SongItem {
   requestedAt: number;
 }
 
-export interface Participant {
-  userIdHash: string;
-  nickname: string;
-  joinedAt: number;
-}
-
-export interface VoteOption {
-  id: string;
-  text: string;
-}
-
-export interface VoteSession {
-  id: string;
-  question: string;
-  options: VoteOption[];
-  results: { [optionId: string]: number };
-  isActive: boolean;
-  settings: any;
-  startTime: number | null;
-  totalVotes: number;
-}
-
 export interface BotState {
   isConnected: boolean;
   isReconnecting: boolean;
@@ -74,14 +52,14 @@ export interface BotState {
   commands: CommandItem[];
   counters: any[];
   macros: any[];
-  votes: VoteSession[];
+  votes: any[];
   songs: {
     queue: SongItem[];
     current: SongItem | null;
   };
   participation: {
-    queue: Participant[];
-    active: Participant[];
+    queue: any[];
+    active: any[];
     isActive: boolean;
     max: number;
     ranking: any[];
@@ -90,6 +68,6 @@ export interface BotState {
     settings: any;
     historyCount: number;
   };
-  points: { [userIdHash: string]: { nickname: string; points: number; lastMessageTime: number } }; // 포인트 타입 명시
+  points: { [userIdHash: string]: { nickname: string; points: number; lastMessageTime: number } };
   chatHistory: any[];
 }

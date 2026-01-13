@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, SongItem } from '@/types/bot';
 
 /**
- * BotStore: 애플리케이션의 모든 전역 상태를 통합 관리합니다.
+ * BotStore: 프론트엔드의 유일한 진실 공급원 (Single Source of Truth)
+ * 서버에서 오는 모든 데이터를 여기에 담아 각 컴포넌트로 분배합니다.
  */
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -21,7 +22,7 @@ interface BotStore extends BotState {
 }
 
 export const useBotStore = create<BotStore>((set) => ({
-  // States (BotState 상속)
+  // States
   isConnected: false,
   isReconnecting: false,
   currentUser: null,
@@ -35,7 +36,7 @@ export const useBotStore = create<BotStore>((set) => ({
   songs: { queue: [], current: null },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
-  points: {}, // 초기값 보장
+  points: {},
   chatHistory: [],
 
   // Actions
