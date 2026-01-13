@@ -1,34 +1,19 @@
-import { getSession } from '@/lib/auth/session';
-import { redirect } from 'next/navigation';
-import DashboardNav from '@/components/dashboard/DashboardNav';
-import DashboardClientWrapper from '@/components/dashboard/DashboardClientWrapper';
+import type { Metadata } from "next";
+import "../globals.css";
 
-export const dynamic = 'force-dynamic';
+export const metadata: Metadata = {
+  title: "Professional Bot Dashboard",
+  description: "Next-gen Chzzk management system",
+};
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-
-  if (!session) {
-    redirect('/login');
-  }
-
   return (
-    <DashboardClientWrapper>
-      <div className="min-h-screen bg-[#0a0a0f]">
-        <DashboardNav user={{
-          name: session.channelName,
-          image: session.channelImageUrl,
-        }} />
-        <main className="lg:pl-72">
-          <div className="p-4 lg:p-8 pt-20 lg:pt-8">
-            {children}
-          </div>
-        </main>
-      </div>
-    </DashboardClientWrapper>
+    <div className="min-h-screen bg-[#050505] selection:bg-emerald-500/30">
+      {children}
+    </div>
   );
 }
