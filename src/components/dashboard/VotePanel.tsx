@@ -9,17 +9,14 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
   const store = useBotStore();
   const [subTab, setSubTab] = useState<'vote' | 'draw' | 'roulette' | 'settings'>('vote');
   
-  // Vote Creation States
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [voteSettings, setVoteSettings] = useState({ duration: 60, mode: 'any', allowDonation: true, donationWeight: 100, subscriberOnly: false });
 
-  // Draw Creation States
   const [drawKeyword, setDrawKeyword] = useState('!참여');
   const [winnerCount, setWinnerCount] = useState(1);
   const [drawSettings, setDrawSettings] = useState({ subscriberOnly: false, excludePreviousWinners: true });
 
-  // Roulette States
   const [rouletteItems, setRouletteItems] = useState([{ text: '꽝', weight: 1 }, { text: '당첨', weight: 1 }]);
 
   const handleStartVote = () => {
@@ -31,7 +28,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
     const token = localStorage.getItem('chzzk_session_token');
     const url = `${window.location.origin}/overlay/${path}?token=${token}`;
     navigator.clipboard.writeText(url);
-    if (typeof window !== 'undefined' && (window as any).ui) {
+    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
       (window as any).ui.notify('URL이 복사되었습니다.', 'success');
     }
   };
@@ -40,7 +37,6 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
 
   return (
     <div className="space-y-10">
-      {/* Navigation Tabs */}
       <div className="flex gap-2 p-2 bg-white/5 rounded-3xl w-fit border border-white/5 shadow-2xl">
         {[
           { id: 'vote', label: '투표', icon: Vote },
@@ -65,12 +61,8 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
             <div className="col-span-12 xl:col-span-5 bg-[#0a0a0a] p-10 rounded-[3rem] border border-white/5 space-y-10">
               <h3 className="text-2xl font-black flex items-center gap-3"><Plus className="text-emerald-500"/> 투표 정밀 설정</h3>
               <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">질문 내용</label>
-                  <input value={question} onChange={e => setQuestion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl focus:border-emerald-500 outline-none font-bold" placeholder="질문을 입력하세요" />
-                </div>
+                <input value={question} onChange={e => setQuestion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl focus:border-emerald-500 outline-none font-bold" placeholder="질문을 입력하세요" />
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">선택지 관리</label>
                   {options.map((opt, i) => (
                     <div key={i} className="flex gap-3">
                       <div className="w-12 bg-white/5 flex items-center justify-center rounded-2xl font-black text-emerald-500">{i+1}</div>
@@ -85,10 +77,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
             <div className="col-span-12 xl:col-span-7 bg-[#0a0a0a] p-10 rounded-[3rem] border border-white/5">
               {!currentVote ? <div className="h-full flex flex-col items-center justify-center text-gray-700 py-32"><Vote size={80} className="opacity-20 mb-4"/><p className="font-bold italic">진행 중인 투표가 없습니다.</p></div> : (
                 <div className="space-y-10">
-                  <div className="flex justify-between items-start">
-                    <h2 className="text-4xl font-black tracking-tighter text-white border-l-4 border-emerald-500 pl-6">{currentVote.question}</h2>
-                    <div className="bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-xl text-[10px] font-black animate-pulse">LIVE MONITOR</div>
-                  </div>
+                  <h2 className="text-4xl font-black tracking-tighter text-white border-l-4 border-emerald-500 pl-6">{currentVote.question}</h2>
                   <div className="space-y-8">
                     {currentVote.options.map((opt: any, i: number) => {
                       const total = Object.values(currentVote.results as Record<string, number>).reduce((a, b) => a + b, 0);
@@ -116,7 +105,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
             </div>
           </motion.div>
         )}
-        {/* Draw, Settings remains logic same, just using correct icons */}
+        
         {subTab === 'draw' && (
           <motion.div key="draw" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="bg-[#0a0a0a] border border-white/5 p-16 rounded-[4rem] flex flex-col items-center text-center space-y-12 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 to-cyan-500" />
@@ -133,6 +122,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
             </button>
           </motion.div>
         )}
+
         {subTab === 'settings' && (
           <motion.div key="settings" initial={{opacity:0}} animate={{opacity:1}} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-[#0a0a0a] border border-white/5 p-12 rounded-[3.5rem] space-y-10">
