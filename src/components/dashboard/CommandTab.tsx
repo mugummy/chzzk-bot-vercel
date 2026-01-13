@@ -48,11 +48,32 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
     setIsModalOpen(true);
   };
 
+  // [수정] 저장 및 삭제 시 알림 추가
+  const notify = (msg: string) => {
+    if (typeof window !== 'undefined' && (window as any).ui?.notify) {
+      (window as any).ui.notify(msg, 'success');
+    }
+  };
+
   const handleSave = () => {
-    if (modalMode === 'edit') onSend({ type: 'updateCommand', data: { oldTrigger: editingOldTrigger, ...cmdData } });
-    else if (modalMode === 'add') onSend({ type: 'addCommand', data: cmdData });
-    else onSend({ type: 'addCounter', data: cntData });
+    if (modalMode === 'edit') {
+      onSend({ type: 'updateCommand', data: { oldTrigger: editingOldTrigger, ...cmdData } });
+      notify('명령어가 수정되었습니다.');
+    } else if (modalMode === 'add') {
+      onSend({ type: 'addCommand', data: cmdData });
+      notify('새 명령어가 추가되었습니다.');
+    } else {
+      onSend({ type: 'addCounter', data: cntData });
+      notify('카운터가 추가되었습니다.');
+    }
     handleCloseModal();
+  };
+
+  const handleDelete = (trigger: string, isCounter = false) => {
+    if (confirm(`'${trigger}' 항목을 삭제하시겠습니까?`)) {
+      onSend({ type: isCounter ? 'removeCounter' : 'removeCommand', data: { trigger } });
+      notify('삭제되었습니다.');
+    }
   };
 
   const insertFunction = (func: string) => {
@@ -66,7 +87,6 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
     setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + func.length, start + func.length); }, 0);
   };
 
-  // 실시간 미리보기 계산
   const previewText = useMemo(() => {
     const text = modalMode === 'counter' ? cntData.response : cmdData.response;
     if (!text) return "응답 미리보기가 여기에 표시됩니다.";
@@ -85,8 +105,8 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
           <input value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white/5 border border-white/5 pl-14 pr-6 py-5 rounded-[2rem] outline-none focus:border-emerald-500/50 transition-all text-white" placeholder="검색..." />
         </div>
         <div className="flex gap-4">
-          <button onClick={() => { setModalMode('add'); setIsModalOpen(true); }} className="bg-emerald-500 text-black px-10 py-5 rounded-[2.5rem] font-black hover:scale-105 transition-all shadow-xl"><Zap size={20} fill="currentColor" /> 명령어 추가</button>
-          <button onClick={() => { setModalMode('counter'); setIsModalOpen(true); }} className="bg-white/5 border border-white/10 px-10 py-5 rounded-[2.5rem] font-black hover:bg-white/10 transition-all text-white"><Calculator size={20}/> 카운터 추가</button>
+          <button onClick={() => { setModalMode('add'); setIsModalOpen(true); }} className="bg-emerald-500 text-black px-10 py-5 rounded-[2.5rem] font-black hover:scale-105 transition-all flex items-center gap-2 shadow-xl"><Zap size={20} fill="currentColor" /> 명령어 추가</button>
+          <button onClick={() => { setModalMode('counter'); setIsModalOpen(true); }} className="bg-white/5 border border-white/10 px-10 py-5 rounded-[2.5rem] font-black hover:bg-white/10 transition-all flex items-center gap-2 text-white"><Calculator size={20}/> 카운터 추가</button>
         </div>
       </header>
 
@@ -106,7 +126,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
               </div>
               <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all">
                 <button onClick={() => handleOpenEdit(cmd)} className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 text-gray-400"><Edit3 size={22} /></button>
-                <button onClick={() => { if(confirm('삭제할까요?')) onSend({ type: 'removeCommand', data: { trigger: getDisplayTrigger(cmd) } }); }} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 transition-all"><Trash2 size={22} /></button>
+                <button onClick={() => handleDelete(getDisplayTrigger(cmd))} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 transition-all"><Trash2 size={22} /></button>
               </div>
             </motion.div>
           ))}
@@ -122,7 +142,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
                   <p className="text-gray-500 font-medium line-clamp-1">{cnt.response}</p>
                 </div>
               </div>
-              <button onClick={() => onSend({ type: 'removeCounter', data: { trigger: cnt.trigger } })} className="p-5 bg-red-500/10 text-red-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={22} /></button>
+              <button onClick={() => handleDelete(cnt.trigger, true)} className="p-5 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={22} /></button>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -132,7 +152,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 space-y-8 py-4">
             <input value={modalMode === 'counter' ? cntData.trigger : cmdData.trigger} onChange={e => modalMode === 'counter' ? setCntData({...cntData, trigger: e.target.value}) : setCmdData({...cmdData, trigger: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-black text-2xl text-white" placeholder="!키워드" />
-            <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
+            <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
             <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
               {Object.keys(HELPER_DATA).filter(f => modalMode !== 'counter' || !['/any'].includes(f)).map(f => (
                 <button key={f} onClick={() => insertFunction(f)} onMouseEnter={() => setActiveHelper({...HELPER_DATA[f], title: f})} className="py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-gray-400 hover:bg-emerald-500 hover:text-black transition-all">{f}</button>
@@ -140,14 +160,13 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
             </div>
           </div>
           <div className="lg:col-span-5 py-4 space-y-6">
-            <div className="bg-black/40 border border-white/5 rounded-3xl p-8 relative overflow-hidden h-[220px]">
-              <h4 className="text-xl font-black text-white mb-2 tracking-tight">{activeHelper.title}</h4>
+            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 h-[220px] relative overflow-hidden">
+              <h4 className="text-xl font-black text-white mb-2">{activeHelper.title}</h4>
               <p className="text-emerald-400 text-sm font-bold mb-6">{activeHelper.sub}</p>
               <div className="space-y-1"><span className="text-[9px] font-black text-gray-600 uppercase">Example</span><p className="bg-white/5 p-3 rounded-xl text-xs font-mono text-gray-400">{activeHelper.msg}</p></div>
               <HelpCircle className="absolute -bottom-10 -right-10 text-white/5" size={150} />
             </div>
-            {/* [복구] 실시간 미리보기 플롯 */}
-            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-3xl p-8 h-[220px]">
+            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2rem] p-8 h-[220px]">
               <h4 className="text-sm font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2"><MessageSquare size={16}/> Live Preview</h4>
               <div className="bg-black/40 p-5 rounded-2xl border border-white/5 h-24 overflow-y-auto">
                 <p className="text-gray-300 text-sm font-medium leading-relaxed italic" dangerouslySetInnerHTML={{ __html: previewText }} />
