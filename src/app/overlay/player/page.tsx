@@ -3,37 +3,38 @@
 import { useEffect, useState, useRef } from 'react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, User, SkipForward, ListMusic, Volume2, AlertCircle } from 'lucide-react';
+import { Music, User, SkipForward, ListMusic, Volume2, AlertCircle, Play } from 'lucide-react';
 
 export default function OverlayPlayer() {
   const store = useBotStore();
   const currentSong = store.songs.current;
   const queue = store.songs.queue;
   const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [isApiReady, setIsApiReady] = useState(false); // [수정] API 로드 완료 상태
-  const [isPlayerReady, setIsPlayerReady] = useState(false); // [수정] 플레이어 객체 준비 완료 상태
-  const [needsInteraction, setNeedsInteraction] = useState(true);
+  const [isApiReady, setIsApiReady] = useState(false);
+  const [playerState, setPlayerState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+  const [needsInteraction, setNeedsInteraction] = useState(false);
   const playerRef = useRef<any>(null);
 
-  // 1. WebSocket 및 YouTube API 로드
+  // 1. WebSocket 연결 및 API 로드
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (!token) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`wss://web-production-19eef.up.railway.app/?token=${token}`);
     
     ws.onopen = () => {
       console.log('[Player] Connected');
       ws.send(JSON.stringify({ type: 'connect' }));
-      ws.send(JSON.stringify({ type: 'requestData' })); // [중요] 접속 즉시 데이터 요청
+      // [핵심] 연결 즉시 플레이어의 존재를 서버에 알림 (서버가 이를 인지하고 자동 재생 트리거 가능)
+      // 현재 서버에는 이 핸들러가 없지만, requestData로 상태 동기화
+      ws.send(JSON.stringify({ type: 'requestData' }));
     };
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === 'songStateUpdate') store.updateSongs(data.payload);
-      if (data.type === 'connectResult') store.updateSongs(data.payload || { queue: [], currentSong: null }); // 초기 데이터 동기화
+      if (data.type === 'connectResult') store.updateSongs(data.payload || { queue: [], currentSong: null });
     };
     setSocket(ws);
 
@@ -50,62 +51,80 @@ export default function OverlayPlayer() {
     return () => ws.close();
   }, []);
 
-  // 2. 플레이어 초기화 및 곡 변경 로직
+  // 2. 노래 변경 감지 및 플레이어 제어
   useEffect(() => {
-    if (!currentSong || !isApiReady) return;
+    if (!isApiReady || !currentSong) {
+      if (!currentSong) setPlayerState('idle');
+      return;
+    }
 
-    if (!playerRef.current) {
-      // 플레이어 최초 생성
-      playerRef.current = new (window as any).YT.Player('yt-player', {
-        height: '360',
-        width: '640',
-        videoId: currentSong.videoId,
-        playerVars: { 
-          'autoplay': 1, 
-          'controls': 0, 
-          'disablekb': 1,
-          'modestbranding': 1,
-          'rel': 0
-        },
-        events: {
-          'onReady': (event: any) => {
-            setIsPlayerReady(true);
-            event.target.playVideo();
-            if (!needsInteraction) event.target.unMute();
+    const loadOrPlay = () => {
+      if (!playerRef.current) {
+        // 플레이어 최초 생성
+        setPlayerState('loading');
+        playerRef.current = new (window as any).YT.Player('yt-player', {
+          height: '100%',
+          width: '100%',
+          videoId: currentSong.videoId,
+          playerVars: { 
+            'autoplay': 1, 
+            'controls': 0, 
+            'disablekb': 1,
+            'modestbranding': 1,
+            'rel': 0,
+            'showinfo': 0
           },
-          'onStateChange': (event: any) => {
-            if (event.data === (window as any).YT.PlayerState.ENDED) {
+          events: {
+            'onReady': (event: any) => {
+              setPlayerState('playing');
+              event.target.playVideo();
+              // [중요] 자동 재생 정책으로 소리가 안 나면 인터랙션 유도
+              if (event.target.isMuted() || event.target.getPlayerState() !== 1) {
+                setNeedsInteraction(true);
+              }
+            },
+            'onStateChange': (event: any) => {
+              if (event.data === (window as any).YT.PlayerState.ENDED) {
+                if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
+              }
+              // 재생 중(1)이면 인터랙션 배너 제거
+              if (event.data === 1) setNeedsInteraction(false);
+            },
+            'onError': () => {
               if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
             }
-          },
-          'onError': () => {
-            if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'controlMusic', action: 'skip' }));
           }
+        });
+      } else {
+        // 이미 있으면 곡만 변경
+        const currentId = playerRef.current.getVideoData?.()?.video_id;
+        if (currentId !== currentSong.videoId) {
+          setPlayerState('loading');
+          playerRef.current.loadVideoById(currentSong.videoId);
+          setPlayerState('playing');
         }
-      });
-    } else if (isPlayerReady && playerRef.current.loadVideoById) {
-      // [수정] 플레이어가 준비된 상태에서만 메서드 호출 (getVideoData 에러 방지)
-      const currentId = playerRef.current.getVideoData?.()?.video_id;
-      if (currentId !== currentSong.videoId) {
-        playerRef.current.loadVideoById(currentSong.videoId);
       }
-    }
-  }, [currentSong, isApiReady, isPlayerReady, needsInteraction]); // 의존성 추가
+    };
+
+    loadOrPlay();
+  }, [currentSong, isApiReady]); // currentSong이 바뀌면 즉시 실행됨
 
   const handleInteraction = () => {
-    setNeedsInteraction(false);
-    if (playerRef.current && typeof playerRef.current.unMute === 'function') {
+    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
       playerRef.current.unMute();
       playerRef.current.playVideo();
+      setNeedsInteraction(false);
     }
   };
 
+  // [UI 1] 대기 화면 (노래 없음)
   if (!currentSong) return (
     <div className="h-screen bg-black flex items-center justify-center p-10 text-white font-black italic text-3xl">
       <Music className="animate-pulse mr-4" size={48} /> gummybot Jukebox Ready...
     </div>
   );
 
+  // [UI 2] 재생 화면
   return (
     <div className="h-screen bg-[#050505] text-white font-sans p-10 overflow-hidden relative">
       <AnimatePresence>
@@ -113,26 +132,26 @@ export default function OverlayPlayer() {
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={handleInteraction}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center cursor-pointer"
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center cursor-pointer"
           >
             <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-black mb-8 animate-bounce shadow-2xl">
-              <Volume2 size={48} />
+              <Play size={48} fill="currentColor" />
             </div>
-            <h2 className="text-4xl font-black mb-4">Click to Start Audio</h2>
-            <p className="text-gray-500 font-bold tracking-widest uppercase">Resume Playback</p>
+            <h2 className="text-4xl font-black mb-4">Click to Enable Sound</h2>
+            <p className="text-gray-500 font-bold tracking-widest uppercase">Autoplay Policy Restriction</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="grid grid-cols-12 gap-10 h-full max-w-7xl mx-auto">
         <div className="col-span-8 flex flex-col justify-center space-y-12">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-emerald-500/20 blur-[120px] rounded-full group-hover:bg-emerald-500/30 transition-all duration-1000" />
-            <div className="rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-black aspect-video relative z-10">
-              <div id="yt-player" className="w-full h-full pointer-events-none" />
-            </div>
+          <div className="relative w-full aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl bg-black group">
+            <div id="yt-player" className="w-full h-full" />
+            {/* Overlay to prevent direct interaction with iframe */}
+            <div className="absolute inset-0 z-10 pointer-events-none" />
           </div>
-          <div className="space-y-4 relative z-10">
+
+          <div className="space-y-4">
             <div className="flex items-center gap-3 text-emerald-500 font-black text-xs uppercase tracking-[0.4em]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" /> Now Performance
             </div>

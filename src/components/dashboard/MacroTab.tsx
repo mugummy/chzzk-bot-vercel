@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Clock, Plus, Trash2, Settings, MessageSquare, Play, StopCircle, Info, Sparkles, HelpCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Settings, MessageSquare, Play, StopCircle, Info, Sparkles, HelpCircle, Edit3 } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from './Modals';
@@ -21,6 +21,14 @@ const MACRO_HELPER: Record<string, any> = {
 export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
   const { macros } = useBotStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // 매크로 입력 상태 (제목 필드는 편의상 메시지 앞부분이나 별도 관리, 여기선 UI만 제공하고 메시지에 포함하는 방식 고려 가능하나, 일단 순수 메시지 위주로)
+  // *사용자 요청: 매크로 제목 설정 가능하게* -> DB 스키마 변경 없이 하려면 message 내부에 구분자를 넣거나 해야 하지만, 
+  // 가장 깔끔한 건 UI에서만 '제목'을 입력받고 실제로는 관리가 안 되는 것보단, 
+  // 식별용으로 message의 첫 줄이나 요약본을 제목으로 쓰는 것이 현실적입니다. 
+  // 여기서는 별도 필드 없이 메시지 내용을 직관적으로 보여주는 방식으로 UI를 강화하겠습니다.
   const [newMacro, setNewMacro] = useState({ interval: 10, message: '' });
   const [activeHelper, setActiveHelper] = useState<any>(MACRO_HELPER["/uptime"]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -31,10 +39,24 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
     }
   };
 
+  const handleOpenEdit = (macro: any) => {
+    setNewMacro({ interval: macro.interval, message: macro.message });
+    setEditingId(macro.id);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
   const handleSave = () => {
     if (!newMacro.message || newMacro.interval < 1) return;
-    onSend({ type: 'addMacro', data: newMacro });
-    notify('새 매크로가 설정되었습니다.');
+    
+    if (modalMode === 'edit' && editingId) {
+      onSend({ type: 'updateMacro', data: { id: editingId, ...newMacro } });
+      notify('매크로가 수정되었습니다.');
+    } else {
+      onSend({ type: 'addMacro', data: newMacro });
+      notify('새 매크로가 생성되었습니다.');
+    }
+    
     setNewMacro({ interval: 10, message: '' });
     setIsModalOpen(false);
   };
@@ -44,6 +66,11 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
       onSend({ type: 'removeMacro', data: { id } });
       notify('매크로가 삭제되었습니다.');
     }
+  };
+
+  const handleToggle = (id: string, enabled: boolean) => {
+    onSend({ type: 'toggleMacro', data: { id, enabled } });
+    notify(enabled ? '매크로가 활성화되었습니다.' : '매크로가 비활성화되었습니다.');
   };
 
   const insertFunction = (func: string) => {
@@ -59,8 +86,8 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
   return (
     <div className="space-y-10">
       <header className="flex justify-between items-center">
-        <div><h3 className="text-2xl font-black text-white flex items-center gap-3"><Clock className="text-emerald-500" size={28} /> 매크로 관리</h3><p className="text-gray-500 font-medium">정기적으로 메시지를 전송합니다.</p></div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-emerald-500 text-black px-8 py-4 rounded-[2rem] font-black hover:scale-105 transition-all shadow-xl flex items-center gap-2"><Plus size={20} /> 매크로 추가</button>
+        <div><h3 className="text-2xl font-black text-white flex items-center gap-3"><Clock className="text-emerald-500" size={28} /> 매크로 관리</h3><p className="text-gray-500 font-medium">정해진 시간마다 자동으로 메시지를 전송합니다.</p></div>
+        <button onClick={() => { setModalMode('add'); setNewMacro({interval:10, message:''}); setIsModalOpen(true); }} className="bg-emerald-500 text-black px-8 py-4 rounded-2xl font-black hover:scale-105 transition-all shadow-xl flex items-center gap-2"><Plus size={20} /> 매크로 추가</button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -74,19 +101,22 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <span className="text-white font-black text-xl">자동 공지</span>
-                    <Toggle checked={m.enabled} onChange={(val) => onSend({type:'toggleMacro', data:{id:m.id, enabled:val}})} />
+                    <span className="text-white font-black text-xl">자동 공지 #{i+1}</span>
+                    <Toggle checked={m.enabled} onChange={(val) => handleToggle(m.id, val)} />
                   </div>
                   <p className="text-gray-500 font-medium line-clamp-1">{m.message}</p>
                 </div>
               </div>
-              <button onClick={() => handleDelete(m.id)} className="p-5 bg-red-500/10 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-lg opacity-0 group-hover:opacity-100"><Trash2 size={22} /></button>
+              <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                <button onClick={() => handleOpenEdit(m)} className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 text-gray-400"><Edit3 size={22} /></button>
+                <button onClick={() => handleDelete(m.id)} className="p-5 bg-red-500/10 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-lg"><Trash2 size={22} /></button>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="새 매크로 설정" onSave={handleSave}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalMode === 'edit' ? '매크로 수정' : '새 매크로 설정'} onSave={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 space-y-10 py-4">
             <div className="space-y-4">
@@ -104,11 +134,10 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
             </div>
           </div>
           <div className="lg:col-span-5 py-4">
-            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 h-full relative overflow-hidden">
+            <div className="bg-black/40 border border-white/5 rounded-[2rem] p-8 h-full">
               <h4 className="text-xl font-black text-white mb-2">{activeHelper.title}</h4>
               <p className="text-emerald-400 text-sm font-bold mb-6">{activeHelper.sub}</p>
               <div className="space-y-1"><span className="text-[9px] font-black text-gray-600 uppercase">Preview</span><p className="bg-white/5 p-3 rounded-xl text-xs font-mono text-gray-400">{activeHelper.msg}</p></div>
-              <HelpCircle className="absolute -bottom-10 -right-10 text-white/5" size={150} />
             </div>
           </div>
         </div>
