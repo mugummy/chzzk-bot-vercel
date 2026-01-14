@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, VoteSession, SongItem, RouletteState } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, VoteSession, SongItem, RouletteState, DrawState } from '@/types/bot';
 
-// BotStore 인터페이스는 BotState를 상속받으며 액션들을 포함합니다.
 export interface BotStore extends BotState {
   setAuth: (user: any) => void;
   setBotStatus: (connected: boolean, reconnecting?: boolean) => void;
@@ -12,6 +11,7 @@ export interface BotStore extends BotState {
   updateMacros: (macros: any[]) => void;
   updateVotes: (payload: any) => void;
   updateRoulette: (payload: any) => void;
+  updateDraw: (payload: any) => void; // [추가]
   updateSongs: (payload: any) => void;
   updateParticipation: (payload: any) => void;
   updateParticipationRanking: (ranking: any[]) => void;
@@ -31,7 +31,8 @@ export const useBotStore = create<BotStore>((set) => ({
   counters: [],
   macros: [],
   votes: [],
-  roulette: { items: [], isSpinning: false, winner: null }, // [확인] 초기값 존재
+  roulette: { items: [], isSpinning: false, winner: null },
+  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [] }, // [추가] 초기값
   songs: { queue: [], current: null, isPlaying: false },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
@@ -51,7 +52,9 @@ export const useBotStore = create<BotStore>((set) => ({
   updateMacros: (macros) => set({ macros }),
   
   updateVotes: (payload) => set({ votes: payload.currentVote ? [payload.currentVote] : [] }),
-  updateRoulette: (payload) => set({ roulette: payload }), // [확인] 액션 존재
+  updateRoulette: (payload) => set({ roulette: payload }),
+  // [추가] 추첨 상태 업데이트
+  updateDraw: (payload) => set({ draw: payload }),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
   

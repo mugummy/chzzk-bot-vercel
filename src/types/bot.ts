@@ -37,6 +37,12 @@ export interface VoteOption {
   text: string;
 }
 
+export interface Voter {
+  userIdHash: string;
+  nickname: string;
+  optionId: string;
+}
+
 export interface VoteSession {
   id: string;
   question: string;
@@ -46,6 +52,7 @@ export interface VoteSession {
   settings: any;
   startTime: number | null;
   totalVotes: number;
+  voters: Voter[];
 }
 
 export interface RouletteItem {
@@ -59,6 +66,14 @@ export interface RouletteState {
   items: RouletteItem[];
   isSpinning: boolean;
   winner: RouletteItem | null;
+}
+
+// [신규] 추첨 상태 인터페이스
+export interface DrawState {
+  candidatesCount: number;
+  candidates: any[];
+  isRolling: boolean;
+  winners: any[];
 }
 
 export interface BotState {
@@ -86,8 +101,8 @@ export interface BotState {
   counters: any[];
   macros: any[];
   votes: VoteSession[];
-  // [추가] 룰렛 상태 정의
   roulette: RouletteState;
+  draw: DrawState; // [추가]
   songs: {
     queue: SongItem[];
     current: SongItem | null;
