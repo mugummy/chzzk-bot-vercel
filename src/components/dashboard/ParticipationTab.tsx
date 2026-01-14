@@ -9,11 +9,12 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
   const store = useBotStore();
   const { participation, settings } = store;
 
-  const [cmd, setCmd] = useState(settings?.participationCommand || '!시참');
+  // [수정] 초기값 로드 시 공백 제거하여 깔끔하게 표시
+  const [cmd, setCmd] = useState(settings?.participationCommand?.trim() || '!시참');
   const [max, setMax] = useState(participation.max || 10);
 
   useEffect(() => {
-    if (settings?.participationCommand) setCmd(settings.participationCommand);
+    if (settings?.participationCommand) setCmd(settings.participationCommand.trim());
     if (participation.max) setMax(participation.max);
   }, [settings?.participationCommand, participation.max]);
 
@@ -39,7 +40,8 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
   };
   
   const handleSaveSettings = () => {
-    onSend({ type: 'updateSettings', data: { participationCommand: cmd } });
+    // [중요] 저장 시 공백 제거하여 깔끔하게 전송
+    onSend({ type: 'updateSettings', data: { participationCommand: cmd.trim() } });
     onSend({ type: 'updateMaxParticipants', payload: { count: max } });
     notify('참여 설정이 적용되었습니다.');
   };
@@ -56,7 +58,7 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
           <div className="space-y-3 flex-1 xl:w-64">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">참여 명령어 (접두사)</label>
             <input value={cmd} onChange={e => setCmd(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl focus:border-emerald-500 outline-none font-black text-xl text-white shadow-inner" placeholder="예: !시참" />
-            <p className="text-[10px] text-gray-500 font-bold ml-1">* 채팅창에 '{cmd} 참여' 라고 입력해야 등록됩니다.</p>
+            <p className="text-[10px] text-gray-500 font-bold ml-1">* '{cmd} 참여' 라고 입력해야 등록됩니다.</p>
           </div>
           <div className="space-y-3 w-32">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">최대 인원</label>
