@@ -1,20 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Play, StopCircle, Trash2, UserPlus, UserCheck, Save, Trophy, Info } from 'lucide-react';
+import { Users, Play, StopCircle, Trash2, UserPlus, UserCheck, Settings2, Info, Save, Zap, Trophy, Medal } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/**
- * ParticipationTab: 시청자 참여 시스템 제어
- * 모든 UI 요소와 로직이 포함된 100% 전체 소스입니다.
- */
 export default function ParticipationTab({ onSend }: { onSend: (msg: any) => void }) {
   const store = useBotStore();
   const { participation, settings } = store;
 
-  const [cmd, setCmd] = useState('!시참');
-  const [max, setMax] = useState(10);
+  const [cmd, setCmd] = useState(settings?.participationCommand || '!시참');
+  const [max, setMax] = useState(participation.max || 10);
 
   useEffect(() => {
     if (settings?.participationCommand) setCmd(settings.participationCommand);
@@ -55,12 +51,12 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
 
   return (
     <div className="space-y-10">
-      {/* 1. 제어 및 설정 바 */}
       <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 flex flex-col xl:flex-row justify-between items-center gap-10 shadow-2xl">
         <div className="flex items-center gap-10 w-full xl:w-auto">
           <div className="space-y-3 flex-1 xl:w-64">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">참여 명령어</label>
-            <input value={cmd} onChange={e => setCmd(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl focus:border-emerald-500 outline-none font-black text-xl text-white shadow-inner" />
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">참여 명령어 (접두사)</label>
+            <input value={cmd} onChange={e => setCmd(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl focus:border-emerald-500 outline-none font-black text-xl text-white shadow-inner" placeholder="예: !시참" />
+            <p className="text-[10px] text-gray-500 font-bold ml-1">* 채팅창에 '{cmd} 참여' 라고 입력해야 등록됩니다.</p>
           </div>
           <div className="space-y-3 w-32">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">최대 인원</label>
@@ -79,11 +75,9 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
       </div>
 
       <div className="grid grid-cols-12 gap-8">
-        {/* 2. 실시간 명단 영역 */}
         <div className="col-span-12 xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* 대기열 */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col min-h-[500px]">
-            <h4 className="text-xl font-black mb-8 flex items-center gap-3 text-white"><UserPlus className="text-cyan-500" size={24}/> 승인 대기열 <span className="text-cyan-500">{participation.queue.length}</span></h4>
+            <h4 className="text-xl font-black mb-8 flex items-center gap-3 text-white"><UserPlus className="text-cyan-500"/> 승인 대기열 <span className="text-cyan-500">{participation.queue.length}</span></h4>
             <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
               <AnimatePresence initial={false}>
                 {participation.queue.map((p, i) => (
@@ -96,14 +90,12 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
               </AnimatePresence>
             </div>
           </div>
-
-          {/* 최종 명단 */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col min-h-[500px]">
             <h4 className="text-xl font-black mb-8 flex items-center gap-3 text-white"><UserCheck className="text-emerald-500" size={24}/> 확정 명단 <span className="text-emerald-500">{participation.active.length}/{max}</span></h4>
             <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
               <AnimatePresence initial={false}>
                 {participation.active.map((p, i) => (
-                  <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} key={p.userIdHash} className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 flex items-center justify-between group">
+                  <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.5}} key={p.userIdHash} className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 flex items-center justify-between group">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-emerald-500 text-black rounded-xl flex items-center justify-center font-black text-xs">{i+1}</div>
                       <span className="font-black text-lg text-emerald-400">{p.nickname}</span>
@@ -117,9 +109,8 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
           </div>
         </div>
 
-        {/* 3. 참여왕 랭킹 보드 */}
         <div className="col-span-12 xl:col-span-4 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col shadow-2xl">
-          <div className="flex items-center gap-3 mb-10">
+          <div className="flex items-center gap-3 mb-8">
             <Trophy size={28} className="text-amber-500" />
             <h4 className="text-2xl font-black italic uppercase tracking-tighter text-white">Hall of Fame</h4>
           </div>
