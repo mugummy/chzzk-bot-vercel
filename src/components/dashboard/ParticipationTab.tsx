@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Play, StopCircle, Trash2, UserPlus, UserCheck, Save, Trophy, Info, Terminal, UserCog } from 'lucide-react';
+import { Users, Play, StopCircle, Trash2, UserPlus, UserCheck, Save, Trophy, Terminal, UserCog } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * ParticipationTab: 시청자 참여 시스템
- * 접두사 고정 (!시참) 및 최대 20인 슬라이더가 적용된 최종 버전입니다.
+ * 직접 입력 가능한 인원수 설정과 20인 제한 슬라이더가 적용된 버전입니다.
  */
 export default function ParticipationTab({ onSend }: { onSend: (msg: any) => void }) {
   const store = useBotStore();
@@ -41,7 +41,6 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
   };
   
   const handleSaveSettings = () => {
-    // 접두사는 고정이므로 인원수만 업데이트
     onSend({ type: 'updateMaxParticipants', payload: { count: max } });
     notify('인원 설정이 적용되었습니다.');
   };
@@ -51,12 +50,20 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
     notify(`${nickname}님을 명단에서 제거했습니다.`, 'info');
   };
 
+  // 직접 입력 처리
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val < 1) val = 1;
+    if (val > 100) val = 100; // 수동 입력은 최대 100명까지 허용 (슬라이더는 20명 제한)
+    setMax(val);
+  };
+
   return (
     <div className="space-y-10">
-      {/* 1. 명령어 가이드 및 인원 설정 */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         
-        {/* 명령어 가이드 (좌측) */}
+        {/* 명령어 가이드 */}
         <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col justify-center shadow-2xl relative overflow-hidden">
           <div className="relative z-10 space-y-6">
             <div className="flex items-center gap-3 text-emerald-500 mb-2">
@@ -73,27 +80,35 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
           <UserCog className="absolute -bottom-10 -right-10 text-white/[0.02] rotate-12" size={300} />
         </div>
 
-        {/* 인원 설정 (우측) */}
+        {/* 인원 설정 (슬라이더 + 직접 입력) */}
         <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col justify-center shadow-2xl">
           <div className="space-y-8">
-            <div className="flex justify-between items-end">
+            <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <h4 className="text-sm font-black text-gray-500 uppercase tracking-widest">Max Participants</h4>
                 <p className="text-2xl font-black text-white">최대 인원 설정</p>
               </div>
-              <span className="text-5xl font-black text-emerald-500 tracking-tighter">{max}<span className="text-sm ml-1 text-gray-600">명</span></span>
+              {/* [수정] 직접 입력 가능한 숫자 창 */}
+              <div className="flex items-end gap-2 bg-white/5 p-4 rounded-3xl border border-white/10 focus-within:border-emerald-500/50 transition-all">
+                <input 
+                  type="number" value={max} onChange={handleInputChange}
+                  className="bg-transparent text-5xl font-black text-emerald-500 tracking-tighter w-24 text-right outline-none appearance-none"
+                />
+                <span className="text-sm font-black text-gray-600 mb-2">명</span>
+              </div>
             </div>
             
             <div className="space-y-6">
+              {/* [제한] 슬라이더는 20명까지만 */}
               <input 
                 type="range" min="1" max="20" step="1" 
-                value={max} 
+                value={max > 20 ? 20 : max} 
                 onChange={e => setMax(parseInt(e.target.value))} 
                 className="w-full accent-emerald-500 h-2 bg-white/5 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-widest">
                 <span>1 Person</span>
-                <span>Limit: 20 People</span>
+                <span>Slider Limit: 20 People</span>
               </div>
             </div>
 
@@ -110,10 +125,9 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
         </div>
       </div>
 
-      {/* 2. 명단 영역 */}
+      {/* 실시간 명단 영역 (기존 유지) */}
       <div className="grid grid-cols-12 gap-8">
         <div className="col-span-12 xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* 대기열 */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col min-h-[500px] shadow-xl">
             <div className="flex justify-between items-center mb-8 shrink-0">
               <h4 className="text-xl font-black flex items-center gap-3 text-white"><UserPlus className="text-cyan-500" size={24}/> 승인 대기열</h4>
@@ -127,12 +141,10 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
                     <button onClick={() => handleApprove(p.userIdHash)} className="px-6 py-2.5 bg-cyan-500 text-black font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg text-xs">승인</button>
                   </motion.div>
                 ))}
-                {participation.queue.length === 0 && <div className="h-full flex flex-col items-center justify-center text-gray-700 py-32 italic font-bold">대기자가 없습니다.</div>}
               </AnimatePresence>
             </div>
           </div>
 
-          {/* 최종 명단 */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col min-h-[500px] shadow-xl">
             <div className="flex justify-between items-center mb-8 shrink-0">
               <h4 className="text-xl font-black flex items-center gap-3 text-white"><UserCheck className="text-emerald-500" size={24}/> 확정 명단</h4>
@@ -149,15 +161,14 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
                     <button onClick={() => handleRemove(p.userIdHash, p.nickname)} className="p-3 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={20}/></button>
                   </motion.div>
                 ))}
-                {participation.active.length === 0 && <div className="h-full flex flex-col items-center justify-center text-gray-700 py-32 italic font-bold">참여자가 없습니다.</div>}
               </AnimatePresence>
             </div>
             <button onClick={handleClear} className="w-full mt-6 py-4 rounded-2xl bg-white/5 text-gray-500 font-bold hover:bg-red-500/10 hover:text-red-500 transition-all text-sm border border-white/5">전체 초기화</button>
           </div>
         </div>
 
-        {/* 3. 참여왕 랭킹 보드 */}
         <div className="col-span-12 xl:col-span-4 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 flex flex-col shadow-2xl">
+          {/* Hall of Fame 유지 */}
           <div className="flex items-center gap-3 mb-10">
             <Trophy size={28} className="text-amber-500" />
             <h4 className="text-2xl font-black italic uppercase tracking-tighter text-white">Hall of Fame</h4>
@@ -175,9 +186,6 @@ export default function ParticipationTab({ onSend }: { onSend: (msg: any) => voi
                 </div>
               </motion.div>
             ))}
-            {(!participation.ranking || participation.ranking.length === 0) && (
-              <div className="py-24 text-center text-gray-700 font-bold italic border border-dashed border-white/5 rounded-3xl">데이터 집계 중...</div>
-            )}
           </div>
         </div>
       </div>
