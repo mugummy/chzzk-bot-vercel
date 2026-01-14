@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Coins, Save, Clock, Zap, Trophy, Crown, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,15 +8,13 @@ import NumberInput from '@/components/ui/NumberInput';
 
 /**
  * PointTab: 포인트 시스템
- * 슬라이더 부활 + 랭킹 더보기 기능 탑재
+ * useMemo 최적화를 통해 슬라이더 조작 시 렉을 제거한 최종본입니다.
  */
 export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
   const { points, settings } = useBotStore();
   const [pointName, setPointName] = useState('포인트');
   const [perChat, setPerChat] = useState(10);
   const [cooldown, setCooldown] = useState(60);
-  
-  // [신규] 랭킹 표시 개수 상태 (기본 5개)
   const [visibleCount, setVisibleCount] = useState(5);
   
   const isLoaded = useRef(false);
@@ -48,13 +46,18 @@ export default function PointTab({ onSend }: { onSend: (msg: any) => void }) {
     notify('포인트 설정이 저장되었습니다.');
   };
 
-  // 랭킹 정렬 및 슬라이싱
-  const allRankings = Object.entries(points).sort(([, a], [, b]) => b.points - a.points);
-  const currentRankings = allRankings.slice(0, visibleCount);
+  // [핵심 최적화] 슬라이더를 움직일 때 랭킹 연산이 돌지 않도록 useMemo 사용
+  // points 데이터가 바뀔 때만 정렬을 수행합니다.
+  const allRankings = useMemo(() => {
+    return Object.entries(points).sort(([, a], [, b]) => b.points - a.points);
+  }, [points]);
+
+  const currentRankings = useMemo(() => {
+    return allRankings.slice(0, visibleCount);
+  }, [allRankings, visibleCount]);
 
   const toggleShowMore = () => {
-    if (visibleCount === 5) setVisibleCount(10);
-    else setVisibleCount(5);
+    setVisibleCount(prev => prev === 5 ? 10 : 5);
   };
 
   return (
