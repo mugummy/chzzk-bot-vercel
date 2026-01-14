@@ -8,7 +8,6 @@ import { Modal } from './Modals';
 import { CommandItem } from '@/types/bot';
 import Toggle from '@/components/ui/Toggle';
 
-// [수정] 헬퍼 데이터 정제 (순수 값 위주)
 const HELPER_DATA: Record<string, any> = {
   "/user": { title: "/user", sub: "시청자 닉네임", msg: "무거미" },
   "/channel": { title: "/channel", sub: "스트리머 닉네임", msg: "나디아" },
@@ -96,7 +95,6 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
     if (!text) return "응답 미리보기가 여기에 표시됩니다.";
     let res = text;
     Object.keys(HELPER_DATA).forEach(key => {
-      // [수정] 헬퍼 예시 값을 초록색으로 강조하여 치환
       res = res.split(key).join(`<span class="text-emerald-400 font-bold">${HELPER_DATA[key].msg}</span>`);
     });
     return res;
@@ -158,12 +156,18 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
           <div className="lg:col-span-7 space-y-8 py-4">
             <input value={modalMode === 'counter' ? cntData.trigger : cmdData.trigger} onChange={e => modalMode === 'counter' ? setCntData({...cntData, trigger: e.target.value}) : setCmdData({...cmdData, trigger: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-3xl outline-none font-black text-2xl text-white" placeholder="!키워드" />
             <textarea ref={textareaRef} value={modalMode === 'counter' ? cntData.response : cmdData.response} onChange={e => modalMode === 'counter' ? setCntData({...cntData, response: e.target.value}) : setCmdData({...cmdData, response: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium h-48 text-white resize-none" placeholder="응답 메시지..." />
+            
+            {/* [수정] 못생긴 체크박스 -> 고급 토글로 교체 */}
             {modalMode === 'counter' && (
-              <label className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 cursor-pointer hover:bg-white/10 transition-all">
-                <span className="font-black text-white">하루 한 번만 실행</span>
-                <input type="checkbox" checked={cntData.oncePerDay} onChange={e => setCntData({...cntData, oncePerDay: e.target.checked})} className="w-6 h-6 accent-emerald-500" />
-              </label>
+              <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
+                <div>
+                  <span className="font-black text-white block text-lg">1일 1회 제한</span>
+                  <span className="text-xs text-gray-500">한 유저당 하루에 한 번만 카운트합니다.</span>
+                </div>
+                <Toggle checked={cntData.oncePerDay} onChange={val => setCntData({...cntData, oncePerDay: val})} />
+              </div>
             )}
+
             <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
               {Object.keys(HELPER_DATA).filter(f => !modalMode.includes('counter') || !['/any'].includes(f)).map(f => (
                 <button key={f} onClick={() => insertFunction(f)} onMouseEnter={() => setActiveHelper({...HELPER_DATA[f], title: f})} className="py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-gray-400 hover:bg-emerald-500 hover:text-black transition-all">{f}</button>

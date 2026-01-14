@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Clock, Plus, Trash2, Edit3, MessageSquare, HelpCircle } from 'lucide-react';
+import { Clock, Plus, Trash2, Edit3, MessageSquare, HelpCircle, Save } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from './Modals';
 import Toggle from '@/components/ui/Toggle';
+import NumberInput from '@/components/ui/NumberInput';
 
 const MACRO_HELPER: Record<string, any> = {
   "/channel": { sub: "스트리머 닉네임", msg: "무거미 방송!" },
@@ -23,10 +24,7 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  // [수정] title 필드 추가
   const [newMacro, setNewMacro] = useState({ title: '', interval: 10, message: '' });
-  
   const [activeHelper, setActiveHelper] = useState<any>({ ...MACRO_HELPER["/uptime"], title: "/uptime" });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,10 +41,7 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
 
   const handleSave = () => {
     if (!newMacro.message || newMacro.interval < 1) return;
-    
-    // 제목이 없으면 기본값 설정
     const finalMacro = { ...newMacro, title: newMacro.title || '새 매크로' };
-
     if (modalMode === 'edit' && editingId) {
       onSend({ type: 'updateMacro', data: { id: editingId, ...finalMacro } });
       notify('매크로가 수정되었습니다.');
@@ -70,8 +65,8 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
   return (
     <div className="space-y-10">
       <header className="flex justify-between items-center">
-        <div><h3 className="text-2xl font-black text-white flex items-center gap-3 text-white"><Clock className="text-emerald-500" size={28} /> 정기 매크로 관리</h3><p className="text-gray-500 font-medium">정해진 시간마다 자동으로 메시지를 전송합니다.</p></div>
-        <button onClick={() => { setModalMode('add'); setNewMacro({ title: '', interval: 10, message: '' }); setIsModalOpen(true); }} className="bg-emerald-500 text-black px-8 py-4 rounded-[2rem] font-black hover:scale-105 transition-all shadow-xl flex items-center gap-2 text-black"><Plus size={20} /> 매크로 추가</button>
+        <div><h3 className="text-2xl font-black text-white flex items-center gap-3"><Clock className="text-emerald-500" size={28} /> 정기 매크로 관리</h3><p className="text-gray-500 font-medium">정해진 시간마다 자동으로 메시지를 전송합니다.</p></div>
+        <button onClick={() => { setModalMode('add'); setNewMacro({ title: '', interval: 10, message: '' }); setIsModalOpen(true); }} className="bg-emerald-500 text-black px-8 py-4 rounded-[2rem] font-black hover:scale-105 transition-all shadow-xl flex items-center gap-2"><Plus size={20} /> 매크로 추가</button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -85,7 +80,6 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    {/* [수정] 매크로 이름 표시 */}
                     <span className="text-white font-black text-xl">{m.title || `매크로 #${i+1}`}</span>
                     <Toggle checked={m.enabled} onChange={(val) => { onSend({type:'toggleMacro', data:{id:m.id, enabled:val}}); notify(val ? '활성화됨' : '비활성화됨'); }} />
                   </div>
@@ -104,16 +98,20 @@ export default function MacroTab({ onSend }: { onSend: (msg: any) => void }) {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalMode === 'edit' ? '매크로 수정' : '새 매크로 설정'} onSave={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 space-y-8 py-4">
-            {/* [추가] 매크로 이름 입력 */}
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">매크로 이름</label>
               <input value={newMacro.title} onChange={e => setNewMacro({...newMacro, title: e.target.value})} className="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] focus:border-emerald-500 outline-none font-bold text-white text-lg" placeholder="예: 디스코드 홍보" />
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-end px-1"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">실행 간격 (분)</label><span className="text-emerald-500 font-black text-xl">{newMacro.interval}분</span></div>
-              <input type="range" min="1" max="120" value={newMacro.interval} onChange={e => setNewMacro({...newMacro, interval: parseInt(e.target.value)})} className="w-full accent-emerald-500" />
+              <div className="flex justify-between items-end px-1"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">실행 간격 (분)</label></div>
+              {/* [수정] 커스텀 숫자 입력기 적용 */}
+              <div className="flex items-center gap-4">
+                <input type="range" min="1" max="120" value={newMacro.interval} onChange={e => setNewMacro({...newMacro, interval: parseInt(e.target.value)})} className="flex-1 accent-emerald-500 h-2 bg-white/5 rounded-lg appearance-none cursor-pointer" />
+                <NumberInput value={newMacro.interval} onChange={v => setNewMacro({...newMacro, interval: v})} min={1} max={1440} step={1} unit="분" className="w-40" />
+              </div>
             </div>
+            
             <div className="space-y-4">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">메시지 내용</label>
               <textarea ref={textareaRef} value={newMacro.message} onChange={e => setNewMacro({...newMacro, message: e.target.value})} className="w-full bg-white/5 border border-white/10 p-6 rounded-[1.5rem] outline-none font-medium text-lg h-40 resize-none text-white focus:border-emerald-500/50" placeholder="메시지를 입력하세요..." />

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, SkipForward, Trash2, ExternalLink, Music, Disc, Settings2, Save, DollarSign, Clock } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
+import NumberInput from '@/components/ui/NumberInput';
 
 export default function SongTab({ onControl, onSend }: { onControl: (action: string, index?: number) => void, onSend: (msg: any) => void }) {
   const store = useBotStore();
@@ -34,7 +35,7 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
   };
 
   const handleControl = (action: string, index?: number) => {
-    if (action !== 'remove' && !songs.current) return; // 노래 없으면 제어 불가
+    if (action !== 'remove' && !songs.current) return;
     onControl(action, index);
     if (action === 'togglePlayPause') notify(songs.isPlaying ? '노래를 일시정지했습니다.' : '노래를 재생합니다.', 'info');
     else if (action === 'skip') notify('노래를 스킵했습니다.', 'success');
@@ -58,13 +59,21 @@ export default function SongTab({ onControl, onSend }: { onControl: (action: str
         </div>
         <AnimatePresence mode="wait">
           {mode === 'cooldown' && (
-            <motion.div key="cooldown" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden">
-              <Clock className="text-emerald-500 shrink-0" /><div className="flex-1"><label className="text-xs font-black text-gray-500 uppercase tracking-widest">재신청 대기 시간 (초)</label><div className="flex items-center gap-4 mt-2"><input type="range" min="10" max="300" step="10" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="flex-1 accent-emerald-500" /><input type="number" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="w-20 bg-black/20 border border-white/10 p-2 rounded-xl text-center font-bold text-white outline-none" /></div></div>
+            <motion.div key="cooldown" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex flex-col md:flex-row md:items-center gap-6 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden">
+              <div className="flex items-center gap-4 flex-1">
+                <Clock className="text-emerald-500 shrink-0" />
+                <div className="flex-1"><label className="text-xs font-black text-gray-500 uppercase tracking-widest">재신청 대기 시간 (초)</label><input type="range" min="10" max="300" step="10" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} className="w-full accent-emerald-500 mt-2 h-1.5 bg-white/10 rounded-lg cursor-pointer" /></div>
+              </div>
+              <NumberInput value={cooldown} onChange={setCooldown} min={10} max={3600} step={10} unit="초" className="w-48" />
             </motion.div>
           )}
           {mode === 'donation' && (
-            <motion.div key="donation" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden">
-              <DollarSign className="text-emerald-500 shrink-0" /><div className="flex-1"><label className="text-xs font-black text-gray-500 uppercase tracking-widest">최소 후원 금액 (치즈)</label><input type="number" value={minDonation} onChange={e => setMinDonation(parseInt(e.target.value))} className="w-full bg-transparent border-b border-white/20 text-xl font-bold py-2 outline-none focus:border-emerald-500 transition-all text-white mt-1" /></div>
+            <motion.div key="donation" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-6 bg-white/5 p-6 rounded-3xl border border-white/5 overflow-hidden">
+              <div className="flex items-center gap-4 flex-1">
+                <DollarSign className="text-emerald-500 shrink-0" />
+                <div className="flex-1"><label className="text-xs font-black text-gray-500 uppercase tracking-widest">최소 후원 금액 (치즈)</label><p className="text-sm text-gray-400 mt-1">설정한 금액 이상의 후원만 신청곡으로 인정됩니다.</p></div>
+              </div>
+              <NumberInput value={minDonation} onChange={setMinDonation} min={100} max={1000000} step={100} unit="치즈" className="w-56" />
             </motion.div>
           )}
         </AnimatePresence>
