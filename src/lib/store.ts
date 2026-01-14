@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, VoteSession, SongItem } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, VoteSession, SongItem, RouletteState } from '@/types/bot';
 
 interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -10,6 +10,7 @@ interface BotStore extends BotState {
   updateCounters: (counters: any[]) => void;
   updateMacros: (macros: any[]) => void;
   updateVotes: (payload: any) => void;
+  updateRoulette: (payload: any) => void; // [추가]
   updateSongs: (payload: any) => void;
   updateParticipation: (payload: any) => void;
   updateParticipationRanking: (ranking: any[]) => void;
@@ -29,7 +30,9 @@ export const useBotStore = create<BotStore>((set) => ({
   counters: [],
   macros: [],
   votes: [],
-  songs: { queue: [], current: null, isPlaying: false }, // [수정] 초기값 추가
+  // [추가] 룰렛 초기값
+  roulette: { items: [], isSpinning: false, winner: null },
+  songs: { queue: [], current: null, isPlaying: false },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
   points: {},
@@ -38,20 +41,30 @@ export const useBotStore = create<BotStore>((set) => ({
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
+  
   updateSettings: (newSettings) => set((state) => ({ 
     settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
   })),
+  
   updateCommands: (cmds) => set({ commands: cmds }),
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
+  
   updateVotes: (payload) => set({ votes: payload.currentVote ? [payload.currentVote] : [] }),
-  // [수정] isPlaying 상태 업데이트 반영
+  // [추가] 룰렛 업데이트 액션
+  updateRoulette: (payload) => set({ roulette: { items: payload.items, isSpinning: payload.isSpinning, winner: payload.winner } }),
+  
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
+  
   updateParticipation: (payload) => set((state) => ({ 
     participation: { ...state.participation, queue: payload.queue, active: payload.participants, isActive: payload.isParticipationActive, max: payload.maxParticipants }
   })),
+  
   updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
+  
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
+  
   setChatHistory: (history) => set({ chatHistory: history }),
+  
   addChat: (chat) => set((state) => ({ chatHistory: [chat, ...state.chatHistory].slice(0, 50) })),
 }));

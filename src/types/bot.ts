@@ -48,6 +48,19 @@ export interface VoteSession {
   totalVotes: number;
 }
 
+export interface RouletteItem {
+  id: string;
+  text: string;
+  weight: number;
+  color: string;
+}
+
+export interface RouletteState {
+  items: RouletteItem[];
+  isSpinning: boolean;
+  winner: RouletteItem | null;
+}
+
 export interface BotState {
   isConnected: boolean;
   isReconnecting: boolean;
@@ -73,10 +86,12 @@ export interface BotState {
   counters: any[];
   macros: any[];
   votes: VoteSession[];
+  // [추가] 룰렛 상태 정의
+  roulette: RouletteState;
   songs: {
     queue: SongItem[];
     current: SongItem | null;
-    isPlaying: boolean; // [추가] 재생 상태 필드
+    isPlaying: boolean;
   };
   participation: {
     queue: Participant[];
