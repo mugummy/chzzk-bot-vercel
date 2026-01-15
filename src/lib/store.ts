@@ -31,9 +31,9 @@ export const useBotStore = create<BotStore>((set) => ({
   counters: [],
   macros: [],
   votes: [],
-  voteHistory: [], // [신규]
+  voteHistory: [],
   roulette: { items: [], isSpinning: false, winner: null },
-  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [] },
+  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [], isActive: false },
   songs: { queue: [], current: null, isPlaying: false },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
@@ -44,6 +44,7 @@ export const useBotStore = create<BotStore>((set) => ({
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
   
+  // [설정 업데이트]
   updateSettings: (newSettings) => set((state) => ({ 
     settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
   })),
@@ -52,12 +53,31 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
   
+  // [투표 업데이트] 서버 payload: { currentVote, history }
   updateVotes: (payload) => set({ 
     votes: payload.currentVote ? [payload.currentVote] : [],
-    voteHistory: payload.history || [] // [신규] 기록 업데이트
+    voteHistory: payload.history || []
   }),
-  updateRoulette: (payload) => set({ roulette: payload }),
-  updateDraw: (payload) => set({ draw: payload }),
+
+  // [룰렛 업데이트] 서버 payload: { items, isSpinning, winner }
+  updateRoulette: (payload) => set({ 
+    roulette: { 
+      items: payload.items || [], 
+      isSpinning: payload.isSpinning || false, 
+      winner: payload.winner 
+    } 
+  }),
+
+  // [추첨 업데이트] 서버 payload: { isActive, candidates, candidatesCount, ... }
+  updateDraw: (payload) => set({ 
+    draw: {
+      isActive: payload.isActive || false,
+      candidates: payload.candidates || [],
+      candidatesCount: payload.candidatesCount || 0,
+      isRolling: payload.isRolling || false,
+      winners: payload.winners || []
+    }
+  }),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
   
@@ -66,10 +86,7 @@ export const useBotStore = create<BotStore>((set) => ({
   })),
   
   updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
-  
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
-  
   setChatHistory: (history) => set({ chatHistory: history }),
-  
   addChat: (chat) => set((state) => ({ chatHistory: [chat, ...state.chatHistory].slice(0, 50) })),
 }));

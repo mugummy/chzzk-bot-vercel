@@ -9,13 +9,12 @@ const WebSocketContext = createContext<WebSocket | null>(null);
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
   const searchParams = useSearchParams();
-  const store = useBotStore() as BotStore; // Store 접근
+  const store = useBotStore() as BotStore;
 
   useEffect(() => {
     const session = searchParams.get('session');
     if (!session) return;
 
-    // 개발/배포 환경에 따른 주소 설정
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
     const ws = new WebSocket(`${wsUrl}?session=${session}`);
 
@@ -28,7 +27,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     ws.onclose = () => {
       console.log('❌ Disconnected from Bot Server');
       store.setBotStatus(false);
-      // 재연결 로직 (간단 구현)
       setTimeout(() => window.location.reload(), 5000);
     };
 
@@ -37,7 +35,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         const message = JSON.parse(event.data);
         const { type, payload } = message;
 
-        // [핵심] 서버 신호를 스토어 액션에 연결
+        // [디버깅] 상태 업데이트 로그 (개발자 도구에서 확인 가능)
+        if (type.includes('StateUpdate')) {
+            console.log(`[WS] ${type}:`, payload);
+        }
+
         switch (type) {
           case 'connectResult':
             store.setStreamInfo(payload.channelInfo, payload.liveStatus);
@@ -55,15 +57,14 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             store.updateMacros(payload);
             break;
           
-          // [수정] 투표, 룰렛, 추첨, 노래, 참여 상태 동기화 추가
           case 'voteStateUpdate':
             store.updateVotes(payload);
             break;
           case 'rouletteStateUpdate':
-            store.updateRoulette(payload);
+            store.updateRoulette(payload); // payload: { items, isSpinning, winner }
             break;
           case 'drawStateUpdate':
-            store.updateDraw(payload);
+            store.updateDraw(payload); // payload: { isActive, candidates, ... }
             break;
           case 'songStateUpdate':
             store.updateSongs(payload);
