@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, VoteSession, SongItem, RouletteState, DrawState } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, SongItem } from '@/types/bot';
 
 export interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -9,9 +9,6 @@ export interface BotStore extends BotState {
   updateCommands: (cmds: CommandItem[]) => void;
   updateCounters: (counters: any[]) => void;
   updateMacros: (macros: any[]) => void;
-  updateVotes: (payload: any) => void;
-  updateRoulette: (payload: any) => void;
-  updateDraw: (payload: any) => void;
   updateSongs: (payload: any) => void;
   updateParticipation: (payload: any) => void;
   updateParticipationRanking: (ranking: any[]) => void;
@@ -30,10 +27,6 @@ export const useBotStore = create<BotStore>((set) => ({
   commands: [],
   counters: [],
   macros: [],
-  votes: [],
-  voteHistory: [],
-  roulette: { items: [], isSpinning: false, winner: null },
-  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [], isActive: false },
   songs: { queue: [], current: null, isPlaying: false },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
@@ -51,19 +44,6 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCommands: (cmds) => set({ commands: cmds }),
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
-  
-  updateVotes: (payload) => set((state) => ({ 
-    votes: payload.currentVote ? [payload.currentVote] : [],
-    voteHistory: payload.history || state.voteHistory
-  })),
-
-  updateRoulette: (payload) => set((state) => ({ 
-    roulette: { ...state.roulette, ...payload } 
-  })),
-
-  updateDraw: (payload) => set((state) => ({ 
-    draw: { ...state.draw, ...payload } 
-  })),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
   updateParticipation: (payload) => set((state) => ({ 

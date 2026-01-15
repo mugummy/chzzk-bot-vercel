@@ -1,11 +1,3 @@
-export interface OverlayConfig {
-  backgroundColor: string;
-  textColor: string;
-  accentColor: string;
-  opacity: number;
-  scale: number;
-}
-
 export interface BotSettings {
   chatEnabled: boolean;
   songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -16,7 +8,6 @@ export interface BotSettings {
   pointsName: string;
   participationCommand: string;
   maxParticipants: number;
-  overlay: OverlayConfig;
 }
 
 export interface CommandItem {
@@ -39,51 +30,6 @@ export interface Participant {
   userIdHash: string;
   nickname: string;
   joinedAt: number;
-}
-
-export interface VoteOption {
-  id: string;
-  text: string;
-}
-
-export interface Voter {
-  userIdHash: string;
-  nickname: string;
-  optionId: string;
-}
-
-export interface VoteSession {
-  id: string;
-  question: string;
-  options: VoteOption[];
-  results: { [optionId: string]: number };
-  isActive: boolean;
-  settings: any;
-  startTime: number | null;
-  endTime: number | null; // [신규]
-  totalVotes: number;
-  voters: Voter[];
-}
-
-export interface RouletteItem {
-  id: string;
-  text: string;
-  weight: number;
-  color: string;
-}
-
-export interface RouletteState {
-  items: RouletteItem[];
-  isSpinning: boolean;
-  winner: RouletteItem | null;
-}
-
-export interface DrawState {
-  candidatesCount: number;
-  candidates: any[];
-  isRolling: boolean;
-  winners: any[];
-  isActive?: boolean;
 }
 
 export interface BotState {
@@ -110,10 +56,6 @@ export interface BotState {
   commands: CommandItem[];
   counters: any[];
   macros: any[];
-  votes: VoteSession[];
-  voteHistory: VoteSession[]; // [신규]
-  roulette: RouletteState;
-  draw: DrawState;
   songs: {
     queue: SongItem[];
     current: SongItem | null;
