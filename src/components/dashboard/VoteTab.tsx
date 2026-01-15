@@ -118,25 +118,30 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                           </div>
 
                           <div className="flex-1 space-y-4 z-10 overflow-y-auto custom-scrollbar pr-2 max-h-[500px]">
-                              {currentVote.options && currentVote.options.map((opt: any, i: number) => {
-                                  const total = currentVote.totalParticipants || 1; 
-                                  const count = opt.count || 0;
-                                  const percent = total === 0 ? 0 : Math.round((count / total) * 100);
-                                  const label = typeof opt === 'string' ? opt : (opt.label || `항목 ${i+1}`);
-                                  
-                                  return (
-                                      <div key={opt.id || i} className="group relative h-16 bg-black/40 rounded-2xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all">
-                                          <div className="absolute top-0 left-0 h-full bg-emerald-500/20 transition-all duration-1000 ease-out" style={{ width: `${percent}%` }} />
-                                          <div className="absolute inset-0 flex items-center justify-between px-6">
-                                              <span className="font-bold text-lg flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-emerald-500 font-black">{i + 1}</span> {label}</span>
-                                              <div className="text-right">
-                                                  <span className="font-black text-xl tabular-nums block">{count}</span>
-                                                  <span className="text-[10px] text-gray-500 font-bold">{percent}%</span>
+                              {(!currentVote.options || currentVote.options.length === 0) ? (
+                                  <div className="text-center text-gray-500 py-10">항목이 없습니다.</div>
+                              ) : (
+                                  currentVote.options.map((opt: any, i: number) => {
+                                      const total = currentVote.totalParticipants || 0; 
+                                      const count = opt.count || 0;
+                                      const percent = total === 0 ? 0 : Math.round((count / total) * 100);
+                                      // label이 없으면 '항목 N'으로 대체, opt가 문자열이면 그대로 사용
+                                      const label = opt.label || (typeof opt === 'string' ? opt : `항목 ${i+1}`);
+                                      
+                                      return (
+                                          <div key={opt.id || i} className="group relative h-16 bg-black/40 rounded-2xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all">
+                                              <div className="absolute top-0 left-0 h-full bg-emerald-500/20 transition-all duration-1000 ease-out" style={{ width: `${percent}%` }} />
+                                              <div className="absolute inset-0 flex items-center justify-between px-6">
+                                                  <span className="font-bold text-lg flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-emerald-500 font-black">{i + 1}</span> {label}</span>
+                                                  <div className="text-right">
+                                                      <span className="font-black text-xl tabular-nums block">{count}</span>
+                                                      <span className="text-[10px] text-gray-500 font-bold">{percent}%</span>
+                                                  </div>
                                               </div>
                                           </div>
-                                      </div>
-                                  );
-                              })}
+                                      );
+                                  })
+                              )}
                           </div>
 
                           <div className="mt-8 flex gap-3 z-10 pt-6 border-t border-white/10">
