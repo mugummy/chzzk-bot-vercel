@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) {
   const { roulette } = useBotStore();
-  const [items, setItems] = useState<any[]>(roulette.items.length ? roulette.items : [{ id: '1', label: '꽝', weight: 1, color: '#ef4444' }]);
+  const [items, setItems] = useState<any[]>(roulette.items || []);
   const [newItem, setNewItem] = useState('');
   const [newWeight, setNewWeight] = useState(1);
   

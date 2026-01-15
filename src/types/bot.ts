@@ -70,6 +70,7 @@ export interface BotState {
     draw: {
         isCollecting: boolean;
         participantCount: number;
+        participantsList?: string[]; // [New]
         settings: any | null;
         status: 'idle' | 'rolling' | 'completed';
         winners: any[];

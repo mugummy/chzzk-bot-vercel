@@ -18,12 +18,12 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
   const [isRolling, setIsRolling] = useState(false);
 
-  // 애니메이션용 더미 데이터 (실제 참여자가 있으면 그것을 사용)
+  // 애니메이션용 데이터 (실제 참여자 사용)
   const rollingNames = useMemo(() => {
-      if (draw.participantsList && draw.participantsList.length > 5) {
-          return draw.participantsList; // 실제 참여자
+      if (draw.participantsList && draw.participantsList.length > 0) {
+          return draw.participantsList; 
       }
-      return ['참여자_A', '시청자_B', '구독자_C', '후원자_D', '팬클럽_E', '유입_F', '고인물_G']; 
+      return []; 
   }, [draw.participantsList]);
 
   useEffect(() => {

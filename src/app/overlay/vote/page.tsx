@@ -135,7 +135,7 @@ export default function IntegratedOverlay() {
                     <motion.div key={i} className="w-80 h-[450px] bg-black/90 border-8 border-pink-500 rounded-[4rem] flex flex-col items-center justify-center p-10 shadow-[0_0_100px_rgba(236,72,153,0.4)] relative">
                         {isRolling ? (
                             <motion.div animate={{ y: [-2000, 0] }} transition={{ repeat: Infinity, duration: 0.2, ease: "linear" }} className="space-y-16 opacity-30 blur-md">
-                                {['USER_1', 'CHZZK_A', 'GUMMY', 'MASTER', 'NICK_B'].map((n, k) => <div key={k} className="text-5xl font-black text-white italic">{n}</div>)}
+                                {Array.from({length: 10}).map((_, k) => <div key={k} className="text-5xl font-black text-white italic">???</div>)}
                             </motion.div>
                         ) : (
                             <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
