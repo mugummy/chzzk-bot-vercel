@@ -71,6 +71,11 @@ export default function DashboardPage() {
       case 'rouletteStateUpdate': currentStore.updateRoulette(payload); break;
       case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;
 
+      // [Custom Events for Sub-Tabs]
+      case 'voteBallotsResponse': window.dispatchEvent(new CustomEvent('voteBallotsResponse', { detail: payload })); break;
+      case 'voteHistoryResponse': window.dispatchEvent(new CustomEvent('voteHistoryResponse', { detail: payload })); break;
+      case 'voteWinnerResult': window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload })); break;
+
       case 'newChat': 
         currentStore.addChat(payload); 
         if (winner && payload.profile.userIdHash === winner.userIdHash) {
@@ -194,12 +199,9 @@ export default function DashboardPage() {
 
         <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="votes" icon={<BarChart3 size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <div className="my-4 h-[1px] bg-white/5 mx-2" />
-          <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="songs" icon={<Music size={22}/>} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="participation" icon={<Users size={22}/>} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="votes" icon={<BarChart3 size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="points" icon={<Coins size={22}/>} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="greet" icon={<HandHelping size={22}/>} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>

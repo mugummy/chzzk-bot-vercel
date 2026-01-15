@@ -71,16 +71,15 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
       <div className="col-span-7 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] p-10 relative overflow-hidden">
         <div className="absolute inset-0 bg-indigo-500/5 blur-3xl" />
         
-        <div className="w-64 h-64 rounded-full border-8 border-white/10 flex items-center justify-center mb-10 relative shadow-2xl bg-black">
-          {/* 룰렛 시각화 (단순) */}
-          <div className="absolute inset-0 rounded-full overflow-hidden opacity-50">
-             <div className="w-full h-full bg-[conic-gradient(var(--tw-gradient-stops))]" style={{ backgroundImage: `conic-gradient(${items.map((i, idx) => `${i.color} 0 ${100/items.length}%`).join(',')})` }} />
-          </div>
-          <Disc size={64} className="text-white/20 relative z-10" />
+        {/* 대시보드에서도 룰렛 시각화 (간소화) */}
+        <div className="w-64 h-64 rounded-full border-8 border-white/10 flex items-center justify-center mb-10 relative shadow-2xl bg-black overflow-hidden">
+           <div className="w-full h-full bg-[conic-gradient(var(--tw-gradient-stops))]" style={{ backgroundImage: `conic-gradient(${items.map((i, idx) => `${i.color} 0 ${100/items.length}%`).join(',')})` }} />
+           {/* 화살표 */}
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px] border-t-white" />
         </div>
 
         <button onClick={spin} className="px-12 py-6 bg-indigo-500 text-white font-black text-2xl rounded-2xl hover:scale-105 transition-all shadow-[0_0_30px_rgba(99,102,241,0.4)] flex items-center gap-4">
-          <Play fill="currentColor" /> 룰렛 돌리기
+          <Play fill="currentColor" /> 룰렛 돌리기 (오버레이)
         </button>
       </div>
     </div>

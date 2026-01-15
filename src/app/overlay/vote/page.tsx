@@ -11,8 +11,8 @@ export default function IntegratedOverlay() {
   
   // 데이터 상태
   const [voteData, setVoteData] = useState<any>(null);
-  const [drawData, setDrawData] = useState<any>(null); // { winners: [] }
-  const [rouletteData, setRouletteData] = useState<any>(null); // { items: [], selected: null }
+  const [drawData, setDrawData] = useState<any>(null);
+  const [rouletteData, setRouletteData] = useState<any>(null);
 
   // 애니메이션 제어
   const [isRolling, setIsRolling] = useState(false);
@@ -37,19 +37,13 @@ export default function IntegratedOverlay() {
         const msg = JSON.parse(e.data);
         const { type, payload } = msg;
 
-        // 상태 업데이트
-        if (type === 'overlayStateUpdate') {
-            setIsVisible(payload.isVisible);
-            setView(payload.currentView);
-        }
+        if (type === 'overlayStateUpdate') { setIsVisible(payload.isVisible); setView(payload.currentView); }
         if (type === 'voteStateUpdate') setVoteData(payload.currentVote);
-        if (type === 'drawStateUpdate') {
-             if (payload.status === 'idle') setIsRolling(false);
-        }
+        if (type === 'drawStateUpdate') { if (payload.status === 'idle') setIsRolling(false); }
         if (type === 'rouletteStateUpdate') setRouletteData((prev: any) => ({ ...prev, items: payload.items }));
 
-        // 이벤트 (애니메이션 트리거)
-        if (msg.type === 'overlayEvent') {
+        // [중요] 이벤트 트리거
+        if (type === 'overlayEvent') {
             if (payload.type === 'startDraw') {
                 setView('draw');
                 setIsRolling(true);
@@ -69,14 +63,20 @@ export default function IntegratedOverlay() {
   }, []);
 
   const handleRouletteSpin = (selectedItem: any) => {
-    // 룰렛 회전 로직
+    // 룰렛 데이터가 최신 상태인지 확인 (payload.items가 없을 수 있으므로 rouletteData 참조)
+    // 여기서 rouletteData가 null이면 잠시 대기 후 실행하거나, 서버에서 아이템 리스트를 같이 보내줘야 안전함.
+    // 일단 현재 상태 기반으로 계산.
     const items = rouletteData?.items || [];
     if (items.length === 0) return;
 
     const index = items.findIndex((i: any) => i.id === selectedItem.id);
+    if (index === -1) return;
+
     const segmentAngle = 360 / items.length;
-    // 선택된 아이템이 12시 방향(0도)에 오도록 계산
-    const targetAngle = 360 * 5 + (360 - (index * segmentAngle)) - (segmentAngle / 2); // 5바퀴 + 각도 + 보정
+    // 12시 방향 화살표 기준 당첨 위치 계산
+    // 5바퀴(1800도) + 보정 각도
+    const baseRotation = 1800; 
+    const targetAngle = baseRotation + (360 - (index * segmentAngle)) - (segmentAngle / 2);
     
     setRouletteRotation(targetAngle);
     setRouletteData((prev: any) => ({ ...prev, selected: selectedItem }));
@@ -88,34 +88,25 @@ export default function IntegratedOverlay() {
     <div className="w-screen h-screen bg-transparent flex items-center justify-center overflow-hidden font-sans">
       <AnimatePresence mode="wait">
         
-        {/* 투표 오버레이 */}
+        {/* 투표 */}
         {view === 'vote' && voteData && (
-          <motion.div 
-            initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
-            className="w-[80%] max-w-4xl bg-black/80 backdrop-blur-md rounded-[3rem] p-10 border border-white/10 shadow-2xl"
-          >
-            <div className="flex justify-between items-end mb-6">
-                <h1 className="text-4xl font-black text-white truncate max-w-[70%]">{voteData.title}</h1>
-                <div className="text-right">
-                    <span className="block text-emerald-500 font-bold uppercase tracking-widest text-sm mb-1">Total Votes</span>
-                    <span className="text-5xl font-black text-white tabular-nums">{voteData.totalParticipants}</span>
-                </div>
+          <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="w-[80%] max-w-4xl bg-black/85 backdrop-blur-xl rounded-[3rem] p-12 border-2 border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.5)]">
+            <div className="flex justify-between items-end mb-8">
+                <h1 className="text-5xl font-black text-white tracking-tighter">{voteData.title}</h1>
+                <div className="text-right bg-emerald-500 text-black px-6 py-2 rounded-2xl font-black italic uppercase tracking-widest transform -rotate-2">Live Vote</div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-5">
                 {voteData.options.map((opt: any, i: number) => {
                     const total = voteData.options.reduce((acc: number, o: any) => acc + o.count, 0);
                     const percent = total === 0 ? 0 : Math.round((opt.count / total) * 100);
                     return (
-                        <div key={opt.id} className="relative h-20 bg-white/5 rounded-2xl overflow-hidden border border-white/5">
-                            <motion.div 
-                                initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: 1 }}
-                                className="absolute top-0 left-0 h-full bg-emerald-500/80"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-between px-8">
-                                <span className="font-bold text-2xl text-white drop-shadow-md"><span className="text-emerald-300 mr-4">{i + 1}.</span> {opt.label}</span>
-                                <div className="text-right text-white drop-shadow-md">
-                                    <span className="font-black text-3xl tabular-nums block">{opt.count}</span>
-                                    <span className="text-sm opacity-80 font-bold">{percent}%</span>
+                        <div key={opt.id} className="relative h-24 bg-white/5 rounded-[1.5rem] overflow-hidden border border-white/5">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: 1.5, ease: "circOut" }} className="absolute top-0 left-0 h-full bg-emerald-500/60 shadow-[0_0_30px_rgba(16,185,129,0.3)]" />
+                            <div className="absolute inset-0 flex items-center justify-between px-10">
+                                <span className="font-black text-3xl text-white drop-shadow-lg"><span className="text-emerald-400 mr-6 text-2xl">{i + 1}</span> {opt.label}</span>
+                                <div className="text-right text-white drop-shadow-lg">
+                                    <span className="font-black text-4xl tabular-nums block">{opt.count.toLocaleString()}</span>
+                                    <span className="text-sm opacity-60 font-bold uppercase tracking-widest">{percent}%</span>
                                 </div>
                             </div>
                         </div>
@@ -125,98 +116,70 @@ export default function IntegratedOverlay() {
           </motion.div>
         )}
 
-        {/* 추첨 오버레이 (슬롯머신) */}
+        {/* 추첨 */}
         {view === 'draw' && (
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-            className="flex flex-col items-center justify-center gap-8"
-          >
-            <h1 className="text-6xl font-black text-white drop-shadow-[0_0_10px_rgba(0,0,0,1)] uppercase tracking-tighter italic">
-                {isRolling ? 'Rolling...' : 'Winners!'}
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="flex flex-col items-center justify-center gap-12">
+            <h1 className="text-8xl font-black text-white drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] uppercase tracking-tighter italic transform -rotate-3">
+                {isRolling ? 'Spinning...' : 'Winner!'}
             </h1>
-            
-            <div className="flex gap-4">
+            <div className="flex gap-6">
                 {drawData?.winners?.map((winner: any, i: number) => (
-                    <motion.div 
-                        key={i}
-                        className="w-64 h-80 bg-black/90 border-4 border-pink-500 rounded-3xl flex flex-col items-center justify-center p-6 shadow-[0_0_50px_rgba(236,72,153,0.5)] overflow-hidden relative"
-                    >
+                    <motion.div key={i} className="w-80 h-[450px] bg-black/90 border-8 border-pink-500 rounded-[4rem] flex flex-col items-center justify-center p-10 shadow-[0_0_100px_rgba(236,72,153,0.4)] relative">
                         {isRolling ? (
-                            <motion.div 
-                                animate={{ y: [-1000, 0] }} 
-                                transition={{ repeat: Infinity, duration: 0.5, ease: "linear" }}
-                                className="space-y-8 opacity-50 blur-sm"
-                            >
-                                {Array.from({ length: 10 }).map((_, k) => (
-                                    <div key={k} className="text-2xl font-black text-gray-500">???</div>
-                                ))}
+                            <motion.div animate={{ y: [-2000, 0] }} transition={{ repeat: Infinity, duration: 0.2, ease: "linear" }} className="space-y-16 opacity-30 blur-md">
+                                {['USER_1', 'CHZZK_A', 'GUMMY', 'MASTER', 'NICK_B'].map((n, k) => <div key={k} className="text-5xl font-black text-white italic">{n}</div>)}
                             </motion.div>
                         ) : (
-                            <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring" }}>
-                                <Trophy size={64} className="text-yellow-400 mb-6 mx-auto" />
-                                <div className="text-3xl font-black text-white text-center break-words leading-tight">{winner.nickname || winner.nick}</div>
-                                {winner.amount && <div className="mt-2 text-xl font-bold text-pink-400 text-center">₩{winner.amount.toLocaleString()}</div>}
+                            <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 10 }}>
+                                <div className="w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center mb-8 mx-auto shadow-[0_0_40px_rgba(250,204,21,0.6)]"><Trophy size={56} className="text-black" /></div>
+                                <div className="text-5xl font-black text-white text-center break-all leading-none tracking-tighter mb-4">{winner.nickname || winner.nick}</div>
+                                {winner.amount && <div className="mt-4 text-2xl font-black text-pink-400 text-center uppercase">₩{winner.amount.toLocaleString()}</div>}
                             </motion.div>
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/40 pointer-events-none rounded-[3.5rem]" />
                     </motion.div>
                 ))}
             </div>
           </motion.div>
         )}
 
-        {/* 룰렛 오버레이 (개선됨) */}
+        {/* 룰렛 */}
         {view === 'roulette' && rouletteData?.items && (
-          <motion.div 
-             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-             className="relative flex flex-col items-center"
-          >
-             {/* 화살표 (위치 보정) */}
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-50 drop-shadow-xl">
-                <div className="w-0 h-0 border-l-[25px] border-l-transparent border-r-[25px] border-r-transparent border-t-[50px] border-t-white" />
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="relative flex flex-col items-center">
+             {/* 화살표 (Pointer) */}
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-10 z-[100] drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+                <div className="w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-t-[80px] border-t-white relative">
+                    <div className="absolute top-[-85px] left-[-40px] w-20 h-2 bg-white rounded-full opacity-50 blur-sm" />
+                </div>
              </div>
 
-             <motion.div
-                className="w-[700px] h-[700px] rounded-full border-[12px] border-white bg-black shadow-2xl overflow-hidden relative"
-                animate={{ rotate: rouletteRotation }}
-                transition={{ duration: 5, ease: [0.2, 0.8, 0.2, 1] }}
-             >
-                <div 
-                    className="w-full h-full rounded-full relative"
-                    style={{ 
-                        background: `conic-gradient(${rouletteData.items.map((item: any, i: number, arr: any[]) => {
-                            const start = (i / arr.length) * 100;
-                            const end = ((i + 1) / arr.length) * 100;
-                            return `${item.color} ${start}% ${end}%`;
-                        }).join(', ')})` 
-                    }}
-                >
-                    {/* 텍스트 라벨 (회전하여 배치) */}
+             <motion.div className="w-[850px] h-[850px] rounded-full border-[16px] border-white bg-black shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden relative" animate={{ rotate: rouletteRotation }} transition={{ duration: 5, ease: [0.15, 0, 0.15, 1] }}>
+                <div className="w-full h-full rounded-full relative" style={{ background: `conic-gradient(${rouletteData.items.map((item: any, i: number, arr: any[]) => {
+                    const start = (i / arr.length) * 100;
+                    const end = ((i + 1) / arr.length) * 100;
+                    return `${item.color} ${start}% ${end}%`;
+                }).join(', ')})` }}>
                     {rouletteData.items.map((item: any, i: number, arr: any[]) => {
                         const angle = (i * (360 / arr.length)) + (360 / arr.length / 2);
                         return (
-                            <div 
-                                key={item.id}
-                                className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-8"
-                                style={{ transform: `rotate(${angle}deg)` }}
-                            >
-                                <span className="text-2xl font-black text-white drop-shadow-md whitespace-nowrap -rotate-90">{item.label}</span>
+                            <div key={item.id} className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-12" style={{ transform: `rotate(${angle}deg)` }}>
+                                <span className="text-4xl font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] whitespace-nowrap -rotate-90 uppercase tracking-tighter">{item.label}</span>
                             </div>
                         );
                     })}
                 </div>
+                <div className="absolute inset-0 flex items-center justify-center"><div className="w-24 h-24 bg-white rounded-full shadow-2xl border-8 border-black flex items-center justify-center font-black text-black">WIN</div></div>
              </motion.div>
              
-             {/* 결과 표시 */}
-             {rouletteData.selected && rouletteRotation > 0 && (
-                 <motion.div 
-                    initial={{ opacity: 0, y: 20, scale: 0.8 }} 
-                    animate={{ opacity: 1, y: 0, scale: 1 }} 
-                    transition={{ delay: 5.1, type: 'spring' }}
-                    className="absolute top-full mt-12 bg-white text-black px-12 py-8 rounded-[3rem] shadow-[0_0_50px_rgba(255,255,255,0.5)] border-4 border-white/50 z-50"
-                 >
-                     <h2 className="text-6xl font-black text-center uppercase tracking-tighter">{rouletteData.selected.label}</h2>
-                 </motion.div>
-             )}
+             {/* 결과 팝업 */}
+             <AnimatePresence>
+                 {rouletteData.selected && !isRolling && rouletteRotation > 0 && (
+                     <motion.div initial={{ opacity: 0, y: 50, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 5.2, type: 'spring' }} className="absolute top-full mt-20 bg-white text-black px-20 py-10 rounded-[4rem] shadow-[0_0_100px_rgba(255,255,255,0.6)] border-[10px] border-black z-[200]">
+                         <span className="block text-center text-xl font-bold uppercase tracking-[0.5em] mb-2 opacity-40">Result</span>
+                         <h2 className="text-8xl font-black text-center uppercase tracking-tighter leading-none">{rouletteData.selected.label}</h2>
+                     </motion.div>
+                 )}
+             </AnimatePresence>
           </motion.div>
         )}
 

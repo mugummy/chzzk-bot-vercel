@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Vote, Gift, Disc } from 'lucide-react';
+import { Vote, Gift, Disc, Settings } from 'lucide-react';
 import VoteTab from './VoteTab';
 import DrawTab from './DrawTab';
 import RouletteTab from './RouletteTab';
+import SettingsTab from './SettingsTab';
 
 export default function VotesLayout({ onSend }: { onSend: (msg: any) => void }) {
-  const [subTab, setSubTab] = useState<'vote' | 'draw' | 'roulette'>('vote');
+  const [subTab, setSubTab] = useState<'vote' | 'draw' | 'roulette' | 'settings'>('vote');
 
   return (
     <div className="space-y-8">
@@ -31,6 +32,12 @@ export default function VotesLayout({ onSend }: { onSend: (msg: any) => void }) 
         >
           <Disc size={20} /> 룰렛
         </button>
+        <button 
+          onClick={() => setSubTab('settings')}
+          className={`px-8 py-3 rounded-2xl font-black flex items-center gap-2 transition-all ${subTab === 'settings' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+        >
+          <Settings size={20} /> 설정
+        </button>
       </div>
 
       {/* Content Area */}
@@ -38,6 +45,7 @@ export default function VotesLayout({ onSend }: { onSend: (msg: any) => void }) 
         {subTab === 'vote' && <VoteTab onSend={onSend} />}
         {subTab === 'draw' && <DrawTab onSend={onSend} />}
         {subTab === 'roulette' && <RouletteTab onSend={onSend} />}
+        {subTab === 'settings' && <SettingsTab onSend={onSend} />}
       </div>
     </div>
   );
