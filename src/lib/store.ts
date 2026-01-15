@@ -52,14 +52,10 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
   
-  // [수정] 투표 데이터 수신 로직 강화
-  updateVotes: (payload) => {
-    // console.log('[Store] Received Vote Payload:', payload); // 디버깅용 로그
-    set((state) => ({ 
-      votes: payload.currentVote ? [payload.currentVote] : [],
-      voteHistory: payload.history || state.voteHistory
-    }));
-  },
+  updateVotes: (payload) => set((state) => ({ 
+    votes: payload.currentVote ? [payload.currentVote] : [],
+    voteHistory: payload.history || state.voteHistory
+  })),
 
   updateRoulette: (payload) => set((state) => ({ 
     roulette: { ...state.roulette, ...payload } 
