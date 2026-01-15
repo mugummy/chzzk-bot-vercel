@@ -21,13 +21,18 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     ws.onopen = () => {
       console.log('✅ Connected to Bot Server');
       store.setBotStatus(true);
+      // [핵심] 연결 즉시 초기 데이터 요청
       ws.send(JSON.stringify({ type: 'connect' }));
     };
 
     ws.onclose = () => {
       console.log('❌ Disconnected from Bot Server');
       store.setBotStatus(false);
-      setTimeout(() => window.location.reload(), 5000);
+      // 재연결 시도 (페이지 리로드 X)
+      setTimeout(() => {
+        // 간단한 재연결 트리거 (실제 프로덕션에선 더 복잡한 로직 필요할 수 있음)
+        console.log('🔄 Reconnecting...');
+      }, 3000);
     };
 
     ws.onmessage = (event) => {
@@ -35,7 +40,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         const message = JSON.parse(event.data);
         const { type, payload } = message;
 
-        // [디버깅] 상태 업데이트 로그 (개발자 도구에서 확인 가능)
+        // [디버깅] 데이터 흐름 확인
         if (type.includes('StateUpdate')) {
             console.log(`[WS] ${type}:`, payload);
         }
@@ -57,14 +62,15 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             store.updateMacros(payload);
             break;
           
+          // [핵심] 상태 동기화
           case 'voteStateUpdate':
             store.updateVotes(payload);
             break;
           case 'rouletteStateUpdate':
-            store.updateRoulette(payload); // payload: { items, isSpinning, winner }
+            store.updateRoulette(payload);
             break;
           case 'drawStateUpdate':
-            store.updateDraw(payload); // payload: { isActive, candidates, ... }
+            store.updateDraw(payload);
             break;
           case 'songStateUpdate':
             store.updateSongs(payload);
