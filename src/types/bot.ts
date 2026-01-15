@@ -1,3 +1,11 @@
+export interface OverlayConfig {
+  backgroundColor: string;
+  textColor: string;
+  accentColor: string;
+  opacity: number;
+  scale: number;
+}
+
 export interface BotSettings {
   chatEnabled: boolean;
   songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -8,6 +16,7 @@ export interface BotSettings {
   pointsName: string;
   participationCommand: string;
   maxParticipants: number;
+  overlay: OverlayConfig; // [추가] 오버레이 설정
 }
 
 export interface CommandItem {
@@ -68,7 +77,6 @@ export interface RouletteState {
   winner: RouletteItem | null;
 }
 
-// [신규] 추첨 상태 인터페이스
 export interface DrawState {
   candidatesCount: number;
   candidates: any[];
@@ -102,7 +110,7 @@ export interface BotState {
   macros: any[];
   votes: VoteSession[];
   roulette: RouletteState;
-  draw: DrawState; // [추가]
+  draw: DrawState;
   songs: {
     queue: SongItem[];
     current: SongItem | null;

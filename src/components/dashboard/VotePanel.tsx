@@ -1,41 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BarChart3, PieChart, Play, StopCircle, Plus, Trash2, 
   RotateCw, ExternalLink, Settings2, Trophy, Users, 
-  Coins, Copy, Eye, EyeOff, Dices, UserCheck, ShieldCheck, Palette
+  Coins, Copy, Eye, EyeOff, Dices, UserCheck, ShieldCheck, Palette, Save
 } from 'lucide-react';
 import { useBotStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import Toggle from '@/components/ui/Toggle';
 import NumberInput from '@/components/ui/NumberInput';
 
-/**
- * VotePanel: 모든 핸들러가 포함된 무결점 최종 버전입니다.
- */
 export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
-  const { votes, roulette, draw } = useBotStore();
+  const { votes, roulette, draw, settings } = useBotStore();
   const [activeSubTab, setActiveSubTab] = useState<'vote' | 'roulette' | 'viewerDraw' | 'donationDraw' | 'settings'>('vote');
 
-  // 1. 실시간 투표 상태
+  // 투표 입력 상태
   const [voteQuestion, setVoteQuestion] = useState('');
   const [voteOptions, setVoteOptions] = useState([{ id: '1', text: '' }, { id: '2', text: '' }]);
   const [showVoters, setShowVoters] = useState(false);
   const [revealNicknames, setRevealNicknames] = useState(false);
 
-  // 2. 룰렛 상태
+  // 룰렛 입력 상태
   const [rouletteItems, setRouletteItems] = useState([{ id: '1', text: '', weight: 1, color: '#10b981' }]);
 
-  // 3. 추첨 설정
+  // 추첨 설정
   const [chatType, setChatType] = useState<'any' | 'command'>('command');
   const [chatCommand, setChatCommand] = useState('!참가');
   const [donationType, setDonationType] = useState<'all' | 'specific'>('all');
   const [donationAmount, setDonationAmount] = useState(1000);
   const [drawCount, setDrawCount] = useState(1);
 
-  // 4. 오버레이 설정
+  // 오버레이 설정 (로컬 상태)
   const [showUrl, setShowUrl] = useState(false);
+  const [overlayConfig, setOverlayConfig] = useState(settings?.overlay || {
+    backgroundColor: '#000000',
+    textColor: '#ffffff',
+    accentColor: '#10b981',
+    opacity: 0.9,
+    scale: 1.0
+  });
+
+  useEffect(() => {
+    if (settings?.overlay) setOverlayConfig(settings.overlay);
+  }, [settings?.overlay]);
 
   const currentVote = votes?.[0];
   const overlayUrl = typeof window !== 'undefined' ? `${window.location.origin}/overlay/vote?token=${localStorage.getItem('chzzk_session_token')}` : '';
@@ -44,71 +52,24 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
     if (typeof window !== 'undefined' && (window as any).ui?.notify) (window as any).ui.notify(msg, type);
   };
 
-  // --- [핸들러] 실시간 투표 ---
-  const handleAddVoteOption = () => {
-    if (voteOptions.length >= 6) return notify('최대 6개까지만 가능합니다.', 'info');
-    setVoteOptions([...voteOptions, { id: Date.now().toString(), text: '' }]);
-  };
-
   const handleCreateVote = () => {
     if (!voteQuestion || voteOptions.some(o => !o.text)) return notify('질문과 모든 항목을 채워주세요.', 'error');
     onSend({ type: 'createVote', data: { question: voteQuestion, options: voteOptions } });
     notify('투표 세션이 생성되었습니다.');
   };
 
-  const handleResetVote = () => {
-    onSend({ type: 'resetVote' });
-    setVoteQuestion('');
-    setVoteOptions([{id:'1',text:''},{id:'2',text:''}]);
-    notify('투표가 초기화되었습니다.', 'info');
-  };
-
-  const maskName = (name: string) => revealNicknames ? name : (name[0] || '') + '***';
-
-  // --- [핸들러] 행운의 룰렛 ---
-  const handleAddRouletteItem = () => {
-    if (rouletteItems.length >= 12) return notify('최대 12개까지만 가능합니다.', 'info');
-    setRouletteItems([...rouletteItems, { id: Date.now().toString(), text: '', weight: 1, color: '#10b981' }]);
-  };
-
-  const handleRemoveRouletteItem = (index: number) => {
-    if (rouletteItems.length <= 1) return;
-    setRouletteItems(rouletteItems.filter((_, i) => i !== index));
-  };
-
   const handleCreateRoulette = () => {
-    if (rouletteItems.some(i => !i.text)) return notify('항목 내용을 모두 입력해주세요.', 'error');
+    if (rouletteItems.some(i => !i.text)) return notify('항목 내용을 입력해주세요.', 'info');
     onSend({ type: 'createRoulette', payload: { items: rouletteItems } });
     notify('룰렛판이 준비되었습니다.');
   };
 
-  const handleResetRoulette = () => {
-    onSend({ type: 'resetRoulette' });
-    setRouletteItems([{id:'1',text:'',weight:1,color:'#10b981'}]);
-    notify('룰렛이 초기화되었습니다.', 'info');
+  const handleSaveOverlay = () => {
+    onSend({ type: 'updateSettings', data: { overlay: overlayConfig } });
+    notify('오버레이 설정이 저장되었습니다.');
   };
 
-  // --- [핸들러] 추첨 시스템 ---
-  const handleStartDraw = (mode: 'chat' | 'donation') => {
-    onSend({ 
-      type: 'startDraw', 
-      payload: { 
-        settings: { 
-          mode, 
-          chatType, 
-          chatCommand, 
-          donationType, 
-          donationAmount 
-        } 
-      } 
-    });
-    notify('모집을 시작했습니다.');
-  };
-
-  const handleExecuteDraw = (fromVote: boolean = false) => {
-    onSend({ type: 'executeDraw', payload: { count: drawCount, fromVote } });
-    notify('추첨을 시작합니다!');
-  };
+  const maskName = (name: string) => revealNicknames ? name : (name[0] || '') + '***';
 
   return (
     <div className="space-y-8">
@@ -135,7 +96,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
           <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 shadow-2xl space-y-8">
             <h3 className="text-2xl font-black text-white">투표 만들기</h3>
             <div className="space-y-4">
-              <input value={voteQuestion} onChange={e => setVoteQuestion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none font-bold text-lg text-white focus:border-emerald-500/50" placeholder="투표 질문 입력" />
+              <input value={voteQuestion} onChange={e => setVoteQuestion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none font-bold text-lg text-white" placeholder="투표 질문 입력" />
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {voteOptions.map((opt, i) => (
                   <div key={opt.id} className="flex gap-3">
@@ -144,11 +105,11 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
                   </div>
                 ))}
               </div>
-              <button onClick={handleAddVoteOption} className="w-full py-4 border border-dashed border-white/20 text-gray-500 hover:text-emerald-500 rounded-xl font-bold flex justify-center gap-2"><Plus size={18}/> 항목 추가</button>
+              <button onClick={() => setVoteOptions([...voteOptions, { id: Date.now().toString(), text: '' }])} className="w-full py-4 border border-dashed border-white/20 text-gray-500 hover:text-emerald-500 rounded-xl font-bold flex justify-center gap-2"><Plus size={18}/> 항목 추가</button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <button onClick={handleCreateVote} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-emerald-500 transition-all shadow-xl">투표 생성</button>
-              <button onClick={handleResetVote} className="bg-white/5 text-gray-400 py-5 rounded-2xl font-black hover:bg-white/10 transition-all">초기화</button>
+              <button onClick={() => onSend({ type: 'resetVote' })} className="bg-white/5 text-gray-400 py-5 rounded-2xl font-black hover:bg-white/10 transition-all">초기화</button>
             </div>
           </div>
           <div className="xl:col-span-7 space-y-8">
@@ -171,7 +132,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
                   <div className="flex justify-center gap-4 mt-8">
                     <button onClick={() => onSend({ type: 'startVote' })} disabled={currentVote.isActive} className="px-10 py-4 bg-emerald-500 text-black rounded-2xl font-black hover:scale-105 disabled:opacity-30 flex items-center gap-2"><Play size={20}/> 시작</button>
                     <button onClick={() => onSend({ type: 'endVote' })} disabled={!currentVote.isActive} className="px-10 py-4 bg-red-500 text-white rounded-2xl font-black hover:scale-105 disabled:opacity-30 flex items-center gap-2"><StopCircle size={20}/> 종료</button>
-                    <button onClick={() => handleExecuteDraw(true)} className="px-10 py-4 bg-amber-500 text-black rounded-2xl font-black hover:scale-105 flex items-center gap-2 shadow-xl"><Trophy size={20}/> 투표자 추첨</button>
+                    <button onClick={() => onSend({ type: 'executeDraw', payload: { count: 1, fromVote: true } })} className="px-10 py-4 bg-amber-500 text-black rounded-2xl font-black hover:scale-105 flex items-center gap-2 shadow-xl"><Trophy size={20}/> 투표자 추첨</button>
                   </div>
                 </div>
               ) : <div className="flex flex-col items-center gap-6 opacity-20"><BarChart3 size={80} /><p className="text-2xl font-black italic">투표를 먼저 생성해주세요.</p></div>}
@@ -200,7 +161,7 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
         </div>
       )}
 
-      {/* 2. 행운의 룰렛 */}
+      {/* 2. 룰렛 탭 */}
       {activeSubTab === 'roulette' && (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           <div className="xl:col-span-5 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 shadow-2xl space-y-8">
@@ -208,17 +169,19 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {rouletteItems.map((item, i) => (
                 <div key={item.id} className="flex gap-3">
-                  <input value={item.text} onChange={e => { const n = [...rouletteItems]; n[i].text = e.target.value; setRouletteItems(n); }} className="flex-1 bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white font-medium" placeholder="당첨 항목" />
-                  <button onClick={() => handleRemoveRouletteItem(i)} className="p-4 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 transition-all"><Trash2 size={20}/></button>
+                  <input value={item.text} onChange={e => { const n = [...rouletteItems]; n[i].text = e.target.value; setRouletteItems(n); }} className="flex-1 bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white font-medium" placeholder={`항목 ${i + 1}`} />
+                  <button onClick={() => { if(rouletteItems.length > 1) setRouletteItems(rouletteItems.filter((_, idx) => idx !== i)); }} className="p-4 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 transition-all"><Trash2 size={20}/></button>
                 </div>
               ))}
             </div>
-            <button onClick={handleAddRouletteItem} className="w-full py-4 border border-dashed border-white/20 text-gray-500 hover:text-pink-500 rounded-xl font-bold flex justify-center gap-2"><Plus size={18}/> 항목 추가</button>
+            <button onClick={() => setRouletteItems([...rouletteItems, { id: Date.now().toString(), text: '', weight: 1, color: '#10b981' }])} className="w-full py-4 border border-dashed border-white/20 text-gray-500 hover:text-pink-500 rounded-xl font-bold flex justify-center gap-2"><Plus size={18}/> 항목 추가</button>
             <div className="grid grid-cols-2 gap-4">
               <button onClick={handleCreateRoulette} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-pink-500 transition-all shadow-xl">룰렛 생성</button>
-              <button onClick={handleResetRoulette} className="bg-white/5 text-gray-400 py-5 rounded-2xl font-black hover:bg-white/10 transition-all">초기화</button>
+              <button onClick={() => onSend({ type: 'resetRoulette' })} className="bg-white/5 text-gray-400 py-5 rounded-2xl font-black hover:bg-white/10 transition-all">초기화</button>
             </div>
-            <button onClick={() => onSend({ type: 'spinRoulette' })} disabled={roulette.isSpinning} className="w-full bg-emerald-500 text-black py-5 rounded-2xl font-black hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-3"><RotateCw size={20} className={roulette.isSpinning ? 'animate-spin' : ''} /> <span>돌리기</span></button>
+            <button onClick={() => onSend({ type: 'spinRoulette' })} disabled={roulette.isSpinning} className="w-full bg-emerald-500 text-black py-5 rounded-2xl font-black hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-3">
+              <RotateCw size={20} className={roulette.isSpinning ? 'animate-spin' : ''} /> <span>돌리기</span>
+            </button>
           </div>
           <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 shadow-2xl flex flex-col items-center justify-center min-h-[450px]">
             {roulette?.items?.length > 0 ? (
@@ -248,13 +211,13 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
               <div className="space-y-3"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">당첨 인원</label><NumberInput value={drawCount} onChange={setDrawCount} min={1} max={10} className="bg-white/5" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => handleStartDraw('chat')} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-cyan-500 transition-all shadow-xl">모집 시작</button>
-              <button onClick={() => handleExecuteDraw(false)} disabled={draw.isRolling} className="bg-cyan-500 text-black py-5 rounded-2xl font-black hover:scale-105 shadow-xl flex items-center justify-center gap-2"><Trophy size={20}/> 추첨하기</button>
+              <button onClick={() => onSend({ type: 'startDraw', payload: { settings: { mode: 'chat', chatType, chatCommand } } })} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-cyan-500 transition-all shadow-xl">모집 시작</button>
+              <button onClick={() => onSend({ type: 'executeDraw', payload: { count: drawCount } })} disabled={draw.isRolling} className="bg-cyan-500 text-black py-5 rounded-2xl font-black hover:scale-105 shadow-xl flex items-center justify-center gap-2"><Trophy size={20}/> 추첨하기</button>
             </div>
             <button onClick={() => onSend({ type: 'resetDraw' })} className="w-full py-4 bg-white/5 text-gray-500 rounded-2xl font-bold text-xs hover:bg-white/10 transition-all">초기화</button>
           </div>
           <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 shadow-2xl flex flex-col items-center justify-center min-h-[450px]">
-            {draw.isRolling ? <div className="text-center space-y-6"><div className="text-6xl font-black text-white/10 animate-bounce blur-sm italic uppercase tracking-tighter">Rolling...</div><p className="text-cyan-500 font-black animate-pulse">선정 중...</p></div> : draw.winners.length > 0 ? (
+            {draw.isRolling ? <div className="text-center space-y-6"><div className="text-6xl font-black text-white/10 animate-bounce blur-sm italic uppercase tracking-tighter">Rolling...</div><p className="text-cyan-500 font-black animate-pulse">참가자 {draw.candidatesCount}명 중 선정 중</p></div> : draw.winners.length > 0 ? (
               <div className="w-full space-y-4">{draw.winners.map((w, i) => <motion.div initial={{x:20,opacity:0}} animate={{x:0,opacity:1}} transition={{delay:i*0.1}} key={i} className="bg-cyan-500 text-black p-6 rounded-3xl font-black text-3xl flex justify-between items-center shadow-xl"><span>{w.nickname}</span><Trophy size={28} /></motion.div>)}</div>
             ) : <div className="flex flex-col items-center gap-6 opacity-20"><Dices size={80} /><p className="text-2xl font-black italic">모집 시작 후 추첨을 진행하세요.</p></div>}
           </div>
@@ -275,13 +238,13 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
               <div className="space-y-3"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">당첨 인원</label><NumberInput value={drawCount} onChange={setDrawCount} min={1} max={10} className="bg-white/5" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => handleStartDraw('donation')} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-amber-500 transition-all shadow-xl">모집 시작</button>
+              <button onClick={() => onSend({ type: 'startDraw', payload: { settings: { mode: 'donation', donationType, donationAmount } } })} className="bg-white text-black py-5 rounded-2xl font-black hover:bg-amber-500 transition-all shadow-xl">모집 시작</button>
               <button onClick={() => handleExecuteDraw(false)} disabled={draw.isRolling} className="bg-amber-500 text-black py-5 rounded-2xl font-black hover:scale-105 shadow-xl flex items-center justify-center gap-2"><Trophy size={20}/> 추첨하기</button>
             </div>
             <button onClick={() => onSend({ type: 'resetDraw' })} className="w-full py-4 bg-white/5 text-gray-500 rounded-2xl font-bold text-xs hover:bg-white/10 transition-all">초기화</button>
           </div>
           <div className="xl:col-span-7 bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-10 shadow-2xl flex flex-col items-center justify-center min-h-[450px]">
-            {draw.isRolling ? <div className="text-center space-y-6"><div className="text-6xl font-black text-white/10 animate-bounce blur-sm italic uppercase tracking-tighter">Rolling...</div><p className="text-amber-500 font-black animate-pulse">선정 중...</p></div> : draw.winners.length > 0 ? (
+            {draw.isRolling ? <div className="text-center space-y-6"><div className="text-6xl font-black text-white/10 animate-bounce blur-sm italic uppercase tracking-tighter">Rolling...</div><p className="text-amber-500 font-black animate-pulse">후원자 {draw.candidatesCount}명 중 선정 중</p></div> : draw.winners.length > 0 ? (
               <div className="w-full space-y-4">{draw.winners.map((w, i) => <motion.div initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} transition={{delay:i*0.1}} key={i} className="bg-amber-500 text-black p-6 rounded-3xl font-black text-3xl flex justify-between items-center shadow-xl"><span>{w.nickname}</span><Coins size={28} /></motion.div>)}</div>
             ) : <div className="flex flex-col items-center gap-6 opacity-20"><Coins size={80} /><p className="text-2xl font-black italic">모집 시작 후 추첨을 진행하세요.</p></div>}
           </div>
@@ -291,13 +254,31 @@ export default function VotePanel({ onSend }: { onSend: (msg: any) => void }) {
       {/* 5. 오버레이 설정 */}
       {activeSubTab === 'settings' && (
         <div className="bg-[#0a0a0a] border border-white/5 rounded-[3.5rem] p-12 shadow-2xl space-y-10">
-          <div className="flex items-center gap-6"><div className="w-20 h-20 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center text-emerald-500 shadow-2xl"><Settings2 size={40} /></div><div><h3 className="text-3xl font-black text-white tracking-tighter">Overlay Link</h3><p className="text-gray-500 font-bold mt-1">OBS 브라우저 소스에 추가하세요.</p></div></div>
-          <div className="bg-white/[0.02] p-10 rounded-[3rem] border border-white/5 space-y-6">
-            <div className="flex gap-4">
-              <div className="flex-1 relative group"><input type={showUrl ? "text" : "password"} value={overlayUrl} readOnly className="w-full bg-black/40 border border-white/10 p-6 rounded-2xl text-emerald-400 font-mono text-sm outline-none" /><button onClick={() => setShowUrl(!showUrl)} className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-gray-500 hover:text-white transition-colors">{showUrl ? <EyeOff size={20}/> : <Eye size={20}/>}</button></div>
-              <button onClick={() => { navigator.clipboard.writeText(overlayUrl); notify('주소가 복사되었습니다.'); }} className="px-10 bg-emerald-500 text-black rounded-2xl font-black hover:bg-emerald-400 transition-all flex items-center gap-3 shadow-xl"><Copy size={20}/> <span>주소 복사</span></button>
+          <div className="flex items-center gap-6"><div className="w-20 h-20 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center text-emerald-500 shadow-2xl"><Settings2 size={40} /></div><div><h3 className="text-3xl font-black text-white tracking-tighter">Overlay Settings</h3><p className="text-gray-500 font-bold mt-1">오버레이 디자인을 커스터마이징하세요.</p></div></div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 space-y-6">
+              <h4 className="text-xl font-black text-white flex items-center gap-3"><ExternalLink className="text-emerald-500" /> 주소 복사</h4>
+              <div className="flex gap-3">
+                <div className="flex-1 relative group"><input type={showUrl ? "text" : "password"} value={overlayUrl} readOnly className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl text-emerald-400 font-mono text-xs outline-none" /><button onClick={() => setShowUrl(!showUrl)} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-white transition-colors">{showUrl ? <EyeOff size={18}/> : <Eye size={18}/>}</button></div>
+                <button onClick={() => { navigator.clipboard.writeText(overlayUrl); notify('복사되었습니다.'); }} className="bg-emerald-500 text-black px-8 rounded-2xl font-black hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-lg"><Copy size={18}/> 복사</button>
+              </div>
             </div>
-            <div className="flex gap-4 p-6 bg-white/5 rounded-2xl border border-white/5 items-start"><ShieldCheck className="text-emerald-500 shrink-0" size={20}/><p className="text-xs text-gray-500 leading-relaxed font-medium">이 주소에는 세션 토큰이 포함되어 있습니다. 타인에게 노출되지 않도록 주의하세요.</p></div>
+
+            <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 space-y-6">
+              <h4 className="text-xl font-black text-white flex items-center gap-3"><Palette className="text-emerald-500" /> 디자인 설정</h4>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
+                  <span className="text-sm font-bold text-gray-400">포인트 컬러</span>
+                  <input type="color" value={overlayConfig.accentColor} onChange={e => setOverlayConfig({...overlayConfig, accentColor: e.target.value})} className="bg-transparent border-none w-8 h-8 cursor-pointer" />
+                </div>
+                <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
+                  <span className="text-sm font-bold text-gray-400">배경 투명도</span>
+                  <input type="range" min="0" max="1" step="0.1" value={overlayConfig.opacity} onChange={e => setOverlayConfig({...overlayConfig, opacity: parseFloat(e.target.value)})} className="accent-emerald-500" />
+                </div>
+                <button onClick={handleSaveOverlay} className="w-full py-4 bg-emerald-500 text-black rounded-2xl font-black hover:scale-105 transition-all flex items-center justify-center gap-2"><Save size={18}/> 설정 저장</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
