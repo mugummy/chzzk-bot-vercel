@@ -60,6 +60,7 @@ export interface VoteSession {
   isActive: boolean;
   settings: any;
   startTime: number | null;
+  endTime: number | null; // [신규]
   totalVotes: number;
   voters: Voter[];
 }
@@ -82,7 +83,7 @@ export interface DrawState {
   candidates: any[];
   isRolling: boolean;
   winners: any[];
-  isActive?: boolean; // [추가] 모집 중 상태
+  isActive?: boolean;
 }
 
 export interface BotState {
@@ -110,6 +111,7 @@ export interface BotState {
   counters: any[];
   macros: any[];
   votes: VoteSession[];
+  voteHistory: VoteSession[]; // [신규]
   roulette: RouletteState;
   draw: DrawState;
   songs: {

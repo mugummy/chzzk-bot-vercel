@@ -11,7 +11,7 @@ export interface BotStore extends BotState {
   updateMacros: (macros: any[]) => void;
   updateVotes: (payload: any) => void;
   updateRoulette: (payload: any) => void;
-  updateDraw: (payload: any) => void; // [추가]
+  updateDraw: (payload: any) => void;
   updateSongs: (payload: any) => void;
   updateParticipation: (payload: any) => void;
   updateParticipationRanking: (ranking: any[]) => void;
@@ -31,8 +31,9 @@ export const useBotStore = create<BotStore>((set) => ({
   counters: [],
   macros: [],
   votes: [],
+  voteHistory: [], // [신규]
   roulette: { items: [], isSpinning: false, winner: null },
-  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [] }, // [추가] 초기값
+  draw: { candidatesCount: 0, candidates: [], isRolling: false, winners: [] },
   songs: { queue: [], current: null, isPlaying: false },
   participation: { queue: [], active: [], isActive: false, max: 10, ranking: [] },
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
@@ -51,9 +52,11 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
   
-  updateVotes: (payload) => set({ votes: payload.currentVote ? [payload.currentVote] : [] }),
+  updateVotes: (payload) => set({ 
+    votes: payload.currentVote ? [payload.currentVote] : [],
+    voteHistory: payload.history || [] // [신규] 기록 업데이트
+  }),
   updateRoulette: (payload) => set({ roulette: payload }),
-  // [추가] 추첨 상태 업데이트
   updateDraw: (payload) => set({ draw: payload }),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
