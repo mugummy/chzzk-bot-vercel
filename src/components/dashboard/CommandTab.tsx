@@ -35,7 +35,7 @@ export default function CommandTab({ onSend }: { onSend: (msg: any) => void }) {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const getDisplayTrigger = (cmd: CommandItem) => cmd.triggers?.[0] || cmd.trigger || '';
+  const getDisplayTrigger = (cmd: CommandItem) => cmd.triggers?.[0] || '';
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
