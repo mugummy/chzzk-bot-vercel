@@ -16,7 +16,7 @@ export interface BotSettings {
   pointsName: string;
   participationCommand: string;
   maxParticipants: number;
-  overlay: OverlayConfig; // [추가] 오버레이 설정
+  overlay: OverlayConfig;
 }
 
 export interface CommandItem {
@@ -82,6 +82,7 @@ export interface DrawState {
   candidates: any[];
   isRolling: boolean;
   winners: any[];
+  isActive?: boolean; // [추가] 모집 중 상태
 }
 
 export interface BotState {
