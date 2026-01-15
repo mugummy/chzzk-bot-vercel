@@ -1,32 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useBotStore } from '@/lib/store';
-import { Gift, Users, Trophy, DollarSign, Play, CheckCircle2, ChevronRight, RefreshCw } from 'lucide-react';
+import { Gift, Users, Trophy, DollarSign, Play, CheckCircle2, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
   const { draw } = useBotStore();
   const [subTab, setSubTab] = useState<'chat' | 'donation'>('chat');
   
-  // 설정
   const [command, setCommand] = useState('!참여');
   const [useCommand, setUseCommand] = useState(true);
   const [subscriberOnly, setSubscriberOnly] = useState(false);
   const [winnerCount, setWinnerCount] = useState(1);
   const [allowDuplicate, setAllowDuplicate] = useState(false);
   
-  // 후원 설정
   const [donationMode, setDonationMode] = useState<'all' | 'min'>('all');
   const [minAmount, setMinAmount] = useState(1000);
 
-  // 로컬 슬롯머신 제어
   const [isRolling, setIsRolling] = useState(false);
 
   useEffect(() => {
-      // 서버에서 status가 rolling으로 변하면 로컬 애니메이션 시작
       if (draw.status === 'rolling') {
           setIsRolling(true);
       } else if (draw.status === 'completed') {
-          // 약간의 시간차를 두고 롤링 종료
           setTimeout(() => setIsRolling(false), 500);
       }
   }, [draw.status]);
@@ -44,6 +39,13 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
   const pickWinners = () => {
     onSend({ type: 'pickWinners' });
     onSend({ type: 'toggleOverlay', visible: true, view: 'draw' });
+  };
+
+  const reset = () => {
+      if (confirm('추첨 상태를 초기화하시겠습니까?')) {
+          onSend({ type: 'resetDraw' });
+          setIsRolling(false);
+      }
   };
 
   return (
@@ -112,9 +114,12 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Entry Pool</p>
                  <h2 className="text-4xl font-black text-white italic">{draw.isCollecting ? 'Collecting Chat...' : 'Ready to Spin'}</h2>
              </div>
-             <div className="text-right z-10 bg-black/40 px-8 py-4 rounded-[2rem] border border-white/5">
-                 <p className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-1">Total Entries</p>
-                 <p className="text-5xl font-black tabular-nums text-white">{draw.participantCount}</p>
+             <div className="flex items-center gap-4 z-10">
+                 <div className="bg-black/40 px-8 py-4 rounded-[2rem] border border-white/5 text-right">
+                     <p className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-1">Total Entries</p>
+                     <p className="text-5xl font-black tabular-nums text-white">{draw.participantCount}</p>
+                 </div>
+                 <button onClick={reset} className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"><RotateCcw size={24}/></button>
              </div>
           </div>
 
@@ -124,7 +129,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
               </button>
           )}
 
-          {/* [핵심] 대시보드 슬롯머신 애니메이션 */}
+          {/* 대시보드 슬롯머신 애니메이션 */}
           <AnimatePresence mode="wait">
               {(isRolling || draw.winners.length > 0) && (
                   <motion.div 
