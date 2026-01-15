@@ -41,7 +41,7 @@ export const useBotStore = create<BotStore>((set) => ({
   
   // [New Initial States]
   vote: { currentVote: null },
-  draw: { isCollecting: false, participantCount: 0, settings: null, status: 'idle', winners: [] },
+  draw: { isCollecting: false, participantCount: 0, participantsList: [], settings: null, status: 'idle', winners: [] },
   roulette: { items: [] },
   overlay: { isVisible: true, currentView: 'none' },
 
