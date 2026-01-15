@@ -52,28 +52,27 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
   
-  // 투표 업데이트 (현재 진행 중인 투표와 과거 기록 동시 처리)
-  updateVotes: (payload) => set((state) => ({ 
-    votes: payload.currentVote ? [payload.currentVote] : [],
-    voteHistory: payload.history || state.voteHistory
-  })),
+  // [수정] 투표 데이터 수신 로직 강화
+  updateVotes: (payload) => {
+    // console.log('[Store] Received Vote Payload:', payload); // 디버깅용 로그
+    set((state) => ({ 
+      votes: payload.currentVote ? [payload.currentVote] : [],
+      voteHistory: payload.history || state.voteHistory
+    }));
+  },
 
-  // 룰렛 업데이트
   updateRoulette: (payload) => set((state) => ({ 
     roulette: { ...state.roulette, ...payload } 
   })),
 
-  // 추첨 업데이트 (isActive 플래그 보존)
   updateDraw: (payload) => set((state) => ({ 
     draw: { ...state.draw, ...payload } 
   })),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
-  
   updateParticipation: (payload) => set((state) => ({ 
     participation: { ...state.participation, queue: payload.queue, active: payload.participants, isActive: payload.isParticipationActive, max: payload.maxParticipants }
   })),
-  
   updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
   setChatHistory: (history) => set({ chatHistory: history }),
