@@ -9,7 +9,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  onSave: () => void;
+  onSave?: () => void;
 }
 
 export function Modal({ isOpen, onClose, title, children, onSave }: ModalProps) {
@@ -43,8 +43,8 @@ export function Modal({ isOpen, onClose, title, children, onSave }: ModalProps) 
               {children}
             </div>
             <div className="p-8 border-t border-white/5 bg-white/[0.02] flex gap-4">
-              <button onClick={onClose} className="flex-1 py-4 rounded-2xl bg-white/5 font-bold hover:bg-white/10 transition-all">취소</button>
-              <button onClick={onSave} className="flex-[2] py-4 rounded-2xl bg-emerald-500 text-black font-black hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">저장하기</button>
+              <button onClick={onClose} className="flex-1 py-4 rounded-2xl bg-white/5 font-bold hover:bg-white/10 transition-all">{onSave ? '취소' : '닫기'}</button>
+              {onSave && <button onClick={onSave} className="flex-[2] py-4 rounded-2xl bg-emerald-500 text-black font-black hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">저장하기</button>}
             </div>
           </motion.div>
         </div>
