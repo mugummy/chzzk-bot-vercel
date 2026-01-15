@@ -1,25 +1,50 @@
 import { useState, useEffect } from 'react';
 import { useBotStore } from '@/lib/store';
 import { Disc, Plus, Trash2, Play, RotateCcw } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) {
   const { roulette } = useBotStore();
   const [items, setItems] = useState<any[]>(roulette.items.length ? roulette.items : [{ id: '1', label: '꽝', weight: 1, color: '#ef4444' }]);
   const [newItem, setNewItem] = useState('');
   const [newWeight, setNewWeight] = useState(1);
+  
+  // 회전 상태 (서버 상태가 없으므로 로컬에서 에뮬레이션하되 이벤트 수신으로 동작)
   const [rotation, setRotation] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
   const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899'];
 
-  // 대시보드 룰렛 애니메이션 동기화 (간단 버전)
   useEffect(() => {
-      // 실제로는 오버레이와 정확히 각도를 맞추려면 서버에서 타겟 아이템 정보를 받아야 함.
-      // 여기선 spinRoulette 이벤트 리스너를 추가하거나, store의 roulette 상태 변화를 감지해서 돌림.
-      // (단, store엔 결과 selectedItem 정보가 없으므로 간단히 회전만 시킴)
-      if (items.length > 0) {
-          // 그냥 시각적 효과로 계속 천천히 돌거나, 스핀 시 빠르게 돌게 할 수 있음.
-      }
+      // 스토어 업데이트 시 로컬 상태 동기화
+      if (roulette.items.length > 0) setItems(roulette.items);
+  }, [roulette.items]);
+
+  useEffect(() => {
+      const handleSpinResult = (e: any) => {
+          const selectedItem = e.detail.selectedItem;
+          // 회전 계산
+          const index = items.findIndex(i => i.id === selectedItem.id);
+          if (index === -1) return;
+          
+          setIsSpinning(true);
+          setResult(null);
+
+          const segmentAngle = 360 / items.length;
+          // 12시 방향 기준 (Pointer)
+          const targetAngle = 1800 + (360 - (index * segmentAngle)) - (segmentAngle / 2);
+          
+          setRotation(targetAngle);
+          
+          setTimeout(() => {
+              setIsSpinning(false);
+              setResult(selectedItem);
+          }, 5000);
+      };
+
+      window.addEventListener('spinRouletteResult', handleSpinResult);
+      return () => window.removeEventListener('spinRouletteResult', handleSpinResult);
   }, [items]);
 
   const addItem = () => {
@@ -45,13 +70,13 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
   const spin = () => {
     onSend({ type: 'spinRoulette' });
     onSend({ type: 'toggleOverlay', visible: true, view: 'roulette' });
-    // 대시보드에서도 돌아가는 척 (랜덤 회전 추가)
-    setRotation(rotation + 1800 + Math.random() * 360);
   };
 
   const reset = () => {
       if (confirm('룰렛을 초기화하시겠습니까?')) {
           onSend({ type: 'resetRoulette' });
+          setRotation(0);
+          setResult(null);
       }
   };
 
@@ -59,7 +84,7 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
     <div className="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="col-span-5 bg-white/5 border border-white/5 p-6 rounded-[2rem] h-fit">
         <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-black flex items-center gap-2"><Disc className="text-indigo-500" /> 룰렛 아이템</h3>
+            <h3 className="text-xl font-black flex items-center gap-2"><Disc className="text-indigo-500" /> 룰렛 설정</h3>
             <button onClick={reset} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><RotateCcw size={18}/></button>
         </div>
         
@@ -68,7 +93,7 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
             value={newItem} onChange={e => setNewItem(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addItem()}
             placeholder="항목 이름"
-            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold"
+            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-indigo-500 outline-none"
           />
           <input 
             type="number" value={newWeight} onChange={e => setNewWeight(Number(e.target.value))}
@@ -97,23 +122,49 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
         {/* 대시보드 룰렛 시각화 */}
         <div className="relative mb-10">
             {/* 화살표 */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-10">
-                <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px] border-t-white" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-10 drop-shadow-xl">
+                <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-white" />
             </div>
             
             <motion.div 
-                className="w-80 h-80 rounded-full border-8 border-white/10 shadow-2xl bg-black overflow-hidden relative"
+                className="w-[450px] h-[450px] rounded-full border-[10px] border-white/10 shadow-2xl bg-black overflow-hidden relative"
                 animate={{ rotate: rotation }}
-                transition={{ duration: 5, ease: [0.2, 0.8, 0.2, 1] }}
+                transition={{ duration: 5, ease: [0.15, 0, 0.15, 1] }}
             >
-               <div className="w-full h-full bg-[conic-gradient(var(--tw-gradient-stops))]" style={{ backgroundImage: `conic-gradient(${items.map((i, idx) => `${i.color} 0 ${100/items.length}%`).join(',')})` }}>
-                   {/* 대시보드에서는 텍스트 생략하고 색상만 (복잡도 줄임) */}
+               <div className="w-full h-full rounded-full relative" style={{ background: `conic-gradient(${items.map((item, i) => {
+                   const start = (i / items.length) * 100;
+                   const end = ((i + 1) / items.length) * 100;
+                   return `${item.color} ${start}% ${end}%`;
+               }).join(', ')})` }}>
+                   {items.map((item, i) => {
+                       const angle = (i * (360 / items.length)) + (360 / items.length / 2);
+                       return (
+                           <div key={item.id} className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-8" style={{ transform: `rotate(${angle}deg)` }}>
+                               <span className="text-xl font-black text-white drop-shadow-md whitespace-nowrap -rotate-90 uppercase tracking-tight">{item.label}</span>
+                           </div>
+                       );
+                   })}
                </div>
             </motion.div>
+
+            {/* 결과 팝업 */}
+            <AnimatePresence>
+                {result && (
+                    <motion.div 
+                        initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        className="absolute inset-0 flex items-center justify-center z-20"
+                    >
+                        <div className="bg-black/80 backdrop-blur-md px-10 py-6 rounded-3xl border-2 border-white/20 text-center">
+                            <span className="text-sm font-bold text-indigo-400 uppercase tracking-widest">Result</span>
+                            <h2 className="text-5xl font-black text-white">{result.label}</h2>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
 
-        <button onClick={spin} className="px-12 py-6 bg-indigo-500 text-white font-black text-2xl rounded-2xl hover:scale-105 transition-all shadow-[0_0_30px_rgba(99,102,241,0.4)] flex items-center gap-4">
-          <Play fill="currentColor" /> 룰렛 돌리기
+        <button onClick={spin} disabled={isSpinning} className={`px-12 py-6 rounded-2xl font-black text-2xl transition-all shadow-[0_0_30px_rgba(99,102,241,0.4)] flex items-center gap-4 ${isSpinning ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-indigo-500 text-white hover:scale-105'}`}>
+          <Play fill="currentColor" /> {isSpinning ? 'Spinning...' : '룰렛 돌리기 (START)'}
         </button>
       </div>
     </div>

@@ -21,7 +21,15 @@ export default function IntegratedOverlay() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://web-production-19eef.up.railway.app';
+    
+    // [Fix] 웹소켓 주소 처리 강화
+    let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://web-production-19eef.up.railway.app';
+    if (!wsUrl.startsWith('ws')) {
+        // 상대 경로인 경우 현재 호스트 사용 (개발 환경 등)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}${wsUrl}`;
+    }
+    // 이미 wss://... 형태라면 그대로 사용 (배포 환경)
     
     if (!token) return;
 

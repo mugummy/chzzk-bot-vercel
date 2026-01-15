@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useBotStore } from '@/lib/store';
 import { Gift, Users, Trophy, DollarSign, Play, CheckCircle2, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,14 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
   const [minAmount, setMinAmount] = useState(1000);
 
   const [isRolling, setIsRolling] = useState(false);
+
+  // 애니메이션용 더미 데이터 (실제 참여자가 있으면 그것을 사용)
+  const rollingNames = useMemo(() => {
+      if (draw.participantsList && draw.participantsList.length > 5) {
+          return draw.participantsList; // 실제 참여자
+      }
+      return ['참여자_A', '시청자_B', '구독자_C', '후원자_D', '팬클럽_E', '유입_F', '고인물_G']; 
+  }, [draw.participantsList]);
 
   useEffect(() => {
       if (draw.status === 'rolling') {
@@ -123,6 +131,22 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
              </div>
           </div>
 
+          {/* 참여자 리스트 표시 영역 */}
+          {draw.isCollecting && (
+              <div className="bg-black/20 p-4 rounded-2xl border border-white/5 max-h-32 overflow-y-auto custom-scrollbar">
+                  <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Live Participants ({draw.participantsList?.length || 0})</p>
+                  <div className="flex flex-wrap gap-2">
+                      {draw.participantsList && draw.participantsList.length > 0 ? (
+                          draw.participantsList.map((p, i) => (
+                              <span key={i} className="px-2 py-1 bg-white/5 rounded text-xs font-medium text-gray-300 border border-white/5">{p}</span>
+                          ))
+                      ) : (
+                          <span className="text-gray-600 text-xs italic">대기 중...</span>
+                      )}
+                  </div>
+              </div>
+          )}
+
           {draw.isCollecting && (
               <button onClick={pickWinners} className="w-full py-8 bg-emerald-500 text-black font-black text-3xl rounded-[2.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_50px_rgba(16,185,129,0.3)] flex items-center justify-center gap-4">
                   <Trophy size={40} /> 당첨자 뽑기
@@ -134,48 +158,51 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
               {(isRolling || draw.winners.length > 0) && (
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-black/60 border-2 border-white/10 rounded-[3rem] p-10 min-h-[350px] flex flex-col items-center justify-center relative overflow-hidden"
+                    className="bg-black/60 border-2 border-white/10 rounded-[3rem] p-10 min-h-[400px] flex flex-col items-center justify-center relative overflow-hidden shadow-2xl"
                   >
                       {isRolling ? (
-                          <div className="flex flex-col items-center gap-6">
-                              <div className="flex gap-4">
-                                  {Array.from({length: Math.min(3, winnerCount)}).map((_, slotIdx) => (
-                                      <div key={slotIdx} className="w-48 h-64 bg-white/5 rounded-3xl border-2 border-pink-500/30 overflow-hidden relative">
+                          <div className="flex flex-col items-center gap-8 w-full">
+                              <div className={`grid gap-4 w-full justify-center ${winnerCount > 3 ? 'grid-cols-4' : 'grid-cols-' + winnerCount}`}>
+                                  {Array.from({length: Math.min(4, winnerCount)}).map((_, slotIdx) => (
+                                      <div key={slotIdx} className="w-full max-w-[200px] h-64 bg-white/5 rounded-3xl border-2 border-pink-500/30 overflow-hidden relative shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]">
                                           <motion.div 
-                                            animate={{ y: [-1000, 0] }}
-                                            transition={{ repeat: Infinity, duration: 0.3, ease: "linear" }}
-                                            className="flex flex-col gap-8 py-4 items-center"
+                                            animate={{ y: [-500, 0] }}
+                                            transition={{ repeat: Infinity, duration: 0.2 + (slotIdx * 0.05), ease: "linear" }}
+                                            className="flex flex-col gap-12 py-4 items-center"
                                           >
-                                              {['닉네임_A', '닉네임_B', '닉네임_C', '사용자_X', '시청자_Y', '치지직_Z'].map((name, i) => (
-                                                  <div key={i} className="text-xl font-black text-gray-600 blur-[1px]">{name}</div>
+                                              {/* 롤링 데이터 랜덤 셔플 */}
+                                              {[...rollingNames].sort(() => Math.random() - 0.5).map((name, i) => (
+                                                  <div key={i} className="text-2xl font-black text-gray-500 blur-[1px]">{name}</div>
                                               ))}
                                           </motion.div>
                                           <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none" />
                                       </div>
                                   ))}
                               </div>
-                              <p className="text-pink-500 font-black animate-pulse text-xl uppercase tracking-[0.3em]">Spinning Slots...</p>
+                              <p className="text-pink-500 font-black animate-pulse text-2xl uppercase tracking-[0.5em] drop-shadow-lg">Spinning...</p>
                           </div>
                       ) : (
-                          <div className="w-full space-y-8">
+                          <div className="w-full space-y-10">
                               <div className="flex items-center justify-center gap-4 mb-4">
-                                  <Trophy className="text-yellow-400" size={48} />
-                                  <h3 className="text-4xl font-black text-white italic uppercase tracking-tighter">Congratulations!</h3>
+                                  <Trophy className="text-yellow-400 animate-bounce" size={56} />
+                                  <h3 className="text-5xl font-black text-white italic uppercase tracking-tighter drop-shadow-xl">Congratulations!</h3>
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                              <div className={`grid gap-6 w-full ${draw.winners.length === 1 ? 'grid-cols-1 max-w-md mx-auto' : (draw.winners.length > 3 ? 'grid-cols-3' : 'grid-cols-' + draw.winners.length)}`}>
                                   {draw.winners.map((w: any, i: number) => (
                                       <motion.div 
-                                        initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ delay: i * 0.1, type: 'spring' }}
-                                        key={i} className="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col items-center gap-3 shadow-2xl"
+                                        initial={{ scale: 0, opacity: 0, rotate: -10 }} animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                        transition={{ delay: i * 0.15, type: 'spring', stiffness: 200 }}
+                                        key={i} className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 p-8 rounded-[2.5rem] flex flex-col items-center gap-4 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:scale-105 transition-transform"
                                       >
-                                          <div className="w-12 h-12 bg-yellow-400 text-black flex items-center justify-center rounded-full font-black text-xl shadow-[0_0_20px_rgba(250,204,21,0.4)]">{i+1}</div>
-                                          <span className="text-2xl font-black text-white text-center break-all leading-tight">{w.nickname || w.nick}</span>
-                                          {w.amount && <span className="text-xs font-bold text-emerald-400 font-mono">₩{w.amount.toLocaleString()}</span>}
+                                          <div className="w-16 h-16 bg-yellow-400 text-black flex items-center justify-center rounded-full font-black text-2xl shadow-[0_0_20px_rgba(250,204,21,0.6)]">{i+1}</div>
+                                          <span className="text-3xl font-black text-white text-center break-all leading-tight">{w.nickname || w.nick}</span>
+                                          {w.amount && <span className="text-sm font-bold text-emerald-400 font-mono bg-black/40 px-3 py-1 rounded-full">₩{w.amount.toLocaleString()}</span>}
                                       </motion.div>
                                   ))}
                               </div>
-                              <button onClick={() => { setIsRolling(false); onSend({type:'startDraw', settings: draw.settings}); }} className="mt-8 text-gray-500 hover:text-white text-xs font-bold transition-all uppercase tracking-widest">새로 추첨하기</button>
+                              <div className="text-center pt-4">
+                                  <button onClick={() => { setIsRolling(false); onSend({type:'startDraw', settings: draw.settings}); }} className="text-gray-500 hover:text-white text-sm font-bold transition-all uppercase tracking-widest hover:underline decoration-2 underline-offset-4">새로 추첨하기 (Reset)</button>
+                              </div>
                           </div>
                       )}
                   </motion.div>
