@@ -75,8 +75,9 @@ export default function DashboardPage() {
       case 'voteBallotsResponse': window.dispatchEvent(new CustomEvent('voteBallotsResponse', { detail: payload })); break;
       case 'voteHistoryResponse': window.dispatchEvent(new CustomEvent('voteHistoryResponse', { detail: payload })); break;
       case 'voteWinnerResult': window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload })); break;
+      case 'spinRouletteResult': window.dispatchEvent(new CustomEvent('spinRouletteResult', { detail: payload })); break; // [New]
 
-      case 'newChat': 
+      case 'newChat':  
         currentStore.addChat(payload); 
         if (winner && payload.profile.userIdHash === winner.userIdHash) {
           setWinnerChats(prev => [payload, ...prev].slice(0, 10));
