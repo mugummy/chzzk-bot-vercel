@@ -44,7 +44,6 @@ export default function IntegratedOverlay() {
         }
         if (type === 'voteStateUpdate') setVoteData(payload.currentVote);
         if (type === 'drawStateUpdate') {
-             // 진행 중 상태 업데이트
              if (payload.status === 'idle') setIsRolling(false);
         }
         if (type === 'rouletteStateUpdate') setRouletteData((prev: any) => ({ ...prev, items: payload.items }));
@@ -55,7 +54,6 @@ export default function IntegratedOverlay() {
                 setView('draw');
                 setIsRolling(true);
                 setDrawData({ winners: payload.winners });
-                // 3초 후 롤링 멈춤 (서버와 싱크 맞춤)
                 setTimeout(() => setIsRolling(false), 3000);
             }
             if (payload.type === 'spinRoulette') {
@@ -78,8 +76,7 @@ export default function IntegratedOverlay() {
     const index = items.findIndex((i: any) => i.id === selectedItem.id);
     const segmentAngle = 360 / items.length;
     // 선택된 아이템이 12시 방향(0도)에 오도록 계산
-    // 기본적으로 3시 방향이 0도라고 가정하면 보정 필요하지만 CSS rotate 기준
-    const targetAngle = 360 * 5 + (360 - (index * segmentAngle)); // 5바퀴 + 각도
+    const targetAngle = 360 * 5 + (360 - (index * segmentAngle)) - (segmentAngle / 2); // 5바퀴 + 각도 + 보정
     
     setRouletteRotation(targetAngle);
     setRouletteData((prev: any) => ({ ...prev, selected: selectedItem }));
@@ -150,7 +147,6 @@ export default function IntegratedOverlay() {
                                 transition={{ repeat: Infinity, duration: 0.5, ease: "linear" }}
                                 className="space-y-8 opacity-50 blur-sm"
                             >
-                                {/* 더미 데이터로 롤링 효과 */}
                                 {Array.from({ length: 10 }).map((_, k) => (
                                     <div key={k} className="text-2xl font-black text-gray-500">???</div>
                                 ))}
@@ -168,22 +164,24 @@ export default function IntegratedOverlay() {
           </motion.div>
         )}
 
-        {/* 룰렛 오버레이 */}
+        {/* 룰렛 오버레이 (개선됨) */}
         {view === 'roulette' && rouletteData?.items && (
           <motion.div 
              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-             className="relative"
+             className="relative flex flex-col items-center"
           >
-             {/* 화살표 */}
-             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-white z-50 drop-shadow-xl" />
+             {/* 화살표 (위치 보정) */}
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-50 drop-shadow-xl">
+                <div className="w-0 h-0 border-l-[25px] border-l-transparent border-r-[25px] border-r-transparent border-t-[50px] border-t-white" />
+             </div>
 
              <motion.div
-                className="w-[600px] h-[600px] rounded-full border-8 border-white bg-black shadow-2xl overflow-hidden relative"
+                className="w-[700px] h-[700px] rounded-full border-[12px] border-white bg-black shadow-2xl overflow-hidden relative"
                 animate={{ rotate: rouletteRotation }}
                 transition={{ duration: 5, ease: [0.2, 0.8, 0.2, 1] }}
              >
                 <div 
-                    className="w-full h-full rounded-full"
+                    className="w-full h-full rounded-full relative"
                     style={{ 
                         background: `conic-gradient(${rouletteData.items.map((item: any, i: number, arr: any[]) => {
                             const start = (i / arr.length) * 100;
@@ -191,19 +189,32 @@ export default function IntegratedOverlay() {
                             return `${item.color} ${start}% ${end}%`;
                         }).join(', ')})` 
                     }}
-                />
-                {/* 텍스트 (각 섹션의 중앙에 배치하려면 삼각함수 필요하지만 생략하고 색상만 표시) */}
+                >
+                    {/* 텍스트 라벨 (회전하여 배치) */}
+                    {rouletteData.items.map((item: any, i: number, arr: any[]) => {
+                        const angle = (i * (360 / arr.length)) + (360 / arr.length / 2);
+                        return (
+                            <div 
+                                key={item.id}
+                                className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-8"
+                                style={{ transform: `rotate(${angle}deg)` }}
+                            >
+                                <span className="text-2xl font-black text-white drop-shadow-md whitespace-nowrap -rotate-90">{item.label}</span>
+                            </div>
+                        );
+                    })}
+                </div>
              </motion.div>
              
-             {/* 결과 표시 (회전 끝난 후) */}
+             {/* 결과 표시 */}
              {rouletteData.selected && rouletteRotation > 0 && (
                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ delay: 5.1 }}
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-10 bg-black/80 px-10 py-6 rounded-3xl border border-white/20"
+                    initial={{ opacity: 0, y: 20, scale: 0.8 }} 
+                    animate={{ opacity: 1, y: 0, scale: 1 }} 
+                    transition={{ delay: 5.1, type: 'spring' }}
+                    className="absolute top-full mt-12 bg-white text-black px-12 py-8 rounded-[3rem] shadow-[0_0_50px_rgba(255,255,255,0.5)] border-4 border-white/50 z-50"
                  >
-                     <h2 className="text-5xl font-black text-white text-center">{rouletteData.selected.label}</h2>
+                     <h2 className="text-6xl font-black text-center uppercase tracking-tighter">{rouletteData.selected.label}</h2>
                  </motion.div>
              )}
           </motion.div>

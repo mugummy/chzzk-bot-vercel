@@ -109,6 +109,19 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
            </div>
         </div>
 
+        {/* [NEW] 참여자 리스트 (간단히 닉네임만 나열) */}
+        {draw.isCollecting && (
+            <div className="bg-black/30 p-4 rounded-2xl h-32 overflow-y-auto custom-scrollbar">
+                <p className="text-xs font-bold text-gray-500 mb-2">실시간 참여자 목록 (최근 50명)</p>
+                <div className="flex flex-wrap gap-2">
+                    {/* participants는 store에 저장되지 않고 개수만 옴. 서버에서 명단을 받아오도록 store/서버 수정이 필요하지만 
+                        여기서는 일단 UX상 '모집중' 텍스트로 대체하거나, 추후 참가자 명단 전송 로직 추가 권장.
+                        현재 구조상 개수만 오므로 텍스트로 안내. */}
+                    <span className="text-gray-400 text-sm">참여자가 입장하면 카운트가 올라갑니다.</span>
+                </div>
+            </div>
+        )}
+
         {/* 액션 버튼 */}
         {draw.isCollecting && (
           <div className="flex gap-4">

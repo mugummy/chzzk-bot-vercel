@@ -3,8 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap,
-  Vote, Gift, Disc
+  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
@@ -16,9 +15,7 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
-import VoteTab from '@/components/dashboard/VoteTab';
-import DrawTab from '@/components/dashboard/DrawTab';
-import RouletteTab from '@/components/dashboard/RouletteTab';
+import VotesLayout from '@/components/dashboard/VotesLayout';
 
 import ToastContainer from '@/components/ui/Toast';
 import Toggle from '@/components/ui/Toggle';
@@ -197,9 +194,7 @@ export default function DashboardPage() {
 
         <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="vote" icon={<Vote size={22}/>} label="투표" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="draw" icon={<Gift size={22}/>} label="추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="roulette" icon={<Disc size={22}/>} label="룰렛" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="votes" icon={<BarChart3 size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
@@ -232,9 +227,7 @@ export default function DashboardPage() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
-            {activeTab === 'vote' && <VoteTab onSend={send} />}
-            {activeTab === 'draw' && <DrawTab onSend={send} />}
-            {activeTab === 'roulette' && <RouletteTab onSend={send} />}
+            {activeTab === 'votes' && <VotesLayout onSend={send} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
             {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} onSend={send} />}
