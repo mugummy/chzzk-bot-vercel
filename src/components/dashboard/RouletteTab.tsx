@@ -8,8 +8,6 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
   const [items, setItems] = useState<any[]>(roulette.items || []);
   const [newItem, setNewItem] = useState('');
   const [newWeight, setNewWeight] = useState(1);
-  
-  // 회전 상태 (서버 상태가 없으므로 로컬에서 에뮬레이션하되 이벤트 수신으로 동작)
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -17,14 +15,12 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
   const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899'];
 
   useEffect(() => {
-      // 스토어 업데이트 시 로컬 상태 동기화
       if (roulette.items.length > 0) setItems(roulette.items);
   }, [roulette.items]);
 
   useEffect(() => {
       const handleSpinResult = (e: any) => {
           const selectedItem = e.detail.selectedItem;
-          // 회전 계산
           const index = items.findIndex(i => i.id === selectedItem.id);
           if (index === -1) return;
           
@@ -32,8 +28,12 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
           setResult(null);
 
           const segmentAngle = 360 / items.length;
-          // 12시 방향 기준 (Pointer)
-          const targetAngle = 1800 + (360 - (index * segmentAngle)) - (segmentAngle / 2);
+          // 12시 방향(상단) 기준 회전 계산
+          // 초기 상태에서 0번 아이템이 12시 방향부터 시작하는 것이 아니라면 offset 조정 필요.
+          // 여기서는 conic-gradient 시작점(0도)이 12시라고 가정.
+          // 목표 각도 = (회전수 * 360) + (360 - (중심각도))
+          const centerAngle = (index * segmentAngle) + (segmentAngle / 2);
+          const targetAngle = 1800 + (360 - centerAngle); 
           
           setRotation(targetAngle);
           
@@ -84,7 +84,7 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
     <div className="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="col-span-5 bg-white/5 border border-white/5 p-6 rounded-[2rem] h-fit">
         <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-black flex items-center gap-2"><Disc className="text-indigo-500" /> 룰렛 설정</h3>
+            <h3 className="text-xl font-black flex items-center gap-2"><Disc className="text-indigo-500" /> 룰렛 아이템</h3>
             <button onClick={reset} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><RotateCcw size={18}/></button>
         </div>
         
@@ -119,7 +119,6 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
       <div className="col-span-7 flex flex-col items-center justify-center bg-white/5 border border-white/5 rounded-[2rem] p-10 relative overflow-hidden">
         <div className="absolute inset-0 bg-indigo-500/5 blur-3xl" />
         
-        {/* 대시보드 룰렛 시각화 */}
         <div className="relative mb-10">
             {/* 화살표 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-10 drop-shadow-xl">
@@ -139,15 +138,14 @@ export default function RouletteTab({ onSend }: { onSend: (msg: any) => void }) 
                    {items.map((item, i) => {
                        const angle = (i * (360 / items.length)) + (360 / items.length / 2);
                        return (
-                           <div key={item.id} className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-8" style={{ transform: `rotate(${angle}deg)` }}>
-                               <span className="text-xl font-black text-white drop-shadow-md whitespace-nowrap -rotate-90 uppercase tracking-tight">{item.label}</span>
+                           <div key={item.id} className="absolute top-0 left-1/2 -translate-x-1/2 h-1/2 origin-bottom flex justify-center pt-8 pointer-events-none" style={{ transform: `rotate(${angle}deg)` }}>
+                               <span className="text-xl font-black text-white drop-shadow-md whitespace-nowrap uppercase tracking-tight" style={{ writingMode: 'vertical-rl' }}>{item.label}</span>
                            </div>
                        );
                    })}
                </div>
             </motion.div>
 
-            {/* 결과 팝업 */}
             <AnimatePresence>
                 {result && (
                     <motion.div 

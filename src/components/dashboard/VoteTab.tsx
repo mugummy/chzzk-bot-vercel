@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useBotStore } from '@/lib/store';
-import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X } from 'lucide-react';
 import { Modal } from './Modals';
 
 export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
@@ -15,7 +15,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [winners, setWinners] = useState<any[]>([]);
   const [showNicknames, setShowNicknames] = useState(false);
   
-  // 생성 폼 상태
   const [title, setTitle] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [mode, setMode] = useState<'normal' | 'donation'>('normal');
@@ -48,28 +47,12 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const handleShowBallots = (voteId: string) => onSend({ type: 'getBallots', voteId });
   
   const handleReset = () => {
-      if (confirm('현재 투표 상태를 초기화하고 오버레이를 끕니다. 계속하시겠습니까?')) {
-          onSend({ type: 'resetVote' });
-      }
-  };
-
-  // 항목 이름 찾기 헬퍼
-  const getOptionLabel = (optionId: string) => {
-      // 현재 투표 혹은 히스토리에서 찾기
-      let opt = currentVote?.options.find((o: any) => o.id === optionId);
-      if (opt) return opt.label;
-      // 히스토리 검색 (ballots 모달이 열려있다면 해당 투표 데이터가 필요함. 
-      // 현재 구조상 ballots만 오고 vote 메타데이터는 안옴. 
-      // -> 일단 현재 투표 기준으로 하되, 히스토리는 "항목 X"로 표시될 수 있음. 
-      // 개선: ballots 요청 시 optionMap도 같이 보내야 완벽함. 
-      // 여기서는 현재 투표인 경우만 처리하고 나머지는 optionId 표시.
-      return '항목';
+      if (confirm('현재 투표를 초기화하시겠습니까?')) onSend({ type: 'resetVote' });
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* 상단 탭 */}
       <div className="flex gap-4 border-b border-white/10 pb-4">
           <button onClick={() => setActiveView('current')} className={`px-6 py-2 rounded-xl font-bold transition-all ${activeView === 'current' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>진행 중인 투표</button>
           <button onClick={() => setActiveView('history')} className={`px-6 py-2 rounded-xl font-bold transition-all ${activeView === 'history' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>투표 기록</button>
@@ -78,13 +61,8 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
       {activeView === 'current' && (
           <div className="grid grid-cols-12 gap-8">
               
-              {/* [좌측] 투표 생성 (4/12) */}
               <div className="col-span-4 bg-white/5 border border-white/5 p-8 rounded-[2rem] h-fit">
-                  <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-black flex items-center gap-3"><Vote className="text-emerald-500" /> 새 투표</h3>
-                      {/* 초기화 버튼 */}
-                      <button onClick={handleReset} className="p-2 bg-white/5 rounded-lg hover:bg-red-500 hover:text-white text-gray-500 transition-all" title="초기화"><RotateCcw size={16}/></button>
-                  </div>
+                  <h3 className="text-xl font-black mb-6 flex items-center gap-3"><Vote className="text-emerald-500" /> 새 투표</h3>
                   
                   <div className="space-y-6">
                     <div>
@@ -101,19 +79,17 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                         <div key={i} className="flex gap-2 items-center">
                           <span className="text-xs text-gray-500 w-4 font-bold">{i+1}</span>
                           <input value={opt} onChange={e => {const n=[...options]; n[i]=e.target.value; setOptions(n);}} placeholder={`항목 ${i + 1}`} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white" />
-                          {options.length > 2 && <button onClick={() => setOptions(options.filter((_, idx) => idx !== i))} className="text-gray-600 hover:text-red-500"><Trash2 size={16} /></button>}
+                          {options.length > 2 && <button onClick={() => setOptions(options.filter((_, idx) => idx !== i))} className="text-gray-600 hover:text-red-500"><X size={16} /></button>}
                         </div>
                       ))}
-                      {/* 항목 추가 버튼 개선 */}
-                      <button onClick={() => setOptions([...options, ''])} className="w-full py-2 rounded-xl border border-dashed border-white/10 text-gray-500 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all text-sm font-bold flex items-center justify-center gap-2">
-                        <Plus size={14} /> 항목 추가
-                      </button>
+                      <div className="flex justify-end">
+                          <button onClick={() => setOptions([...options, ''])} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold flex items-center gap-2 transition-all"><Plus size={14} /> 항목 추가</button>
+                      </div>
                     </div>
                     <button onClick={handleCreate} className="w-full py-4 bg-emerald-500 text-black font-black rounded-xl hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">투표 시작하기</button>
                   </div>
               </div>
 
-              {/* [우측] 현재 투표 상태 (8/12) */}
               <div className="col-span-8 relative">
                   {(!currentVote) ? (
                       <div className="h-full bg-white/5 border border-white/5 p-8 rounded-[2rem] flex flex-col items-center justify-center text-gray-500">
@@ -123,7 +99,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                       </div>
                   ) : (
                       <div className="h-full bg-white/5 border border-white/5 p-8 rounded-[2rem] flex flex-col relative overflow-hidden">
-                          {/* 배경 장식 */}
                           <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
                           <div className="flex justify-between items-start mb-8 z-10">
@@ -136,26 +111,26 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                                   </div>
                                   <h2 className="text-4xl font-black tracking-tight">{currentVote.title}</h2>
                               </div>
-                              <div className="flex flex-col gap-2 items-end">
-                                  <div className="text-right">
-                                      <span className="text-xs text-gray-500 font-bold uppercase">Total</span>
-                                      <p className="text-3xl font-black tabular-nums">{currentVote.totalParticipants}</p>
-                                  </div>
-                                  <button onClick={() => onSend({ type: 'toggleOverlay', visible: true, view: 'vote' })} className="px-3 py-1 bg-white/10 rounded text-xs font-bold hover:bg-white/20">오버레이 띄우기</button>
+                              <div className="flex gap-2">
+                                  <button onClick={handleReset} className="p-2 bg-white/5 rounded-lg hover:bg-red-500 hover:text-white text-gray-500 transition-all" title="초기화"><RotateCcw size={18}/></button>
+                                  <button onClick={() => onSend({ type: 'toggleOverlay', visible: true, view: 'vote' })} className="px-3 py-2 bg-white/10 rounded-lg text-xs font-bold hover:bg-white/20">오버레이</button>
                               </div>
                           </div>
 
                           <div className="flex-1 space-y-4 z-10 overflow-y-auto custom-scrollbar pr-2 max-h-[500px]">
-                              {currentVote.options.map((opt: any, i: number) => {
-                                  const total = currentVote.options.reduce((acc: number, o: any) => acc + o.count, 0);
-                                  const percent = total === 0 ? 0 : Math.round((opt.count / total) * 100);
+                              {currentVote.options && currentVote.options.map((opt: any, i: number) => {
+                                  const total = currentVote.totalParticipants || 1; 
+                                  const count = opt.count || 0;
+                                  const percent = total === 0 ? 0 : Math.round((count / total) * 100);
+                                  const label = typeof opt === 'string' ? opt : (opt.label || `항목 ${i+1}`);
+                                  
                                   return (
-                                      <div key={opt.id} className="group relative h-16 bg-black/40 rounded-2xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all">
+                                      <div key={opt.id || i} className="group relative h-16 bg-black/40 rounded-2xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all">
                                           <div className="absolute top-0 left-0 h-full bg-emerald-500/20 transition-all duration-1000 ease-out" style={{ width: `${percent}%` }} />
                                           <div className="absolute inset-0 flex items-center justify-between px-6">
-                                              <span className="font-bold text-lg flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-emerald-500 font-black">{i + 1}</span> {opt.label}</span>
+                                              <span className="font-bold text-lg flex items-center gap-3"><span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-emerald-500 font-black">{i + 1}</span> {label}</span>
                                               <div className="text-right">
-                                                  <span className="font-black text-xl tabular-nums block">{opt.count}</span>
+                                                  <span className="font-black text-xl tabular-nums block">{count}</span>
                                                   <span className="text-[10px] text-gray-500 font-bold">{percent}%</span>
                                               </div>
                                           </div>
@@ -168,7 +143,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                               {currentVote.status === 'ready' && <button onClick={() => onSend({ type: 'startVote' })} className="flex-1 py-4 bg-emerald-500 text-black font-black rounded-2xl hover:scale-[1.02] transition-all">투표 시작</button>}
                               {currentVote.status === 'active' && <button onClick={() => onSend({ type: 'endVote' })} className="flex-1 py-4 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all">투표 마감</button>}
                               
-                              {/* 마감 후 버튼들 */}
                               {currentVote.status === 'ended' && (
                                   <>
                                       <button onClick={() => setActiveView('history')} className="flex-1 py-4 bg-gray-700 text-white font-bold rounded-2xl hover:bg-gray-600 transition-all flex items-center justify-center gap-2">기록으로 이동 <ChevronRight size={18} /></button>
@@ -204,13 +178,9 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                                       <button onClick={() => { if(confirm('삭제하시겠습니까?')) { onSend({type:'deleteVote', voteId:v.id}); setTimeout(() => onSend({type:'getVoteHistory'}), 500); } }} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg"><Trash2 size={18}/></button>
                                   </div>
                               </div>
-                              
-                              {/* 결과 요약 바 */}
                               <div className="h-2 bg-white/10 rounded-full overflow-hidden flex mb-4">
-                                  {/* 상위 1개만 색칠하거나 전체 비율 보여주기 (여기선 단순화) */}
                                   <div className="h-full bg-emerald-500 w-full opacity-50" />
                               </div>
-
                               <div className="flex gap-2 mt-auto">
                                   <button onClick={() => handleShowBallots(v.id)} className="flex-1 py-3 bg-white/5 rounded-xl text-sm font-bold hover:bg-white/10">투표자 목록</button>
                                   <button onClick={() => { const c = prompt("몇 명을 추첨할까요?", "1"); if(c) onSend({type:'pickVoteWinner', voteId:v.id, count:Number(c), optionId:null}); }} className="flex-1 py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all flex items-center justify-center gap-2"><Trophy size={16}/> 추첨하기</button>
@@ -222,7 +192,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       )}
 
-      {/* 투표자 보기 모달 */}
       <Modal isOpen={isBallotModalOpen} onClose={() => setIsBallotModalOpen(false)} title="투표자 명단">
           <div className="space-y-4">
               <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl">
@@ -239,7 +208,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                               <span className="text-[10px] text-gray-500">{new Date(b.timestamp).toLocaleTimeString()}</span>
                           </div>
                           <div className="text-right">
-                              {/* 항목 표시 (가능하다면) */}
                               <span className="block font-bold text-emerald-500">{b.amount}표</span>
                           </div>
                       </div>
@@ -248,7 +216,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       </Modal>
 
-      {/* 추첨 결과 모달 */}
       <Modal isOpen={isWinnerModalOpen} onClose={() => setIsWinnerModalOpen(false)} title="🏆 당첨자 결과">
           <div className="space-y-4 py-6 text-center">
               <Trophy size={64} className="text-yellow-400 mx-auto mb-4 animate-bounce" />

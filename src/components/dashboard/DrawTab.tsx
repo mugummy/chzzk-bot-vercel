@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useBotStore } from '@/lib/store';
-import { Gift, Users, Trophy, DollarSign, Play, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Gift, Users, Trophy, DollarSign, Play, CheckCircle2, RotateCcw, StopCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
@@ -18,7 +18,6 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
   const [isRolling, setIsRolling] = useState(false);
 
-  // 애니메이션용 데이터 (실제 참여자 사용)
   const rollingNames = useMemo(() => {
       if (draw.participantsList && draw.participantsList.length > 0) {
           return draw.participantsList; 
@@ -42,6 +41,10 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
       type: 'startDraw',
       settings: { target, winnerCount, command: useCommand ? command : null, minAmount: donationMode === 'min' ? minAmount : 0, allowDuplicate }
     });
+  };
+
+  const stopDraw = () => {
+      onSend({ type: 'stopDraw' });
   };
 
   const pickWinners = () => {
@@ -69,7 +72,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
             {subTab === 'chat' && (
                 <>
                     <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-widest">Entry Method</label>
+                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-widest">참여 방식</label>
                         <div className="flex gap-2">
                             <button onClick={() => setUseCommand(false)} className={`flex-1 py-3 border rounded-xl font-bold transition-all ${!useCommand ? 'bg-pink-500/10 border-pink-500 text-pink-500' : 'border-white/5 text-gray-500 hover:bg-white/5'}`}>모든 채팅</button>
                             <button onClick={() => setUseCommand(true)} className={`flex-1 py-3 border rounded-xl font-bold transition-all ${useCommand ? 'bg-pink-500/10 border-pink-500 text-pink-500' : 'border-white/5 text-gray-500 hover:bg-white/5'}`}>명령어 입력</button>
@@ -88,7 +91,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
             {subTab === 'donation' && (
                 <div className="space-y-3">
-                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-widest">Amount Filter</label>
+                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-widest">후원 금액 조건</label>
                     <div className="flex gap-2">
                         <button onClick={() => setDonationMode('all')} className={`flex-1 py-3 border rounded-xl font-bold ${donationMode === 'all' ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500' : 'border-white/5 text-gray-500'}`}>모든 금액</button>
                         <button onClick={() => setDonationMode('min')} className={`flex-1 py-3 border rounded-xl font-bold ${donationMode === 'min' ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500' : 'border-white/5 text-gray-500'}`}>특정 금액</button>
@@ -99,7 +102,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
             <div className="space-y-3">
                 <div className="flex justify-between items-center ml-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Winners</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">당첨 인원</label>
                     <span className="text-pink-500 font-black">{winnerCount}명</span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -109,7 +112,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
             </div>
 
             <button onClick={startDraw} disabled={draw.isCollecting} className={`w-full py-4 rounded-xl font-black text-lg shadow-xl transition-all ${draw.isCollecting ? 'bg-white/5 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02]'}`}>
-                {draw.isCollecting ? '참여자 모집 중...' : '추첨 시작 (모집)'}
+                {draw.isCollecting ? '모집 중...' : '모집 시작'}
             </button>
         </div>
       </div>
@@ -119,15 +122,15 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
           <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between relative overflow-hidden h-40 shadow-2xl">
              <div className="absolute top-0 right-0 p-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
              <div>
-                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Entry Pool</p>
-                 <h2 className="text-4xl font-black text-white italic">{draw.isCollecting ? 'Collecting Chat...' : 'Ready to Spin'}</h2>
+                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                 <h2 className="text-4xl font-black text-white italic">{draw.isCollecting ? 'Collecting...' : (draw.status === 'completed' ? 'Done' : 'Ready')}</h2>
              </div>
              <div className="flex items-center gap-4 z-10">
                  <div className="bg-black/40 px-8 py-4 rounded-[2rem] border border-white/5 text-right">
-                     <p className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-1">Total Entries</p>
+                     <p className="text-[10px] font-black text-pink-500 uppercase tracking-[0.2em] mb-1">Entries</p>
                      <p className="text-5xl font-black tabular-nums text-white">{draw.participantCount}</p>
                  </div>
-                 <button onClick={reset} className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"><RotateCcw size={24}/></button>
+                 <button onClick={reset} className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all" title="초기화"><RotateCcw size={24}/></button>
              </div>
           </div>
 
@@ -141,17 +144,25 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
                               <span key={i} className="px-2 py-1 bg-white/5 rounded text-xs font-medium text-gray-300 border border-white/5">{p}</span>
                           ))
                       ) : (
-                          <span className="text-gray-600 text-xs italic">대기 중...</span>
+                          <span className="text-gray-600 text-xs italic">참여자가 없습니다.</span>
                       )}
                   </div>
               </div>
           )}
 
-          {draw.isCollecting && (
-              <button onClick={pickWinners} className="w-full py-8 bg-emerald-500 text-black font-black text-3xl rounded-[2.5rem] hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_50px_rgba(16,185,129,0.3)] flex items-center justify-center gap-4">
-                  <Trophy size={40} /> 당첨자 뽑기
-              </button>
-          )}
+          {/* 액션 버튼 (모집 마감 -> 추첨하기) */}
+          <div className="flex gap-4">
+              {draw.isCollecting && (
+                  <button onClick={stopDraw} className="flex-1 py-6 bg-red-500 text-white font-black text-2xl rounded-[2.5rem] hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+                      <StopCircle size={32} /> 모집 마감
+                  </button>
+              )}
+              {!draw.isCollecting && draw.status !== 'completed' && draw.participantCount > 0 && (
+                  <button onClick={pickWinners} className="flex-1 py-6 bg-emerald-500 text-black font-black text-2xl rounded-[2.5rem] hover:scale-[1.02] transition-all shadow-[0_0_30px_rgba(16,185,129,0.4)] flex items-center justify-center gap-3">
+                      <Trophy size={32} /> 당첨자 뽑기
+                  </button>
+              )}
+          </div>
 
           {/* 대시보드 슬롯머신 애니메이션 */}
           <AnimatePresence mode="wait">
@@ -164,16 +175,19 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
                           <div className="flex flex-col items-center gap-8 w-full">
                               <div className={`grid gap-4 w-full justify-center ${winnerCount > 3 ? 'grid-cols-4' : 'grid-cols-' + winnerCount}`}>
                                   {Array.from({length: Math.min(4, winnerCount)}).map((_, slotIdx) => (
-                                      <div key={slotIdx} className="w-full max-w-[200px] h-64 bg-white/5 rounded-3xl border-2 border-pink-500/30 overflow-hidden relative shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]">
+                                      <div key={slotIdx} className="w-full min-w-[150px] h-64 bg-white/5 rounded-3xl border-2 border-pink-500/30 overflow-hidden relative shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]">
                                           <motion.div 
                                             animate={{ y: [-500, 0] }}
                                             transition={{ repeat: Infinity, duration: 0.2 + (slotIdx * 0.05), ease: "linear" }}
                                             className="flex flex-col gap-12 py-4 items-center"
                                           >
-                                              {/* 롤링 데이터 랜덤 셔플 */}
-                                              {[...rollingNames].sort(() => Math.random() - 0.5).map((name, i) => (
-                                                  <div key={i} className="text-2xl font-black text-gray-500 blur-[1px]">{name}</div>
-                                              ))}
+                                              {rollingNames.length > 0 ? (
+                                                  [...rollingNames, ...rollingNames].sort(() => Math.random() - 0.5).slice(0, 20).map((name, i) => (
+                                                      <div key={i} className="text-2xl font-black text-gray-500 blur-[1px]">{name}</div>
+                                                  ))
+                                              ) : (
+                                                  <div className="text-xl font-bold text-gray-700">참여자 없음</div>
+                                              )}
                                           </motion.div>
                                           <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none" />
                                       </div>
