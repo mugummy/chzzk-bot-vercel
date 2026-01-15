@@ -15,6 +15,12 @@ export interface BotStore extends BotState {
   updateGreet: (payload: any) => void;
   setChatHistory: (history: any[]) => void;
   addChat: (chat: any) => void;
+  
+  // [New Updaters]
+  updateVote: (payload: any) => void;
+  updateDraw: (payload: any) => void;
+  updateRoulette: (payload: any) => void;
+  updateOverlay: (payload: any) => void;
 }
 
 export const useBotStore = create<BotStore>((set) => ({
@@ -32,6 +38,12 @@ export const useBotStore = create<BotStore>((set) => ({
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
   points: {},
   chatHistory: [],
+  
+  // [New Initial States]
+  vote: { currentVote: null },
+  draw: { isCollecting: false, participantCount: 0, settings: null, status: 'idle', winners: [] },
+  roulette: { items: [] },
+  overlay: { isVisible: true, currentView: 'none' },
 
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
@@ -53,4 +65,10 @@ export const useBotStore = create<BotStore>((set) => ({
   updateGreet: (payload) => set({ greet: { settings: payload.settings, historyCount: payload.historyCount } }),
   setChatHistory: (history) => set({ chatHistory: history }),
   addChat: (chat) => set((state) => ({ chatHistory: [chat, ...state.chatHistory].slice(0, 50) })),
+
+  // [New Actions]
+  updateVote: (payload) => set({ vote: payload }),
+  updateDraw: (payload) => set({ draw: payload }),
+  updateRoulette: (payload) => set({ roulette: payload }),
+  updateOverlay: (payload) => set({ overlay: payload }),
 }));
