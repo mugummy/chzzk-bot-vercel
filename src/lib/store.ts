@@ -44,7 +44,6 @@ export const useBotStore = create<BotStore>((set) => ({
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
   
-  // [설정 업데이트]
   updateSettings: (newSettings) => set((state) => ({ 
     settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
   })),
@@ -53,31 +52,21 @@ export const useBotStore = create<BotStore>((set) => ({
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
   
-  // [투표 업데이트] 서버 payload: { currentVote, history }
-  updateVotes: (payload) => set({ 
+  // 투표 업데이트 (현재 진행 중인 투표와 과거 기록 동시 처리)
+  updateVotes: (payload) => set((state) => ({ 
     votes: payload.currentVote ? [payload.currentVote] : [],
-    voteHistory: payload.history || []
-  }),
+    voteHistory: payload.history || state.voteHistory
+  })),
 
-  // [룰렛 업데이트] 서버 payload: { items, isSpinning, winner }
-  updateRoulette: (payload) => set({ 
-    roulette: { 
-      items: payload.items || [], 
-      isSpinning: payload.isSpinning || false, 
-      winner: payload.winner 
-    } 
-  }),
+  // 룰렛 업데이트
+  updateRoulette: (payload) => set((state) => ({ 
+    roulette: { ...state.roulette, ...payload } 
+  })),
 
-  // [추첨 업데이트] 서버 payload: { isActive, candidates, candidatesCount, ... }
-  updateDraw: (payload) => set({ 
-    draw: {
-      isActive: payload.isActive || false,
-      candidates: payload.candidates || [],
-      candidatesCount: payload.candidatesCount || 0,
-      isRolling: payload.isRolling || false,
-      winners: payload.winners || []
-    }
-  }),
+  // 추첨 업데이트 (isActive 플래그 보존)
+  updateDraw: (payload) => set((state) => ({ 
+    draw: { ...state.draw, ...payload } 
+  })),
   
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
   
