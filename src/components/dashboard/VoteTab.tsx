@@ -29,73 +29,20 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [options, setOptions] = useState(['', '']);
   const [mode, setMode] = useState<'normal' | 'donation'>('normal');
 
-  // 슬롯머신 아이템 렌더링 헬퍼 (최적화 버전)
-  const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
-      const pool = ballots.map(b => b.nickname);
-      // 데이터가 적을 때 반복해서 채워줌 (최소 50개 이상)
-      const baseItems = pool.length > 0 ? pool : ["..."];
-      const repeatCount = Math.ceil(50 / baseItems.length) + 1;
-      
-      // [중요] 당첨자가 마지막에 오도록 구성
-      // 1. 랜덤 더미들
-      const dummyItems = Array(repeatCount).fill(baseItems).flat();
-      // 2. 마지막에 당첨자 추가
-      const finalItems = [...dummyItems, winnerName];
-      
-      const itemHeight = 100; // 칸 높이
-      const totalHeight = finalItems.length * itemHeight;
-      // 최종 위치: 전체 높이 - 뷰포트 높이(300) + 중앙 정렬 보정
-      // 뷰포트가 300이고 아이템이 100이면, 마지막 아이템(winner)이 가운데 오도록
-      // y를 -(totalHeight - itemHeight) - (300 - itemHeight)/2 ... 복잡하니
-      // 그냥 마지막 아이템이 뷰포트 중앙에 오도록 y값 계산.
-      // 마지막 아이템의 top 위치 = (finalItems.length - 1) * 100
-      // 뷰포트 중앙 = 150. 
-      // 이동해야 할 y값 = -(마지막아이템top) + 150 - (itemHeight/2)
-      const finalY = -((finalItems.length - 1) * itemHeight) + (300 - itemHeight) / 2;
-
-      return (
-          <div className="w-72 h-[300px] bg-[#222] rounded-3xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-start">
-              {/* 회전부 */}
-              <motion.div
-                  initial={{ y: 0 }} 
-                  animate={{ y: finalY }}
-                  transition={{
-                      duration: 4, 
-                      delay: delay,
-                      ease: [0.1, 0.9, 0.2, 1.0] // Custom Bezier for realistic slot machine (Start slow, fast middle, slow end)
-                  }}
-                  className="flex flex-col items-center w-full absolute top-0"
-              >
-                  {finalItems.map((name, i) => (
-                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full flex-shrink-0">
-                          {/* 마지막 아이템(당첨자)만 강조 */}
-                          <span className={`truncate px-4 ${i === finalItems.length - 1 ? 'text-5xl font-black text-emerald-400 scale-110' : 'text-4xl font-black text-white/30 blur-[0.5px]'}`}>
-                              {name}
-                          </span>
-                      </div>
-                  ))}
-              </motion.div>
-              
-              {/* [Design] 마스크 및 중앙 하이라이트 */}
-              <div className="absolute top-0 left-0 w-full h-[100px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
-              <div className="absolute top-[100px] left-0 w-full h-[100px] bg-white/5 z-0 rounded-lg" /> 
-              <div className="absolute bottom-0 left-0 w-full h-[100px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
-          </div>
-      );
-  };
-
   useEffect(() => {
     const handleBallots = (e: any) => { setBallots(e.detail); setIsBallotModalOpen(true); };
     const handleHistory = (e: any) => { setHistory(e.detail); };
     
-    // [Fix] 상태 기반이 아닌 단일 이벤트로 처리
+    // [Fix] 애니메이션 시간 연장 및 단계 세분화
     const handleWinner = (e: any) => { 
         setWinners(e.detail); 
         setIsPickModalOpen(false); 
         setIsWinnerModalOpen(true); 
-        // 4.5초 후 결과 공개 (애니메이션 4초 + 여유 0.5초)
-        setIsRolling(true);
-        setTimeout(() => setIsRolling(false), 4500); 
+        
+        setAnimationPhase('accel');
+        setTimeout(() => setAnimationPhase('spin'), 1000); // 1초 가속
+        setTimeout(() => setAnimationPhase('decel'), 4000); // 3초 고속 회전
+        setTimeout(() => setAnimationPhase('stop'), 6000); // 2초 감속 후 정지 (총 6초)
     };
 
     window.addEventListener('voteBallotsResponse', handleBallots);
@@ -110,6 +57,93 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
         window.removeEventListener('voteWinnerResult', handleWinner);
     };
   }, [activeView]);
+
+  const handleCreate = () => {
+    const validOptions = options.filter(o => o.trim());
+    if (!title.trim() || validOptions.length < 2) return alert('제목과 최소 2개의 항목이 필요합니다.');
+    onSend({ type: 'createVote', title, options: validOptions, mode });
+    setTitle(''); setOptions(['', '']);
+  };
+
+  const handleShowBallots = (voteId: string) => onSend({ type: 'getBallots', voteId });
+  
+  const handleReset = () => {
+      if (confirm('현재 투표를 초기화하시겠습니까? (기록에는 남습니다)')) {
+          onSend({ type: 'resetVote' });
+          setTitle(''); setOptions(['', '']);
+      }
+  };
+
+  const handleMoveToHistory = () => {
+      onSend({ type: 'resetVote' }); 
+      setActiveView('history');      
+      setTimeout(() => onSend({ type: 'getVoteHistory' }), 1000); 
+  };
+
+  const openPickModal = (voteId: string) => {
+      onSend({ type: 'getBallots', voteId });
+      setTargetVoteId(voteId);
+      setPickCount(1);
+      setPickFilter('all');
+      setIsPickModalOpen(true);
+  };
+
+  const executePick = () => {
+      if (!targetVoteId) return;
+      onSend({ type: 'pickVoteWinner', voteId: targetVoteId, count: pickCount, filter: pickFilter, optionId: null });
+  };
+
+  const sliderStyle = {
+      background: `linear-gradient(to right, #10b981 0%, #10b981 ${(pickCount - 1) * (100 / 9)}%, #374151 ${(pickCount - 1) * (100 / 9)}%, #374151 100%)`
+  };
+
+  // [Fix] 슬롯머신 디자인 개선 (속도 조절, 구분선 삭제, 중앙 강조 확대)
+  const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
+      const pool = ballots.map(b => b.nickname);
+      // 데이터가 적을 때 반복해서 채워줌
+      const rollingItems = pool.length > 0 
+        ? Array(20).fill(pool).flat().slice(0, 50) 
+        : Array(50).fill("집계 중...");
+      
+      const itemHeight = 100; // 칸 높이 확대
+      const totalHeight = rollingItems.length * itemHeight;
+
+      return (
+          <div className="w-72 h-[300px] bg-[#222] rounded-3xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-center">
+              {/* 회전부 */}
+              <motion.div
+                  initial={{ y: -totalHeight + 300 }} 
+                  animate={
+                      animationPhase === 'accel' ? { y: [-100, 0], transition: { duration: 1, ease: "easeIn" } } :
+                      animationPhase === 'spin' ? { y: [-totalHeight/2, 0], transition: { repeat: Infinity, duration: 0.8, ease: "linear" } } : // 속도 조절 (0.5 -> 0.8)
+                      animationPhase === 'decel' ? { y: [0, 200], transition: { duration: 2, ease: "easeOut" } } : 
+                      { y: 0 } 
+                  }
+                  className="flex flex-col-reverse items-center w-full absolute top-0 w-full"
+                  style={{ top: animationPhase === 'stop' ? '50%' : 'auto', transform: animationPhase === 'stop' ? 'translateY(-50%)' : 'none' }}
+              >
+                  {/* 회전 중 보여줄 아이템들 */}
+                  {animationPhase !== 'stop' && rollingItems.map((name, i) => (
+                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full">
+                          <span className="text-4xl font-black text-white/50 truncate px-4">{name}</span>
+                      </div>
+                  ))}
+                  
+                  {/* 최종 결과 아이템 */}
+                  {animationPhase === 'stop' && (
+                      <div style={{ height: itemHeight }} className="flex items-center justify-center w-full">
+                          <span className="text-5xl font-black text-emerald-400 truncate px-2 scale-110">{winnerName}</span>
+                      </div>
+                  )}
+              </motion.div>
+              
+              {/* [Design] 마스크 및 중앙 하이라이트 (구분선 삭제) */}
+              <div className="absolute top-0 left-0 w-full h-[100px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-[100px] left-0 w-full h-[100px] bg-white/5 z-0 rounded-lg" /> {/* 중앙 강조 */}
+              <div className="absolute bottom-0 left-0 w-full h-[100px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
+          </div>
+      );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -209,7 +243,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                   <span className="font-bold text-white">총 {ballots.length}명 참여</span>
                   <button onClick={() => setShowNicknames(!showNicknames)} className="flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 transition-all">{showNicknames ? <EyeOff size={14} /> : <Eye size={14} />} {showNicknames ? '닉네임 가리기' : '닉네임 보기'}</button>
               </div>
-              
               <div className="max-h-[500px] overflow-y-auto custom-scrollbar space-y-6 pr-2">
                   {/* 현재 투표 정보가 있으면 항목별 그룹화 */}
                   {currentVote && currentVote.options ? currentVote.options.map((opt: any) => {
@@ -219,42 +252,14 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
 
                       return (
                           <div key={opt.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                              <div className="flex justify-between items-end mb-2">
-                                  <h4 className="font-bold text-lg text-white">{label}</h4>
-                                  <span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span>
-                              </div>
-                              
-                              {/* 퍼센트 바 */}
-                              <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4">
-                                  <div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} />
-                              </div>
-
-                              {/* 투표자 리스트 (inline-flex로 변경하여 너비 최적화) */}
-                              {voters.length === 0 ? (
-                                  <p className="text-xs text-gray-600 italic">투표자가 없습니다.</p>
-                              ) : (
-                                  <div className="flex flex-wrap gap-2">
-                                      {voters.map((b, idx) => (
-                                          <div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5">
-                                              <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div>
-                                              <span className="text-sm font-medium text-gray-300">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span>
-                                              {b.amount > 1 && <span className="text-[10px] text-yellow-500 ml-1 font-mono">+{b.amount}</span>}
-                                          </div>
-                                      ))}
-                                  </div>
-                              )}
+                              <div className="flex justify-between items-end mb-2"><h4 className="font-bold text-lg text-white">{label}</h4><span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span></div>
+                              <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4"><div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} /></div>
+                              <div className="grid grid-cols-2 gap-2">{voters.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
                           </div>
                       );
                   }) : (
                       // 투표 기록에서 열어서 옵션 정보가 없을 때: 전체 리스트 표시
-                      <div className="flex flex-wrap gap-2">
-                          {ballots.map((b, idx) => (
-                              <div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5">
-                                  <span className="text-sm font-medium text-gray-300">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span>
-                              </div>
-                          ))}
-                          {ballots.length === 0 && <p className="col-span-2 text-center text-gray-500 w-full">투표자가 없습니다.</p>}
-                      </div>
+                      <div className="flex flex-wrap gap-2">{ballots.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
                   )}
               </div>
           </div>
@@ -302,7 +307,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                           </div>
                       ) : (
                           <div className="flex flex-col items-center gap-10 w-full animate-in zoom-in duration-500">
-                              <div className="flex items-center gap-4"><Trophy size={80} className="text-yellow-400 animate-bounce" /><h2 className="text-7xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl">Congratulations!</h2></div>
+                              <div className="flex items-center gap-4"><Trophy size={80} className="text-yellow-400 animate-bounce" /><h2 className="text-7xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl">Winners!</h2></div>
                               <div className={`grid gap-8 w-full ${winners.length > 3 ? 'grid-cols-4' : 'grid-cols-' + winners.length} justify-center`}>
                                   {winners.map((w, i) => (
                                       <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.2 }} key={i} className="bg-gradient-to-br from-emerald-500/20 to-black border border-emerald-500/50 p-10 rounded-[3rem] flex flex-col items-center gap-6 shadow-[0_0_50px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform">
