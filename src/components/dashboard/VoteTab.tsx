@@ -30,20 +30,19 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [mode, setMode] = useState<'normal' | 'donation'>('normal');
 
   useEffect(() => {
-    const handleBallots = (e: any) => { setBallots(e.detail); };
+    const handleBallots = (e: any) => { setBallots(e.detail); setIsBallotModalOpen(true); };
     const handleHistory = (e: any) => { setHistory(e.detail); };
     
-    // 당첨자 수신 시 애니메이션 시퀀스 시작
+    // [Fix] 애니메이션 시간 연장 및 단계 세분화
     const handleWinner = (e: any) => { 
         setWinners(e.detail); 
         setIsPickModalOpen(false); 
         setIsWinnerModalOpen(true); 
         
-        // 애니메이션 시퀀스
         setAnimationPhase('accel');
-        setTimeout(() => setAnimationPhase('spin'), 500); // 0.5초 가속
-        setTimeout(() => setAnimationPhase('decel'), 2500); // 2초 고속 회전 후 감속
-        setTimeout(() => setAnimationPhase('stop'), 3500); // 1초 감속 후 정지
+        setTimeout(() => setAnimationPhase('spin'), 1000); // 1초 가속
+        setTimeout(() => setAnimationPhase('decel'), 4000); // 3초 고속 회전
+        setTimeout(() => setAnimationPhase('stop'), 6000); // 2초 감속 후 정지 (총 6초)
     };
 
     window.addEventListener('voteBallotsResponse', handleBallots);
@@ -66,10 +65,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
     setTitle(''); setOptions(['', '']);
   };
 
-  const handleShowBallots = (voteId: string) => {
-      onSend({ type: 'getBallots', voteId });
-      setIsBallotModalOpen(true);
-  };
+  const handleShowBallots = (voteId: string) => onSend({ type: 'getBallots', voteId });
   
   const handleReset = () => {
       if (confirm('현재 투표를 초기화하시겠습니까? (기록에는 남습니다)')) {
@@ -85,7 +81,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   };
 
   const openPickModal = (voteId: string) => {
-      // 추첨 전 최신 ballot 데이터 확보 (닉네임 표시용)
       onSend({ type: 'getBallots', voteId });
       setTargetVoteId(voteId);
       setPickCount(1);
@@ -102,43 +97,51 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
       background: `linear-gradient(to right, #10b981 0%, #10b981 ${(pickCount - 1) * (100 / 9)}%, #374151 ${(pickCount - 1) * (100 / 9)}%, #374151 100%)`
   };
 
-  // 슬롯머신 아이템 렌더링 헬퍼
+  // [Fix] 슬롯머신 디자인 및 애니메이션 대폭 수정 (위에서 아래로)
   const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
-      // [Fix] Mock Data 삭제. 실제 데이터만 사용.
       const pool = ballots.map(b => b.nickname);
-      
-      // 애니메이션을 위해 리스트 반복 (실제 참여자가 최소 1명이라도 있어야 함)
       const rollingItems = pool.length > 0 
-        ? [...pool, ...pool, ...pool, ...pool, ...pool].slice(0, 50)
-        : Array(10).fill("집계 중..."); 
+        ? Array(20).fill(pool).flat() // 데이터를 충분히 불림
+        : Array(50).fill("집계 중...");
       
+      const itemHeight = 80; // 닉네임 한 칸의 높이 (px)
+      const totalHeight = rollingItems.length * itemHeight;
+
       return (
-          <div className="w-64 h-80 bg-[#1a1a1a] rounded-3xl border-4 border-emerald-500/50 overflow-hidden relative shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]">
+          <div className="w-64 h-[240px] bg-[#222] rounded-xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-center">
+              {/* 회전부 */}
               <motion.div
-                  initial={{ y: 0 }}
+                  initial={{ y: -totalHeight + 240 }} 
                   animate={
-                      animationPhase === 'accel' ? { y: -500, transition: { duration: 0.5, ease: "easeIn" } } :
-                      animationPhase === 'spin' ? { y: [-500, -2000], transition: { repeat: Infinity, duration: 0.2, ease: "linear" } } :
-                      animationPhase === 'decel' ? { y: [-2000, -3500], transition: { duration: 1, ease: "easeOut" } } :
-                      { y: -3500 } // Stop position (should match winner index, but simplifying visual trick)
+                      animationPhase === 'accel' ? { y: [-100, 0], transition: { duration: 1, ease: "easeIn" } } :
+                      animationPhase === 'spin' ? { y: [-totalHeight/2, 0], transition: { repeat: Infinity, duration: 0.5, ease: "linear" } } : // 고속 회전 (위에서 아래로)
+                      animationPhase === 'decel' ? { y: [0, 200], transition: { duration: 2, ease: "easeOut" } } : // 감속
+                      { y: 0 } 
                   }
-                  className="flex flex-col items-center w-full"
+                  className="flex flex-col-reverse items-center w-full absolute top-0 w-full"
+                  style={{ top: animationPhase === 'stop' ? '50%' : 'auto', transform: animationPhase === 'stop' ? 'translateY(-50%)' : 'none' }}
               >
-                  {/* 회전하는 동안 보일 리스트 */}
-                  {rollingItems.map((name, i) => (
-                      <div key={i} className="h-20 flex items-center justify-center w-full">
-                          <span className={`text-4xl font-black ${animationPhase === 'spin' ? 'blur-sm text-white/30' : 'text-white'} truncate px-4`}>{name}</span>
+                  {/* 회전 중 보여줄 아이템들 */}
+                  {animationPhase !== 'stop' && rollingItems.map((name, i) => (
+                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full border-b border-white/5">
+                          <span className="text-3xl font-black text-white/50 truncate px-4">{name}</span>
                       </div>
                   ))}
-                  {/* 감속 후 최종적으로 보여줄 당첨자 (마지막에 배치) */}
-                  <div className="h-80 flex items-center justify-center w-full bg-emerald-500/20">
-                      <span className="text-5xl font-black text-white truncate px-2">{winnerName}</span>
-                  </div>
+                  
+                  {/* 최종 결과 아이템 (멈췄을 때만 중앙에 표시) */}
+                  {animationPhase === 'stop' && (
+                      <div style={{ height: itemHeight }} className="flex items-center justify-center w-full">
+                          <span className="text-4xl font-black text-emerald-400 truncate px-2 scale-110">{winnerName}</span>
+                      </div>
+                  )}
               </motion.div>
               
-              {/* 중앙 강조 라인 및 마스크 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none" />
-              <div className="absolute top-1/2 left-0 w-full h-1 bg-emerald-500/50 -translate-y-1/2 shadow-[0_0_20px_#10b981]" />
+              {/* [Design] 구분선 및 마스크 */}
+              <div className="absolute top-0 left-0 w-full h-[80px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-[80px] left-0 w-full h-[2px] bg-emerald-500/50 z-20 shadow-[0_0_10px_#10b981]" />
+              <div className="absolute top-[80px] left-0 w-full h-[80px] bg-white/5 z-0" />
+              <div className="absolute top-[160px] left-0 w-full h-[2px] bg-emerald-500/50 z-20 shadow-[0_0_10px_#10b981]" />
+              <div className="absolute bottom-0 left-0 w-full h-[80px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
           </div>
       );
   };
@@ -153,7 +156,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
 
       {activeView === 'current' && (
           <div className="grid grid-cols-12 gap-8">
-              {/* 좌측 패널 (생략 없이) */}
               <div className="col-span-4 bg-white/5 border border-white/5 p-8 rounded-[2rem] h-fit">
                   <h3 className="text-xl font-black mb-6 flex items-center gap-3"><Vote className="text-emerald-500" /> 새 투표</h3>
                   <div className="space-y-6">
@@ -164,7 +166,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                   </div>
               </div>
 
-              {/* 우측 패널 */}
               <div className="col-span-8 relative">
                   {(!currentVote) ? (
                       <div className="h-full bg-white/5 border border-white/5 p-8 rounded-[2rem] flex flex-col items-center justify-center text-gray-500">
@@ -215,7 +216,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       )}
 
-      {/* History 뷰 */}
       {activeView === 'history' && (
           <div className="space-y-4">
               {history.length === 0 ? <div className="text-center py-20 text-gray-500 bg-white/5 rounded-[2rem] border border-white/5"><RefreshCw size={48} className="mx-auto mb-4 opacity-50" /><p>투표 기록이 없습니다.</p></div> : (
@@ -237,7 +237,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       )}
 
-      {/* 모달 1: 투표자 보기 */}
       <Modal isOpen={isBallotModalOpen} onClose={() => setIsBallotModalOpen(false)} title="투표자 상세 현황">
           <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
@@ -248,22 +247,20 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                   {currentVote && currentVote.options ? currentVote.options.map((opt: any) => {
                       const voters = ballots.filter(b => b.optionId === opt.id);
                       const percent = ballots.length === 0 ? 0 : Math.round((voters.length / ballots.length) * 100);
-                      const label = typeof opt === 'string' ? opt : (opt.label || '항목');
                       return (
                           <div key={opt.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                              <div className="flex justify-between items-end mb-2"><h4 className="font-bold text-lg text-white">{label}</h4><span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span></div>
+                              <div className="flex justify-between items-end mb-2"><h4 className="font-bold text-lg text-white">{opt.label || '항목'}</h4><span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span></div>
                               <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4"><div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} /></div>
-                              <div className="flex flex-wrap gap-2">{voters.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300">{showNicknames ? b.nickname : `익명`}</span></div>))}</div>
+                              <div className="grid grid-cols-2 gap-2">{voters.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
                           </div>
                       );
                   }) : (
-                      <div className="flex flex-wrap gap-2">{ballots.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><span className="text-sm font-medium text-gray-300">{showNicknames ? b.nickname : `익명`}</span></div>))}</div>
+                      <div className="flex flex-wrap gap-2">{ballots.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
                   )}
               </div>
           </div>
       </Modal>
 
-      {/* 모달 2: 추첨 설정 */}
       <Modal isOpen={isPickModalOpen} onClose={() => setIsPickModalOpen(false)} title="당첨자 추첨 설정">
           <div className="space-y-8 py-4">
               <div>
@@ -285,7 +282,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       </Modal>
 
-      {/* 모달 3: 결과 슬롯머신 (고품질 애니메이션) */}
       <AnimatePresence>
           {isWinnerModalOpen && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl">
@@ -295,7 +291,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                       {animationPhase !== 'stop' ? (
                           <div className="flex flex-col items-center gap-12 w-full">
                               <h2 className="text-6xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl">Drawing...</h2>
-                              <div className="flex gap-6 justify-center w-full">
+                              <div className="flex gap-6 justify-center w-full flex-wrap">
                                   {/* 당첨 인원수만큼 슬롯 */}
                                   {Array.from({length: Math.min(3, pickCount)}).map((_, i) => (
                                       <SlotColumn key={i} winnerName={winners[i]?.nickname || '???'} delay={i * 0.2} />
