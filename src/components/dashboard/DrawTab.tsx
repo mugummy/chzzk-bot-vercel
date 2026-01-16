@@ -18,19 +18,52 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
   const [isRolling, setIsRolling] = useState(false);
 
-  // 애니메이션용 데이터
-  const rollingNames = useMemo(() => {
-      if (draw.participantsList && draw.participantsList.length > 0) {
-          return draw.participantsList; 
-      }
-      return []; 
-  }, [draw.participantsList]);
+  // 슬롯머신 렌더링 (최적화 버전)
+  const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
+      // 데이터 준비
+      const pool = draw.participantsList && draw.participantsList.length > 0 ? draw.participantsList : ["..."];
+      const repeatCount = Math.ceil(50 / pool.length) + 1;
+      const dummyItems = Array(repeatCount).fill(pool).flat();
+      const finalItems = [...dummyItems, winnerName];
+      
+      const itemHeight = 100;
+      const totalHeight = finalItems.length * itemHeight;
+      const finalY = -((finalItems.length - 1) * itemHeight) + (300 - itemHeight) / 2;
+
+      return (
+          <div className="w-72 h-[300px] bg-[#222] rounded-3xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-start">
+              <motion.div
+                  initial={{ y: 0 }} 
+                  animate={{ y: finalY }}
+                  transition={{
+                      duration: 4, 
+                      delay: delay,
+                      ease: [0.1, 0.9, 0.2, 1.0] 
+                  }}
+                  className="flex flex-col items-center w-full absolute top-0"
+              >
+                  {finalItems.map((name, i) => (
+                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full flex-shrink-0">
+                          <span className={`truncate px-4 ${i === finalItems.length - 1 ? 'text-5xl font-black text-pink-400 scale-110' : 'text-4xl font-black text-white/30 blur-[0.5px]'}`}>
+                              {name}
+                          </span>
+                      </div>
+                  ))}
+              </motion.div>
+              
+              <div className="absolute top-0 left-0 w-full h-[100px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-[100px] left-0 w-full h-[100px] bg-white/5 z-0 rounded-lg" /> 
+              <div className="absolute bottom-0 left-0 w-full h-[100px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
+          </div>
+      );
+  };
 
   useEffect(() => {
       if (draw.status === 'rolling') {
           setIsRolling(true);
       } else if (draw.status === 'completed') {
-          setTimeout(() => setIsRolling(false), 500);
+          // 애니메이션 시간(4초) + 여유(0.5초) 후 결과 화면으로 전환
+          setTimeout(() => setIsRolling(false), 4500);
       }
   }, [draw.status]);
 
