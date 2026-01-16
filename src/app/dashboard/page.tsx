@@ -115,6 +115,9 @@ export default function DashboardPage() {
     ws.onopen = () => {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
+      
+      // [Fix] 5초 타임아웃: 서버 응답 없어도 로딩 해제
+      setTimeout(() => setIsLoading(false), 5000);
     };
 
     ws.onmessage = (e) => {
