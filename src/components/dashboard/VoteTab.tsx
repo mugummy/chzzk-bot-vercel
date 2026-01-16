@@ -254,7 +254,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                           <div key={opt.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
                               <div className="flex justify-between items-end mb-2"><h4 className="font-bold text-lg text-white">{label}</h4><span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span></div>
                               <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4"><div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} /></div>
-                              <div className="grid grid-cols-2 gap-2">{voters.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
+                              <div className="flex flex-wrap gap-2">{voters.map((b, idx) => (<div key={idx} className="inline-flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg border border-white/5"><div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>))}</div>
                           </div>
                       );
                   }) : (
@@ -298,7 +298,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                           <div className="flex flex-col items-center gap-12 w-full">
                               <h2 className="text-6xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl">Drawing...</h2>
                               <div className="flex gap-6 justify-center w-full flex-wrap">
-                                  {/* 당첨 인원수만큼 슬롯 */}
                                   {Array.from({length: Math.min(3, pickCount)}).map((_, i) => (
                                       <SlotColumn key={i} winnerName={winners[i]?.nickname || '???'} delay={i * 0.2} />
                                   ))}
