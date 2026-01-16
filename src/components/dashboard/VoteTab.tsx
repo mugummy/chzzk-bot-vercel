@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useBotStore } from '@/lib/store';
 import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X } from 'lucide-react';
 import { Modal } from './Modals';
+import { motion } from 'framer-motion';
 
 export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const { vote } = useBotStore();
@@ -10,9 +11,14 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [activeView, setActiveView] = useState<'current' | 'history'>('current');
   const [ballots, setBallots] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  
   const [isBallotModalOpen, setIsBallotModalOpen] = useState(false);
+  
+  // 추첨 관련 상태
   const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
   const [winners, setWinners] = useState<any[]>([]);
+  const [isRolling, setIsRolling] = useState(false);
+  
   const [showNicknames, setShowNicknames] = useState(false);
   
   const [title, setTitle] = useState('');
@@ -22,7 +28,14 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   useEffect(() => {
     const handleBallots = (e: any) => { setBallots(e.detail); setIsBallotModalOpen(true); };
     const handleHistory = (e: any) => { setHistory(e.detail); };
-    const handleWinner = (e: any) => { setWinners(e.detail); setIsWinnerModalOpen(true); };
+    
+    // [Fix] 당첨자 수신 시 슬롯머신 애니메이션 시작
+    const handleWinner = (e: any) => { 
+        setWinners(e.detail); 
+        setIsWinnerModalOpen(true); 
+        setIsRolling(true);
+        setTimeout(() => setIsRolling(false), 3000); // 3초 후 결과 공개
+    };
 
     window.addEventListener('voteBallotsResponse', handleBallots);
     window.addEventListener('voteHistoryResponse', handleHistory);
@@ -41,7 +54,6 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
     const validOptions = options.filter(o => o.trim());
     if (!title.trim() || validOptions.length < 2) return alert('제목과 최소 2개의 항목이 필요합니다.');
     onSend({ type: 'createVote', title, options: validOptions, mode });
-    // 생성 후 입력 폼은 유지할지 비울지 선택 사항이나, 사용자 경험상 비우는게 깔끔함.
     setTitle(''); setOptions(['', '']);
   };
 
@@ -50,16 +62,15 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const handleReset = () => {
       if (confirm('현재 투표를 초기화하시겠습니까? (기록에는 남습니다)')) {
           onSend({ type: 'resetVote' });
-          // 입력 폼 초기화
-          setTitle('');
-          setOptions(['', '']);
+          setTitle(''); setOptions(['', '']);
       }
   };
 
   const handleMoveToHistory = () => {
       onSend({ type: 'resetVote' }); 
       setActiveView('history');      
-      setTimeout(() => onSend({ type: 'getVoteHistory' }), 500); // 딜레이 늘림
+      // [Fix] 딜레이 증가 (DB 반영 시간 확보)
+      setTimeout(() => onSend({ type: 'getVoteHistory' }), 1000); 
   };
 
   return (
@@ -67,7 +78,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
       
       <div className="flex gap-4 border-b border-white/10 pb-4">
           <button onClick={() => setActiveView('current')} className={`px-6 py-2 rounded-xl font-bold transition-all ${activeView === 'current' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>진행 중인 투표</button>
-          <button onClick={() => setActiveView('history')} className={`px-6 py-2 rounded-xl font-bold transition-all ${activeView === 'history' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>투표 기록</button>
+          <button onClick={() => { setActiveView('history'); onSend({ type: 'getVoteHistory' }); }} className={`px-6 py-2 rounded-xl font-bold transition-all ${activeView === 'history' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>투표 기록</button>
       </div>
 
       {activeView === 'current' && (
@@ -208,7 +219,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       )}
 
-      {/* 투표자 보기 모달 */}
+      {/* [Fix] 투표자 보기 모달 개선 */}
       <Modal isOpen={isBallotModalOpen} onClose={() => setIsBallotModalOpen(false)} title="투표자 상세 현황">
           <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
@@ -271,22 +282,36 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       </Modal>
 
+      {/* [Fix] 투표 결과 추첨 모달 개선 (슬롯머신) */}
       <Modal isOpen={isWinnerModalOpen} onClose={() => setIsWinnerModalOpen(false)} title="🏆 당첨자 결과">
-          <div className="space-y-4 py-6 text-center">
-              <Trophy size={64} className="text-yellow-400 mx-auto mb-4 animate-bounce" />
-              {winners.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                      {winners.map((w, i) => (
-                          <div key={i} className="bg-gradient-to-r from-emerald-500/20 to-transparent border border-emerald-500/30 p-4 rounded-xl flex items-center gap-4 animate-in zoom-in">
-                              <div className="w-10 h-10 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black text-lg shadow-lg">{i+1}</div>
-                              <div className="text-xl font-black text-white">{w.nickname}</div>
-                          </div>
-                      ))}
+          <div className="space-y-4 py-6 text-center min-h-[300px] flex flex-col items-center justify-center">
+              {isRolling ? (
+                  <div className="space-y-6">
+                      <div className="text-6xl font-black text-emerald-500 animate-pulse">???</div>
+                      <p className="text-gray-400 font-bold tracking-widest uppercase animate-bounce">Picking Winners...</p>
                   </div>
               ) : (
-                  <p className="text-gray-500">당첨자가 없습니다. (참여자가 없거나 추첨 오류)</p>
+                  <>
+                      <Trophy size={64} className="text-yellow-400 mx-auto mb-6 animate-bounce" />
+                      {winners.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-3 w-full">
+                              {winners.map((w, i) => (
+                                  <motion.div 
+                                    initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}
+                                    key={i} 
+                                    className="bg-gradient-to-r from-emerald-500/20 to-transparent border border-emerald-500/30 p-6 rounded-2xl flex items-center gap-6"
+                                  >
+                                      <div className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black text-xl shadow-lg">{i+1}</div>
+                                      <div className="text-2xl font-black text-white">{w.nickname}</div>
+                                  </motion.div>
+                              ))}
+                          </div>
+                      ) : (
+                          <p className="text-gray-500 font-bold">당첨자가 없습니다. (참여자가 없거나 추첨 오류)</p>
+                      )}
+                      <button onClick={() => setIsWinnerModalOpen(false)} className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all mt-8">닫기</button>
+                  </>
               )}
-              <button onClick={() => setIsWinnerModalOpen(false)} className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all mt-6">닫기</button>
           </div>
       </Modal>
     </div>
