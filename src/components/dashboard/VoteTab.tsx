@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useBotStore } from '@/lib/store';
-import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X } from 'lucide-react';
+import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X, CheckCircle } from 'lucide-react';
 import { Modal } from './Modals';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const { vote } = useBotStore();
@@ -12,10 +12,17 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [ballots, setBallots] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   
+  // 모달 상태
   const [isBallotModalOpen, setIsBallotModalOpen] = useState(false);
+  const [isPickModalOpen, setIsPickModalOpen] = useState(false); // 추첨 설정 모달
+  const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false); // 결과 모달
   
-  // 추첨 관련 상태
-  const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
+  // 추첨 설정 상태
+  const [targetVoteId, setTargetVoteId] = useState<string | null>(null);
+  const [pickCount, setPickCount] = useState(1);
+  const [pickFilter, setPickFilter] = useState<'all' | 'win' | 'lose'>('all');
+
+  // 결과 애니메이션 상태
   const [winners, setWinners] = useState<any[]>([]);
   const [isRolling, setIsRolling] = useState(false);
   
@@ -29,10 +36,10 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
     const handleBallots = (e: any) => { setBallots(e.detail); setIsBallotModalOpen(true); };
     const handleHistory = (e: any) => { setHistory(e.detail); };
     
-    // [Fix] 당첨자 수신 시 슬롯머신 애니메이션 시작
     const handleWinner = (e: any) => { 
         setWinners(e.detail); 
-        setIsWinnerModalOpen(true); 
+        setIsPickModalOpen(false); // 설정 모달 닫기
+        setIsWinnerModalOpen(true); // 결과 모달 열기
         setIsRolling(true);
         setTimeout(() => setIsRolling(false), 3000); // 3초 후 결과 공개
     };
@@ -69,8 +76,20 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const handleMoveToHistory = () => {
       onSend({ type: 'resetVote' }); 
       setActiveView('history');      
-      // [Fix] 딜레이 증가 (DB 반영 시간 확보)
       setTimeout(() => onSend({ type: 'getVoteHistory' }), 1000); 
+  };
+
+  // 추첨 설정 모달 열기
+  const openPickModal = (voteId: string) => {
+      setTargetVoteId(voteId);
+      setPickCount(1);
+      setPickFilter('all');
+      setIsPickModalOpen(true);
+  };
+
+  const executePick = () => {
+      if (!targetVoteId) return;
+      onSend({ type: 'pickVoteWinner', voteId: targetVoteId, count: pickCount, filter: pickFilter, optionId: null });
   };
 
   return (
@@ -173,7 +192,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                               {currentVote.status === 'ended' && (
                                   <>
                                       <button onClick={handleMoveToHistory} className="flex-1 py-4 bg-gray-700 text-white font-bold rounded-2xl hover:bg-gray-600 transition-all flex items-center justify-center gap-2">기록으로 이동 <ChevronRight size={18} /></button>
-                                      <button onClick={() => { const c = prompt("몇 명을 추첨할까요?", "1"); if(c) onSend({type:'pickVoteWinner', voteId:currentVote.id, count:Number(c), optionId:null}); }} className="px-6 bg-emerald-500/20 text-emerald-500 font-black rounded-2xl hover:bg-emerald-500 hover:text-black transition-all border border-emerald-500/50 flex items-center gap-2"><Trophy size={18} /> 결과 추첨</button>
+                                      <button onClick={() => openPickModal(currentVote.id)} className="px-6 bg-emerald-500/20 text-emerald-500 font-black rounded-2xl hover:bg-emerald-500 hover:text-black transition-all border border-emerald-500/50 flex items-center gap-2"><Trophy size={18} /> 결과 추첨</button>
                                   </>
                               )}
                               
@@ -205,12 +224,9 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                                       <button onClick={() => { if(confirm('삭제하시겠습니까?')) { onSend({type:'deleteVote', voteId:v.id}); setTimeout(() => onSend({type:'getVoteHistory'}), 500); } }} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg"><Trash2 size={18}/></button>
                                   </div>
                               </div>
-                              <div className="h-2 bg-white/10 rounded-full overflow-hidden flex mb-4">
-                                  <div className="h-full bg-emerald-500 w-full opacity-50" />
-                              </div>
                               <div className="flex gap-2 mt-auto">
                                   <button onClick={() => handleShowBallots(v.id)} className="flex-1 py-3 bg-white/5 rounded-xl text-sm font-bold hover:bg-white/10">투표자 목록</button>
-                                  <button onClick={() => { const c = prompt("몇 명을 추첨할까요?", "1"); if(c) onSend({type:'pickVoteWinner', voteId:v.id, count:Number(c), optionId:null}); }} className="flex-1 py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all flex items-center justify-center gap-2"><Trophy size={16}/> 추첨하기</button>
+                                  <button onClick={() => openPickModal(v.id)} className="flex-1 py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-sm font-bold hover:bg-emerald-500 hover:text-black transition-all flex items-center justify-center gap-2"><Trophy size={16}/> 추첨하기</button>
                               </div>
                           </div>
                       ))}
@@ -219,7 +235,7 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           </div>
       )}
 
-      {/* [Fix] 투표자 보기 모달 개선 */}
+      {/* 모달 1: 투표자 보기 */}
       <Modal isOpen={isBallotModalOpen} onClose={() => setIsBallotModalOpen(false)} title="투표자 상세 현황">
           <div className="space-y-6">
               <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
@@ -228,67 +244,81 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                       {showNicknames ? <EyeOff size={14} /> : <Eye size={14} />} {showNicknames ? '닉네임 가리기' : '닉네임 보기'}
                   </button>
               </div>
-              
               <div className="max-h-[500px] overflow-y-auto custom-scrollbar space-y-6 pr-2">
-                  {/* 현재 투표 정보가 있으면 항목별 그룹화 */}
-                  {currentVote && currentVote.options ? (
-                      currentVote.options.map((opt: any) => {
-                          const voters = ballots.filter(b => b.optionId === opt.id);
-                          const percent = ballots.length === 0 ? 0 : Math.round((voters.length / ballots.length) * 100);
-                          const label = typeof opt === 'string' ? opt : (opt.label || '항목');
-
-                          return (
-                              <div key={opt.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                  <div className="flex justify-between items-end mb-2">
-                                      <h4 className="font-bold text-lg text-white">{label}</h4>
-                                      <span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span>
-                                  </div>
-                                  
-                                  {/* 퍼센트 바 */}
-                                  <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4">
-                                      <div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} />
-                                  </div>
-
-                                  {/* 투표자 리스트 */}
-                                  {voters.length === 0 ? (
-                                      <p className="text-xs text-gray-600 italic">투표자가 없습니다.</p>
-                                  ) : (
-                                      <div className="grid grid-cols-2 gap-2">
-                                          {voters.map((b, idx) => (
-                                              <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg">
-                                                  <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-gray-400">{idx+1}</div>
-                                                  <span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span>
-                                                  {b.amount > 1 && <span className="text-[10px] text-yellow-500 ml-auto font-mono">+{b.amount}</span>}
-                                              </div>
-                                          ))}
-                                      </div>
-                                  )}
+                  {/* 옵션별 그룹화 */}
+                  {currentVote && currentVote.options ? currentVote.options.map((opt: any) => {
+                      const voters = ballots.filter(b => b.optionId === opt.id);
+                      const percent = ballots.length === 0 ? 0 : Math.round((voters.length / ballots.length) * 100);
+                      const label = typeof opt === 'string' ? opt : (opt.label || '항목');
+                      return (
+                          <div key={opt.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                              <div className="flex justify-between items-end mb-2">
+                                  <h4 className="font-bold text-lg text-white">{label}</h4>
+                                  <span className="text-xs font-bold text-emerald-500">{voters.length}명 ({percent}%)</span>
                               </div>
-                          );
-                      })
-                  ) : (
-                      // 투표 기록에서 열어서 옵션 정보가 없을 때: 전체 리스트 표시
+                              <div className="h-1.5 bg-black/40 rounded-full overflow-hidden mb-4"><div className="h-full bg-emerald-500" style={{ width: `${percent}%` }} /></div>
+                              {voters.length === 0 ? <p className="text-xs text-gray-600 italic">투표자가 없습니다.</p> : (
+                                  <div className="grid grid-cols-2 gap-2">
+                                      {voters.map((b, idx) => (
+                                          <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg"><div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-gray-400">{idx+1}</div><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span>{b.amount > 1 && <span className="text-[10px] text-yellow-500 ml-auto font-mono">+{b.amount}</span>}</div>
+                                      ))}
+                                  </div>
+                              )}
+                          </div>
+                      );
+                  }) : (
                       <div className="grid grid-cols-2 gap-2">
                           {ballots.map((b, idx) => (
-                              <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg">
-                                  <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-gray-400">{idx+1}</div>
-                                  <span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span>
-                              </div>
+                              <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg"><span className="text-sm font-medium text-gray-300 truncate">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0,4)})`}</span></div>
                           ))}
-                          {ballots.length === 0 && <p className="col-span-2 text-center text-gray-500">투표자가 없습니다.</p>}
                       </div>
                   )}
               </div>
           </div>
       </Modal>
 
-      {/* [Fix] 투표 결과 추첨 모달 개선 (슬롯머신) */}
+      {/* 모달 2: 추첨 설정 */}
+      <Modal isOpen={isPickModalOpen} onClose={() => setIsPickModalOpen(false)} title="당첨자 추첨 설정">
+          <div className="space-y-6 py-4">
+              <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2">추첨 인원 ({pickCount}명)</label>
+                  <input type="range" min="1" max="10" value={pickCount} onChange={e => setPickCount(Number(e.target.value))} className="w-full accent-emerald-500 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mb-2" />
+                  <div className="flex justify-between text-[10px] text-gray-500 font-bold"><span>1명</span><span>10명</span></div>
+              </div>
+              <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2">추첨 대상</label>
+                  <div className="grid grid-cols-3 gap-2">
+                      {[
+                          { id: 'all', label: '전체 추첨' },
+                          { id: 'win', label: '이긴 항목' },
+                          { id: 'lose', label: '진 항목' }
+                      ].map((f) => (
+                          <button key={f.id} onClick={() => setPickFilter(f.id as any)} className={`py-3 rounded-xl text-sm font-bold border transition-all ${pickFilter === f.id ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-black/20 border-white/10 text-gray-400 hover:text-white'}`}>
+                              {f.label}
+                          </button>
+                      ))}
+                  </div>
+              </div>
+              <button onClick={executePick} className="w-full py-4 bg-emerald-500 text-black font-black rounded-xl hover:bg-emerald-400 transition-all shadow-lg">추첨 시작</button>
+          </div>
+      </Modal>
+
+      {/* 모달 3: 추첨 결과 (슬롯머신 애니메이션) */}
       <Modal isOpen={isWinnerModalOpen} onClose={() => setIsWinnerModalOpen(false)} title="🏆 당첨자 결과">
-          <div className="space-y-4 py-6 text-center min-h-[300px] flex flex-col items-center justify-center">
+          <div className="space-y-4 py-6 text-center min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden">
               {isRolling ? (
-                  <div className="space-y-6">
-                      <div className="text-6xl font-black text-emerald-500 animate-pulse">???</div>
-                      <p className="text-gray-400 font-bold tracking-widest uppercase animate-bounce">Picking Winners...</p>
+                  <div className="space-y-8 flex flex-col items-center">
+                      <div className="flex gap-4">
+                          {Array.from({length: Math.min(3, pickCount)}).map((_, i) => (
+                              <div key={i} className="w-32 h-40 bg-white/5 rounded-2xl border border-emerald-500/30 overflow-hidden relative">
+                                  <motion.div animate={{ y: [-500, 0] }} transition={{ repeat: Infinity, duration: 0.2 + (i * 0.05), ease: "linear" }} className="flex flex-col gap-8 py-4 items-center">
+                                      {Array.from({length: 10}).map((_, k) => <div key={k} className="text-4xl font-black text-gray-600 blur-[1px]">?</div>)}
+                                  </motion.div>
+                                  <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black" />
+                              </div>
+                          ))}
+                      </div>
+                      <p className="text-emerald-500 font-black animate-pulse text-xl uppercase tracking-[0.5em]">Picking Winners...</p>
                   </div>
               ) : (
                   <>
@@ -296,18 +326,14 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
                       {winners.length > 0 ? (
                           <div className="grid grid-cols-1 gap-3 w-full">
                               {winners.map((w, i) => (
-                                  <motion.div 
-                                    initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}
-                                    key={i} 
-                                    className="bg-gradient-to-r from-emerald-500/20 to-transparent border border-emerald-500/30 p-6 rounded-2xl flex items-center gap-6"
-                                  >
-                                      <div className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black text-xl shadow-lg">{i+1}</div>
+                                  <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} key={i} className="bg-gradient-to-r from-emerald-500/20 to-transparent border border-emerald-500/30 p-6 rounded-2xl flex items-center gap-6 shadow-lg">
+                                      <div className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black text-xl shadow-md">{i+1}</div>
                                       <div className="text-2xl font-black text-white">{w.nickname}</div>
                                   </motion.div>
                               ))}
                           </div>
                       ) : (
-                          <p className="text-gray-500 font-bold">당첨자가 없습니다. (참여자가 없거나 추첨 오류)</p>
+                          <p className="text-gray-500 font-bold">대상자가 없습니다.</p>
                       )}
                       <button onClick={() => setIsWinnerModalOpen(false)} className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all mt-8">닫기</button>
                   </>
