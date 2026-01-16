@@ -18,52 +18,11 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
 
   const [isRolling, setIsRolling] = useState(false);
 
-  // 슬롯머신 렌더링 (최적화 버전)
-  const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
-      // 데이터 준비
-      const pool = draw.participantsList && draw.participantsList.length > 0 ? draw.participantsList : ["..."];
-      const repeatCount = Math.ceil(50 / pool.length) + 1;
-      const dummyItems = Array(repeatCount).fill(pool).flat();
-      const finalItems = [...dummyItems, winnerName];
-      
-      const itemHeight = 100;
-      const totalHeight = finalItems.length * itemHeight;
-      const finalY = -((finalItems.length - 1) * itemHeight) + (300 - itemHeight) / 2;
-
-      return (
-          <div className="w-72 h-[300px] bg-[#222] rounded-3xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-start">
-              <motion.div
-                  initial={{ y: 0 }} 
-                  animate={{ y: finalY }}
-                  transition={{
-                      duration: 4, 
-                      delay: delay,
-                      ease: [0.1, 0.9, 0.2, 1.0] 
-                  }}
-                  className="flex flex-col items-center w-full absolute top-0"
-              >
-                  {finalItems.map((name, i) => (
-                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full flex-shrink-0">
-                          <span className={`truncate px-4 ${i === finalItems.length - 1 ? 'text-5xl font-black text-pink-400 scale-110' : 'text-4xl font-black text-white/30 blur-[0.5px]'}`}>
-                              {name}
-                          </span>
-                      </div>
-                  ))}
-              </motion.div>
-              
-              <div className="absolute top-0 left-0 w-full h-[100px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
-              <div className="absolute top-[100px] left-0 w-full h-[100px] bg-white/5 z-0 rounded-lg" /> 
-              <div className="absolute bottom-0 left-0 w-full h-[100px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
-          </div>
-      );
-  };
-
   useEffect(() => {
       if (draw.status === 'rolling') {
           setIsRolling(true);
       } else if (draw.status === 'completed') {
-          // 애니메이션 시간(4초) + 여유(0.5초) 후 결과 화면으로 전환
-          setTimeout(() => setIsRolling(false), 4500);
+          setTimeout(() => setIsRolling(false), 4500); 
       }
   }, [draw.status]);
 
@@ -91,6 +50,46 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
           onSend({ type: 'resetDraw' });
           setIsRolling(false);
       }
+  };
+
+  // [Fix] SlotColumn 내부에서 rollingItems 자체 생성
+  const SlotColumn = ({ winnerName, delay }: { winnerName: string, delay: number }) => {
+      const pool = draw.participantsList && draw.participantsList.length > 0 ? draw.participantsList : ["..."];
+      // 데이터 불리기
+      const repeatCount = Math.ceil(50 / pool.length) + 1;
+      const dummyItems = Array(repeatCount).fill(pool).flat();
+      const finalItems = [...dummyItems, winnerName];
+      
+      const itemHeight = 100;
+      const totalHeight = finalItems.length * itemHeight;
+      const finalY = -((finalItems.length - 1) * itemHeight) + (300 - itemHeight) / 2;
+
+      return (
+          <div className="w-72 h-[300px] bg-[#222] rounded-3xl border-4 border-[#444] overflow-hidden relative shadow-2xl flex flex-col justify-start">
+              <motion.div
+                  initial={{ y: 0 }} 
+                  animate={{ y: finalY }}
+                  transition={{ 
+                      duration: 4, 
+                      delay: delay,
+                      ease: [0.1, 0.9, 0.2, 1.0] 
+                  }}
+                  className="flex flex-col items-center w-full absolute top-0"
+              >
+                  {finalItems.map((name, i) => (
+                      <div key={i} style={{ height: itemHeight }} className="flex items-center justify-center w-full flex-shrink-0">
+                          <span className={`truncate px-4 ${i === finalItems.length - 1 ? 'text-5xl font-black text-emerald-400 scale-110' : 'text-4xl font-black text-white/30 blur-[0.5px]'}`}>
+                              {name}
+                          </span>
+                      </div>
+                  ))}
+              </motion.div>
+              
+              <div className="absolute top-0 left-0 w-full h-[100px] bg-gradient-to-b from-[#111] to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-[100px] left-0 w-full h-[100px] bg-white/5 z-0 rounded-lg" /> 
+              <div className="absolute bottom-0 left-0 w-full h-[100px] bg-gradient-to-t from-[#111] to-transparent z-10 pointer-events-none" />
+          </div>
+      );
   };
 
   return (
@@ -146,14 +145,13 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
             </div>
 
             <button onClick={startDraw} disabled={draw.isCollecting} className={`w-full py-4 rounded-xl font-black text-lg shadow-xl transition-all ${draw.isCollecting ? 'bg-white/5 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:scale-[1.02]'}`}>
-                {draw.isCollecting ? '모집 중...' : '모집 시작'}
+                {draw.isCollecting ? '참여자 모집 중...' : '모집 시작'}
             </button>
         </div>
       </div>
 
       {/* 오른쪽: 결과 및 애니메이션 */}
       <div className="col-span-8 space-y-6">
-          {/* 상태 카드 */}
           <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex items-center justify-between relative overflow-hidden h-40 shadow-2xl">
              <div className="absolute top-0 right-0 p-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
              <div>
@@ -187,7 +185,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
               </div>
           )}
 
-          {/* 버튼 그룹 */}
+          {/* 액션 버튼 */}
           <div className="flex gap-4">
               {draw.isCollecting && (
                   <button onClick={stopDraw} className="flex-1 py-6 bg-red-500 text-white font-black text-2xl rounded-[2.5rem] hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
@@ -201,7 +199,7 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
               )}
           </div>
 
-          {/* [Fix] 개선된 슬롯머신 애니메이션 */}
+          {/* 대시보드 슬롯머신 애니메이션 */}
           <AnimatePresence mode="wait">
               {(isRolling || draw.winners.length > 0) && (
                   <motion.div 
@@ -214,26 +212,13 @@ export default function DrawTab({ onSend }: { onSend: (msg: any) => void }) {
                           {isRolling ? (
                               <div className="flex flex-col items-center gap-12 w-full">
                                   <h2 className="text-6xl font-black text-white italic uppercase tracking-tighter drop-shadow-2xl">Drawing...</h2>
-                                  <div className="flex gap-4 justify-center w-full">
+                                  <div className="flex gap-6 justify-center w-full flex-wrap">
                                       {/* 당첨 인원수만큼 슬롯 생성 */}
                                       {Array.from({length: Math.min(3, winnerCount)}).map((_, i) => (
-                                          <div key={i} className="w-64 h-80 bg-[#1a1a1a] rounded-3xl border-4 border-pink-500/50 overflow-hidden relative shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]">
-                                              <motion.div 
-                                                animate={{ y: [-1000, 0] }} 
-                                                transition={{ repeat: Infinity, duration: 0.2 + (i * 0.05), ease: "linear" }} 
-                                                className="flex flex-col gap-20 py-10 items-center"
-                                              >
-                                                  {/* 실제 참여자 리스트 사용 */}
-                                                  {(rollingNames.length > 0 ? rollingNames : Array(10).fill('???')).map((name, k) => (
-                                                      <div key={k} className="text-5xl font-black text-white/30 truncate max-w-[90%]">{name}</div>
-                                                  ))}
-                                              </motion.div>
-                                              <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none" />
-                                              <div className="absolute top-1/2 left-0 w-full h-1 bg-pink-500/30 -translate-y-1/2" />
-                                          </div>
+                                          <SlotColumn key={i} winnerName={draw.winners[i]?.nickname || draw.winners[i]?.nick || '???'} delay={i * 0.2} />
                                       ))}
                                   </div>
-                                  <p className="text-pink-500 font-black animate-pulse text-3xl uppercase tracking-[0.5em] drop-shadow-2xl">Picking...</p>
+                                  <p className="text-pink-500 font-black animate-pulse text-3xl uppercase tracking-[0.5em] drop-shadow-2xl mt-8">Spinning...</p>
                               </div>
                           ) : (
                               <div className="flex flex-col items-center gap-10 w-full animate-in zoom-in duration-500">
