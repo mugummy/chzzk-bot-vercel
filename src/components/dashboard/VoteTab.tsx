@@ -1,8 +1,82 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useBotStore } from '@/lib/store';
-import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X } from 'lucide-react';
+import { Plus, Trash2, Play, Square, Activity, DollarSign, Vote, Users, List, RefreshCw, Eye, EyeOff, Trophy, RotateCcw, ChevronRight, X, Sparkles, Star, PartyPopper } from 'lucide-react';
 import { Modal } from './Modals';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// 축하 파티클 컴포넌트
+const Confetti = () => {
+  const particles = useMemo(() =>
+    Array.from({ length: 60 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      delay: Math.random() * 1.5,
+      duration: 2.5 + Math.random() * 2,
+      size: 8 + Math.random() * 8,
+      color: ['#10b981', '#22c55e', '#fbbf24', '#f472b6', '#60a5fa', '#a78bfa', '#34d399'][Math.floor(Math.random() * 7)]
+    })), []
+  );
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-sm"
+          style={{
+            left: `${p.x}%`,
+            backgroundColor: p.color,
+            width: p.size,
+            height: p.size,
+          }}
+          initial={{ y: -20, opacity: 1, rotate: 0, scale: 1 }}
+          animate={{
+            y: '100vh',
+            opacity: [1, 1, 0],
+            rotate: 720,
+            scale: [1, 1.2, 0.8]
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: 'linear'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// 반짝이는 별 효과
+const StarBurst = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {Array.from({ length: 15 }).map((_, i) => (
+      <motion.div
+        key={i}
+        className="absolute"
+        style={{
+          left: `${10 + Math.random() * 80}%`,
+          top: `${10 + Math.random() * 80}%`
+        }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{
+          scale: [0, 1.5, 0],
+          opacity: [0, 1, 0],
+          rotate: [0, 180]
+        }}
+        transition={{
+          duration: 1.5,
+          delay: Math.random() * 2,
+          repeat: Infinity,
+          repeatDelay: Math.random() * 2
+        }}
+      >
+        <Star size={20} className="text-yellow-400" fill="currentColor" />
+      </motion.div>
+    ))}
+  </div>
+);
 
 // 타입 정의
 interface VoteOption {
@@ -61,6 +135,9 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   const [options, setOptions] = useState(['', '']);
   const [mode, setMode] = useState<'normal' | 'donation'>('normal');
 
+  // 모달 열림 목적 추적 (투표자 보기 vs 추첨용 데이터 로딩)
+  const ballotsRequestPurpose = useRef<'view' | 'pick'>('view');
+
   // 슬롯머신용 닉네임 풀 생성
   const nicknamePool = useMemo(() => {
     if (ballots.length > 0) {
@@ -72,7 +149,11 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   useEffect(() => {
     const handleBallots = (e: CustomEvent<Ballot[]>) => {
       setBallots(e.detail);
-      setIsBallotModalOpen(true);
+      // 목적에 따라 모달 열기 결정
+      if (ballotsRequestPurpose.current === 'view') {
+        setIsBallotModalOpen(true);
+      }
+      // 'pick' 목적이면 모달 열지 않음 (데이터만 로딩)
     };
     const handleHistory = (e: CustomEvent<VoteData[]>) => {
       setHistory(e.detail);
@@ -85,8 +166,8 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
 
       // 애니메이션 시퀀스
       setAnimationPhase('rolling');
-      setTimeout(() => setAnimationPhase('stopping'), 3000);
-      setTimeout(() => setAnimationPhase('done'), 5000);
+      setTimeout(() => setAnimationPhase('stopping'), 2500);
+      setTimeout(() => setAnimationPhase('done'), 4500);
     };
 
     window.addEventListener('voteBallotsResponse', handleBallots as EventListener);
@@ -124,7 +205,9 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
     setOptions(['', '']);
   };
 
+  // 투표자 목록 보기 (모달 열림)
   const handleShowBallots = (voteId: string, voteData?: VoteData) => {
+    ballotsRequestPurpose.current = 'view';
     if (voteData) setTargetVoteData(voteData);
     else if (currentVote) setTargetVoteData(currentVote);
     onSend({ type: 'getBallots', voteId });
@@ -139,13 +222,17 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
   };
 
   const handleMoveToHistory = () => {
-    onSend({ type: 'resetVote' });
-    setActiveView('history');
-    setTimeout(() => onSend({ type: 'getVoteHistory' }), 500);
+    onSend({ type: 'endVote' }); // 먼저 종료 처리
+    setTimeout(() => {
+      onSend({ type: 'resetVote' });
+      setActiveView('history');
+      setTimeout(() => onSend({ type: 'getVoteHistory' }), 300);
+    }, 200);
   };
 
+  // 추첨 모달 열기 (데이터만 로딩, 투표자 모달 열지 않음)
   const openPickModal = (voteId: string, voteData?: VoteData) => {
-    // 먼저 ballots 데이터 요청
+    ballotsRequestPurpose.current = 'pick';
     onSend({ type: 'getBallots', voteId });
     setTargetVoteId(voteId);
     if (voteData) setTargetVoteData(voteData);
@@ -181,87 +268,89 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
     return 'grid-cols-2 md:grid-cols-4';
   };
 
-  // 슬롯머신 컴포넌트
+  // 슬롯머신 컴포넌트 - 구분선 스타일
   const SlotMachine = ({ winnerName, index }: { winnerName: string; index: number }) => {
-    const itemHeight = 60;
-    const visibleItems = 5;
-    const containerHeight = itemHeight * visibleItems;
+    const itemHeight = 80;
+    const containerHeight = 240;
 
     // 충분한 양의 아이템 생성
     const items = useMemo(() => {
       const pool = nicknamePool.length > 0 ? nicknamePool : ['???'];
-      const repeated = [];
-      for (let i = 0; i < 30; i++) {
+      const repeated: string[] = [];
+      for (let i = 0; i < 40; i++) {
         repeated.push(...pool);
       }
       return repeated;
     }, [nicknamePool]);
 
+    const totalHeight = items.length * itemHeight;
+
     return (
-      <div
-        className="w-48 bg-gradient-to-b from-zinc-800 to-zinc-900 rounded-2xl border-2 border-zinc-700 overflow-hidden relative shadow-2xl"
-        style={{ height: containerHeight }}
-      >
-        {/* 마스크 그라데이션 */}
-        <div className="absolute inset-0 pointer-events-none z-20">
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-zinc-900 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent" />
-        </div>
-
-        {/* 중앙 하이라이트 */}
+      <div className="flex flex-col items-center">
+        {/* 슬롯머신 본체 */}
         <div
-          className="absolute left-0 right-0 bg-emerald-500/10 border-y border-emerald-500/30 z-10 pointer-events-none"
-          style={{ top: itemHeight * 2, height: itemHeight }}
-        />
-
-        {/* 회전 컨텐츠 */}
-        <motion.div
-          className="flex flex-col"
-          initial={{ y: 0 }}
-          animate={
-            animationPhase === 'rolling'
-              ? { y: [0, -itemHeight * items.length / 2] }
-              : animationPhase === 'stopping'
-              ? { y: -itemHeight * 2 }
-              : { y: -itemHeight * 2 }
-          }
-          transition={
-            animationPhase === 'rolling'
-              ? { duration: 0.5, repeat: Infinity, ease: 'linear' }
-              : animationPhase === 'stopping'
-              ? { duration: 2, ease: [0.16, 1, 0.3, 1], delay: index * 0.3 }
-              : { duration: 0 }
-          }
+          className="w-56 bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 rounded-2xl overflow-hidden relative shadow-2xl border-4 border-zinc-600"
+          style={{ height: containerHeight }}
         >
-          {animationPhase === 'done' ? (
-            // 최종 결과
-            <>
-              <div style={{ height: itemHeight * 2 }} />
-              <div
-                className="flex items-center justify-center"
-                style={{ height: itemHeight }}
-              >
-                <span className="text-xl font-black text-emerald-400 truncate px-4">
-                  {winnerName}
-                </span>
-              </div>
-              <div style={{ height: itemHeight * 2 }} />
-            </>
-          ) : (
-            // 회전 중
-            items.map((name, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-center shrink-0"
-                style={{ height: itemHeight }}
-              >
-                <span className="text-lg font-bold text-white/60 truncate px-4">
-                  {name}
-                </span>
-              </div>
-            ))
-          )}
-        </motion.div>
+          {/* 상단 구분선 */}
+          <div className="absolute top-0 left-0 right-0 h-[80px] border-b-4 border-yellow-500/80 bg-gradient-to-b from-black/60 to-transparent z-30 pointer-events-none" />
+
+          {/* 하단 구분선 */}
+          <div className="absolute bottom-0 left-0 right-0 h-[80px] border-t-4 border-yellow-500/80 bg-gradient-to-t from-black/60 to-transparent z-30 pointer-events-none" />
+
+          {/* 중앙 하이라이트 영역 */}
+          <div className="absolute top-[80px] left-0 right-0 h-[80px] bg-gradient-to-r from-emerald-500/20 via-emerald-500/30 to-emerald-500/20 z-20 pointer-events-none border-y-2 border-emerald-400/50" />
+
+          {/* 회전 컨텐츠 */}
+          <motion.div
+            className="flex flex-col"
+            initial={{ y: 0 }}
+            animate={
+              animationPhase === 'rolling'
+                ? { y: [0, -totalHeight / 2] }
+                : animationPhase === 'stopping' || animationPhase === 'done'
+                ? { y: -itemHeight }
+                : { y: 0 }
+            }
+            transition={
+              animationPhase === 'rolling'
+                ? { duration: 0.3, repeat: Infinity, ease: 'linear' }
+                : animationPhase === 'stopping'
+                ? { duration: 1.5, ease: [0.16, 1, 0.3, 1], delay: index * 0.4 }
+                : { duration: 0 }
+            }
+          >
+            {animationPhase === 'done' || animationPhase === 'stopping' ? (
+              // 최종 결과
+              <>
+                <div style={{ height: itemHeight }} className="flex items-center justify-center">
+                  <span className="text-xl font-bold text-white/30">...</span>
+                </div>
+                <div style={{ height: itemHeight }} className="flex items-center justify-center">
+                  <span className="text-2xl font-black text-emerald-400 truncate px-4 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                    {winnerName}
+                  </span>
+                </div>
+                <div style={{ height: itemHeight }} className="flex items-center justify-center">
+                  <span className="text-xl font-bold text-white/30">...</span>
+                </div>
+              </>
+            ) : (
+              // 회전 중
+              items.map((name, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-center shrink-0"
+                  style={{ height: itemHeight }}
+                >
+                  <span className="text-xl font-bold text-white/50 truncate px-4">
+                    {name}
+                  </span>
+                </div>
+              ))
+            )}
+          </motion.div>
+        </div>
       </div>
     );
   };
@@ -297,9 +386,21 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 새 투표 생성 패널 */}
           <div className="lg:col-span-5 bg-white/5 border border-white/5 p-6 rounded-2xl h-fit">
-            <h3 className="text-lg font-black mb-5 flex items-center gap-2">
-              <Vote className="text-emerald-500" size={20} /> 새 투표 만들기
-            </h3>
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-black flex items-center gap-2">
+                <Vote className="text-emerald-500" size={20} /> 새 투표 만들기
+              </h3>
+              {/* 초기화 버튼 - 진행 중인 투표가 있을 때 */}
+              {currentVote && (
+                <button
+                  onClick={handleReset}
+                  className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                  title="현재 투표 초기화"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              )}
+            </div>
             <div className="space-y-5">
               {/* 주제 입력 */}
               <div>
@@ -402,129 +503,263 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
           {/* 진행 중인 투표 패널 */}
           <div className="lg:col-span-7">
             {!currentVote ? (
-              <div className="h-full min-h-[400px] bg-white/5 border border-white/5 p-8 rounded-2xl flex flex-col items-center justify-center text-gray-500">
-                <Activity size={48} className="mb-4 opacity-30" />
-                <p className="font-bold">진행 중인 투표가 없습니다</p>
-                <p className="text-sm text-gray-600 mt-1">왼쪽에서 새 투표를 만들어보세요</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="h-full min-h-[400px] bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-8 rounded-2xl flex flex-col items-center justify-center text-gray-500"
+              >
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Activity size={64} className="mb-6 opacity-20" />
+                </motion.div>
+                <p className="font-black text-xl text-gray-400">진행 중인 투표가 없습니다</p>
+                <p className="text-sm text-gray-600 mt-2">왼쪽에서 새 투표를 만들어보세요</p>
+              </motion.div>
             ) : (
-              <div className="h-full bg-white/5 border border-white/5 p-6 rounded-2xl flex flex-col relative overflow-hidden">
-                {/* 배경 장식 */}
-                <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="h-full bg-gradient-to-br from-zinc-900/80 to-black border border-white/10 p-6 rounded-2xl flex flex-col relative overflow-hidden"
+              >
+                {/* 배경 장식 - 더 화려하게 */}
+                <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+                {currentVote.status === 'active' && (
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5"
+                    animate={{ opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                )}
 
-                {/* 헤더 */}
+                {/* 헤더 - 더 눈에 띄게 */}
                 <div className="flex justify-between items-start mb-6 z-10">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        currentVote.status === 'active'
-                          ? 'bg-emerald-500 text-black animate-pulse'
-                          : currentVote.status === 'ready'
-                          ? 'bg-yellow-500 text-black'
-                          : 'bg-gray-600 text-white'
+                    <div className="flex items-center gap-3 mb-3">
+                      {currentVote.status === 'active' ? (
+                        <motion.div
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-400 rounded-full shadow-lg shadow-emerald-500/30"
+                          animate={{ scale: [1, 1.02, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        >
+                          <motion.span
+                            className="w-3 h-3 bg-white rounded-full"
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 0.8, repeat: Infinity }}
+                          />
+                          <span className="text-sm font-black text-black tracking-wider">LIVE</span>
+                        </motion.div>
+                      ) : currentVote.status === 'ready' ? (
+                        <span className="px-4 py-2 bg-yellow-500 rounded-full text-sm font-black text-black">
+                          READY
+                        </span>
+                      ) : (
+                        <span className="px-4 py-2 bg-gray-600 rounded-full text-sm font-black text-white">
+                          ENDED
+                        </span>
+                      )}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        currentVote.mode === 'normal'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-pink-500/20 text-pink-400'
                       }`}>
-                        {currentVote.status === 'active' ? 'LIVE' : currentVote.status === 'ready' ? 'READY' : 'ENDED'}
-                      </span>
-                      <span className="text-xs font-bold text-gray-400">
-                        {currentVote.mode === 'normal' ? '1인 1표' : '후원 금액 비례'}
+                        {currentVote.mode === 'normal' ? '1인 1표' : '💰 후원 비례'}
                       </span>
                     </div>
-                    <h2 className="text-2xl lg:text-3xl font-black tracking-tight">{currentVote.title}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      참여자 {currentVote.totalParticipants || 0}명
-                      {currentVote.mode === 'donation' && ` · 총 ${(currentVote.totalVotes || 0).toLocaleString()}원`}
-                    </p>
+                    <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-white mb-2">{currentVote.title}</h2>
+                    {/* 참여자 카운터 - 더 눈에 띄게 */}
+                    <div className="flex items-center gap-4">
+                      <motion.div
+                        className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl"
+                        animate={currentVote.status === 'active' ? { scale: [1, 1.02, 1] } : {}}
+                        transition={{ duration: 0.5, repeat: Infinity }}
+                      >
+                        <Users size={18} className="text-emerald-400" />
+                        <span className="font-black text-2xl tabular-nums text-white">
+                          {(currentVote.totalParticipants || 0).toLocaleString()}
+                        </span>
+                        <span className="text-sm text-gray-400">명 참여</span>
+                      </motion.div>
+                      {currentVote.mode === 'donation' && (
+                        <motion.div
+                          className="flex items-center gap-2 bg-pink-500/10 px-4 py-2 rounded-xl"
+                          animate={{ scale: [1, 1.02, 1] }}
+                          transition={{ duration: 0.5, repeat: Infinity, delay: 0.25 }}
+                        >
+                          <DollarSign size={18} className="text-pink-400" />
+                          <span className="font-black text-xl tabular-nums text-pink-400">
+                            ₩{(currentVote.totalVotes || 0).toLocaleString()}
+                          </span>
+                        </motion.div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <motion.button
                       onClick={handleReset}
-                      className="p-2.5 bg-white/5 rounded-lg hover:bg-red-500/20 hover:text-red-400 text-gray-500 transition-all"
+                      className="p-3 bg-white/5 rounded-xl hover:bg-red-500/20 hover:text-red-400 text-gray-500 transition-all border border-white/5"
                       title="초기화"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       <RotateCcw size={18} />
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                       onClick={() => onSend({ type: 'toggleOverlay', visible: true, view: 'vote' })}
-                      className="px-4 py-2 bg-white/10 rounded-lg text-xs font-bold hover:bg-white/20 transition-all"
+                      className="px-5 py-3 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl text-sm font-bold text-emerald-400 hover:from-emerald-500/30 hover:to-cyan-500/30 transition-all border border-emerald-500/30"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
+                      <Eye size={16} className="inline mr-2" />
                       오버레이
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
-                {/* 투표 항목 목록 */}
+                {/* 투표 항목 목록 - 더 화려하게 */}
                 <div className="flex-1 space-y-3 z-10 overflow-y-auto custom-scrollbar pr-2 max-h-[350px]">
                   {currentVote.options?.map((opt, i) => {
                     const percent = getPercent(opt.count, currentVote);
+                    const sortedOptions = [...(currentVote.options || [])].sort((a, b) => b.count - a.count);
+                    const rank = sortedOptions.findIndex(o => o.id === opt.id) + 1;
+                    const isLeading = rank === 1 && opt.count > 0;
+
                     return (
-                      <div
+                      <motion.div
                         key={opt.id || i}
-                        className="group relative h-14 bg-black/40 rounded-xl overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all"
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className={`group relative h-16 rounded-xl overflow-hidden border transition-all ${
+                          isLeading
+                            ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/10'
+                            : 'bg-black/40 border-white/5 hover:border-white/20'
+                        }`}
                       >
-                        <div
-                          className="absolute top-0 left-0 h-full bg-emerald-500/20 transition-all duration-700 ease-out"
-                          style={{ width: `${percent}%` }}
+                        {/* 프로그레스 바 */}
+                        <motion.div
+                          className={`absolute top-0 left-0 h-full ${
+                            isLeading
+                              ? 'bg-gradient-to-r from-emerald-500/40 to-cyan-500/30'
+                              : 'bg-white/10'
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percent}%` }}
+                          transition={{ duration: 1, ease: 'easeOut' }}
                         />
+                        {/* 글로우 효과 (1등만) */}
+                        {isLeading && (
+                          <motion.div
+                            className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-emerald-500/20 to-transparent"
+                            animate={{ opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        )}
                         <div className="absolute inset-0 flex items-center justify-between px-5">
-                          <span className="font-bold flex items-center gap-3">
-                            <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-emerald-500 font-black">
-                              {i + 1}
-                            </span>
-                            {opt.label}
+                          <span className="font-bold flex items-center gap-3 text-lg">
+                            <motion.span
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${
+                                isLeading
+                                  ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-lg'
+                                  : 'bg-white/10 text-gray-400'
+                              }`}
+                              animate={isLeading ? { scale: [1, 1.1, 1] } : {}}
+                              transition={{ duration: 1, repeat: Infinity }}
+                            >
+                              {isLeading ? '👑' : i + 1}
+                            </motion.span>
+                            <span className={isLeading ? 'text-white' : 'text-gray-300'}>{opt.label}</span>
+                            {isLeading && (
+                              <motion.span
+                                className="text-xs font-black text-yellow-400 bg-yellow-400/20 px-2 py-1 rounded-md"
+                                animate={{ scale: [1, 1.05, 1] }}
+                                transition={{ duration: 0.5, repeat: Infinity }}
+                              >
+                                1위
+                              </motion.span>
+                            )}
                           </span>
-                          <div className="text-right">
-                            <span className="font-black text-lg tabular-nums">{opt.count.toLocaleString()}</span>
-                            <span className="text-[10px] text-gray-500 ml-2">{percent}%</span>
+                          <div className="text-right flex items-center gap-3">
+                            <motion.span
+                              className={`font-black text-2xl tabular-nums ${isLeading ? 'text-white' : 'text-gray-300'}`}
+                              key={opt.count}
+                              initial={{ scale: 1.2, color: '#10b981' }}
+                              animate={{ scale: 1, color: isLeading ? '#ffffff' : '#d1d5db' }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              {opt.count.toLocaleString()}
+                            </motion.span>
+                            <span className={`text-sm font-bold px-2 py-1 rounded-lg ${
+                              isLeading ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/5 text-gray-500'
+                            }`}>
+                              {percent}%
+                            </span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
 
-                {/* 하단 액션 버튼 */}
+                {/* 하단 액션 버튼 - 더 화려하게 */}
                 <div className="mt-6 flex gap-3 z-10 pt-4 border-t border-white/10">
                   {currentVote.status === 'ready' && (
-                    <button
+                    <motion.button
                       onClick={() => onSend({ type: 'startVote' })}
-                      className="flex-1 py-3.5 bg-emerald-500 text-black font-black rounded-xl hover:bg-emerald-400 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-green-400 text-black font-black rounded-xl shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-3 text-lg"
+                      whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(16, 185, 129, 0.4)' }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <Play size={18} /> 투표 시작
-                    </button>
+                      <Play size={22} fill="currentColor" /> 투표 시작
+                    </motion.button>
                   )}
                   {currentVote.status === 'active' && (
-                    <button
+                    <motion.button
                       onClick={() => onSend({ type: 'endVote' })}
-                      className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 py-4 bg-gradient-to-r from-red-500 to-rose-500 text-white font-black rounded-xl shadow-lg shadow-red-500/30 flex items-center justify-center gap-3 text-lg"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      animate={{ boxShadow: ['0 0 20px rgba(239, 68, 68, 0.3)', '0 0 30px rgba(239, 68, 68, 0.5)', '0 0 20px rgba(239, 68, 68, 0.3)'] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
                     >
-                      <Square size={18} /> 투표 마감
-                    </button>
+                      <Square size={20} fill="currentColor" /> 투표 마감
+                    </motion.button>
                   )}
                   {currentVote.status === 'ended' && (
                     <>
-                      <button
+                      <motion.button
                         onClick={handleMoveToHistory}
-                        className="flex-1 py-3.5 bg-zinc-700 text-white font-bold rounded-xl hover:bg-zinc-600 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 py-4 bg-zinc-700 text-white font-bold rounded-xl hover:bg-zinc-600 transition-all flex items-center justify-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         기록으로 이동 <ChevronRight size={18} />
-                      </button>
-                      <button
+                      </motion.button>
+                      <motion.button
                         onClick={() => openPickModal(currentVote.id)}
-                        className="px-6 py-3.5 bg-emerald-500/20 text-emerald-400 font-black rounded-xl hover:bg-emerald-500 hover:text-black transition-all border border-emerald-500/50 flex items-center gap-2"
+                        className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-black rounded-xl shadow-lg shadow-yellow-500/30 flex items-center gap-2 text-lg"
+                        whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(234, 179, 8, 0.5)' }}
+                        whileTap={{ scale: 0.95 }}
+                        animate={{ scale: [1, 1.02, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
                       >
-                        <Trophy size={18} /> 추첨
-                      </button>
+                        <Trophy size={22} /> 추첨하기
+                      </motion.button>
                     </>
                   )}
-                  <button
+                  <motion.button
                     onClick={() => handleShowBallots(currentVote.id)}
-                    className="px-4 bg-white/5 rounded-xl font-bold hover:bg-white/10 transition-all border border-white/5"
+                    className="px-5 bg-white/5 rounded-xl font-bold hover:bg-white/10 transition-all border border-white/10"
                     title="투표자 보기"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <List size={20} />
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -739,70 +974,127 @@ export default function VoteTab({ onSend }: { onSend: (msg: any) => void }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4"
           >
-            <div className="relative w-full max-w-4xl flex flex-col items-center">
+            {/* 축하 효과 */}
+            {animationPhase === 'done' && <Confetti />}
+            {animationPhase === 'done' && <StarBurst />}
+
+            <div className="relative w-full max-w-5xl flex flex-col items-center z-10">
               <button
                 onClick={closeWinnerModal}
-                className="absolute top-0 right-0 p-3 text-gray-500 hover:text-white transition-colors"
+                className="absolute top-0 right-0 p-3 text-gray-500 hover:text-white transition-colors z-50"
               >
-                <X size={28} />
+                <X size={32} />
               </button>
 
               {animationPhase !== 'done' ? (
                 // 슬롯머신 애니메이션
-                <div className="flex flex-col items-center gap-8 w-full">
-                  <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight">
+                <div className="flex flex-col items-center gap-10 w-full">
+                  <motion.h2
+                    className="text-5xl md:text-6xl font-black text-white uppercase tracking-tight"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
                     추첨 중...
-                  </h2>
-                  <div className="flex gap-4 justify-center flex-wrap">
+                  </motion.h2>
+                  <div className="flex gap-6 justify-center flex-wrap">
                     {winners.slice(0, Math.min(5, winners.length)).map((w, i) => (
                       <SlotMachine key={i} winnerName={w.nickname} index={i} />
                     ))}
                   </div>
-                  <p className="text-emerald-400 font-bold animate-pulse text-xl uppercase tracking-widest">
+                  <motion.p
+                    className="text-emerald-400 font-black text-2xl uppercase tracking-[0.3em]"
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  >
                     SPINNING...
-                  </p>
+                  </motion.p>
                 </div>
               ) : (
                 // 최종 결과
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="flex flex-col items-center gap-8 w-full"
+                  className="flex flex-col items-center gap-10 w-full"
                 >
-                  <div className="flex items-center gap-3">
-                    <Trophy size={48} className="text-yellow-400" />
-                    <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight">
-                      당첨자!
-                    </h2>
+                  <div className="flex items-center gap-4">
+                    <motion.div
+                      animate={{ rotate: [0, -15, 15, -15, 15, 0], scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: 2 }}
+                    >
+                      <Trophy size={64} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.7)]" />
+                    </motion.div>
+                    <div className="text-center">
+                      <motion.p
+                        className="text-emerald-400 text-sm font-black uppercase tracking-[0.3em] mb-2"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        Congratulations!
+                      </motion.p>
+                      <motion.h2
+                        className="text-5xl md:text-6xl font-black text-white uppercase tracking-tight"
+                        initial={{ scale: 0.5 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200 }}
+                      >
+                        당첨자!
+                      </motion.h2>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: [0, 15, -15, 15, -15, 0], scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: 2 }}
+                    >
+                      <Sparkles size={48} className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" />
+                    </motion.div>
                   </div>
 
-                  <div className={`grid gap-4 w-full max-w-3xl ${getWinnerGridClass(winners.length)}`}>
+                  <div className={`grid gap-5 w-full max-w-4xl ${getWinnerGridClass(winners.length)}`}>
                     {winners.map((w, i) => (
                       <motion.div
                         key={i}
-                        initial={{ y: 30, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="bg-gradient-to-br from-emerald-500/20 to-zinc-900 border border-emerald-500/30 p-6 rounded-2xl flex flex-col items-center gap-3 shadow-lg"
+                        initial={{ y: 50, opacity: 0, scale: 0.5, rotateY: 180 }}
+                        animate={{ y: 0, opacity: 1, scale: 1, rotateY: 0 }}
+                        transition={{ delay: i * 0.2, type: 'spring', stiffness: 150, damping: 15 }}
+                        className="relative group"
                       >
-                        <div className="w-12 h-12 bg-emerald-500 text-black rounded-full flex items-center justify-center font-black text-xl">
-                          {i + 1}
-                        </div>
-                        <div className="text-xl font-black text-white text-center break-all">
-                          {w.nickname}
+                        {/* 글로우 효과 */}
+                        <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 via-yellow-400 to-emerald-500 rounded-3xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity animate-pulse" />
+
+                        <div className="relative bg-gradient-to-br from-emerald-500/30 via-zinc-900 to-zinc-900 border-2 border-emerald-500/50 p-8 rounded-3xl flex flex-col items-center gap-4 shadow-2xl">
+                          <motion.div
+                            className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 text-black rounded-full flex items-center justify-center font-black text-2xl shadow-lg"
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                          >
+                            {i + 1}
+                          </motion.div>
+                          <div className="text-2xl font-black text-white text-center break-all">
+                            {w.nickname}
+                          </div>
+                          {i === 0 && (
+                            <motion.span
+                              className="text-xs font-black text-yellow-400 bg-yellow-400/20 px-3 py-1 rounded-full"
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ duration: 0.5, repeat: Infinity }}
+                            >
+                              WINNER
+                            </motion.span>
+                          )}
                         </div>
                       </motion.div>
                     ))}
                   </div>
 
-                  <button
+                  <motion.button
                     onClick={closeWinnerModal}
-                    className="px-8 py-3 bg-white/10 rounded-full font-bold hover:bg-white/20 transition-all mt-4"
+                    className="px-12 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-black rounded-full font-black text-lg hover:scale-105 transition-all shadow-lg shadow-emerald-500/30 mt-4"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    닫기
-                  </button>
+                    확인
+                  </motion.button>
                 </motion.div>
               )}
             </div>
