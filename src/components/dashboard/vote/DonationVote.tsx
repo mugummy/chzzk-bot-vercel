@@ -7,443 +7,503 @@ import {
   Square,
   RotateCcw,
   Plus,
-  Trash2,
   Trophy,
   DollarSign,
-  Settings,
-  ArrowRight,
   Crown,
-  Coins
+  List,
+  Eye,
+  EyeOff,
+  X
 } from 'lucide-react';
-import { useVoteGameStore } from '@/lib/voteGameStore';
+import { useBotStore } from '@/lib/store';
 
-export default function DonationVote() {
-  const {
-    status,
-    donationVote,
-    setStatus,
-    addDonationVoteItem,
-    removeDonationVoteItem,
-    addDonation,
-    setDonationSettings,
-    setMode
-  } = useVoteGameStore();
+interface VoteOption {
+  id: string;
+  label: string;
+  count: number;
+}
 
-  const [newItemName, setNewItemName] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+interface Ballot {
+  userIdHash: string;
+  nickname: string;
+  amount: number;
+  optionId: string;
+  timestamp: string;
+}
 
-  // 시뮬레이션: 도네 진행 중 랜덤 후원 추가
+export default function DonationVote({ onSend }: { onSend: (msg: any) => void }) {
+  const { vote } = useBotStore();
+  const currentVote = vote.currentVote as any;
+
+  const [title, setTitle] = useState('');
+  const [options, setOptions] = useState(['', '']);
+
+  // 투표자 모달
+  const [isBallotModalOpen, setIsBallotModalOpen] = useState(false);
+  const [ballots, setBallots] = useState<Ballot[]>([]);
+  const [showNicknames, setShowNicknames] = useState(false);
+
+  // 투표자 데이터 이벤트 리스너
   useEffect(() => {
-    if (status !== 'active' || donationVote.items.length === 0) return;
+    const handleBallots = (e: CustomEvent<Ballot[]>) => {
+      setBallots(e.detail);
+      setIsBallotModalOpen(true);
+    };
 
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * donationVote.items.length);
-      const randomItem = donationVote.items[randomIndex];
-      // 랜덤 금액 (1000 ~ 10000 사이, 1000 단위)
-      const randomAmount = (Math.floor(Math.random() * 10) + 1) * 1000;
-      if (randomItem) {
-        addDonation(randomItem.id, randomAmount, `시청자${Math.floor(Math.random() * 1000)}`);
-      }
-    }, 1500 + Math.random() * 2000);
+    window.addEventListener('voteBallotsResponse', handleBallots as EventListener);
 
-    return () => clearInterval(interval);
-  }, [status, donationVote.items, addDonation]);
+    return () => {
+      window.removeEventListener('voteBallotsResponse', handleBallots as EventListener);
+    };
+  }, []);
 
-  const handleAddItem = () => {
-    if (newItemName.trim()) {
-      addDonationVoteItem(newItemName.trim());
-      setNewItemName('');
+  const handleAddOption = () => {
+    if (options.length < 10) {
+      setOptions([...options, '']);
     }
+  };
+
+  const handleRemoveOption = (index: number) => {
+    if (options.length > 2) {
+      setOptions(options.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleCreate = () => {
+    const validOptions = options.filter(o => o.trim());
+    if (!title.trim() || validOptions.length < 2) {
+      return alert('제목과 최소 2개의 항목이 필요합니다.');
+    }
+    onSend({ type: 'createVote', title, options: validOptions, mode: 'donation' });
+    setTitle('');
+    setOptions(['', '']);
+  };
+
+  const handleCreateAndStart = () => {
+    const validOptions = options.filter(o => o.trim());
+    if (!title.trim() || validOptions.length < 2) {
+      return alert('제목과 최소 2개의 항목이 필요합니다.');
+    }
+    onSend({ type: 'createVote', title, options: validOptions, mode: 'donation', autoStart: true });
+    setTitle('');
+    setOptions(['', '']);
   };
 
   const handleStart = () => {
-    if (donationVote.items.length >= 2) {
-      setStatus('active');
-    }
+    onSend({ type: 'startVote' });
   };
 
   const handleStop = () => {
-    setStatus('result');
+    onSend({ type: 'endVote' });
   };
 
   const handleReset = () => {
-    setStatus('idle');
+    if (confirm('현재 투표를 초기화하시겠습니까?')) {
+      onSend({ type: 'resetVote' });
+      setTitle('');
+      setOptions(['', '']);
+    }
   };
 
-  const handleTransferToRoulette = () => {
-    setMode('roulette');
+  const handleShowBallots = () => {
+    if (currentVote?.id) {
+      onSend({ type: 'getBallots', voteId: currentVote.id });
+    }
   };
 
-  // 정렬된 항목 리스트 (득표순)
-  const sortedItems = [...donationVote.items].sort((a, b) => b.votes - a.votes);
-
-  const totalVotes = donationVote.items.reduce((sum, item) => sum + item.votes, 0);
-  const maxVotes = Math.max(...donationVote.items.map(item => item.votes), 1);
-
-  const isIdle = status === 'idle';
-  const isActive = status === 'active';
-  const isResult = status === 'result';
-
-  // 금액 포맷팅
-  const formatAmount = (amount: number) => {
-    return amount.toLocaleString() + '원';
+  const handleShowOverlay = () => {
+    onSend({ type: 'toggleOverlay', visible: true, view: 'vote' });
   };
+
+  // 정렬된 항목 리스트 (금액순)
+  const sortedOptions = currentVote?.options
+    ? [...currentVote.options].sort((a: VoteOption, b: VoteOption) => b.count - a.count)
+    : [];
+
+  const totalAmount = currentVote?.totalVotes || currentVote?.options?.reduce((sum: number, opt: VoteOption) => sum + opt.count, 0) || 0;
+  const maxAmount = Math.max(...(currentVote?.options?.map((opt: VoteOption) => opt.count) || [1]), 1);
+
+  const isReady = currentVote?.status === 'ready';
+  const isActive = currentVote?.status === 'active';
+  const isEnded = currentVote?.status === 'ended';
+
+  // 도네 투표만 표시
+  const isDonationMode = currentVote?.mode === 'donation';
 
   return (
-    <div className="space-y-4">
-      {/* 상단 컨트롤 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* 상태 표시 */}
-          <div
-            className="px-4 py-2 rounded-xl font-bold flex items-center gap-2"
-            style={{
-              backgroundColor: isActive ? 'rgba(255, 230, 109, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              color: isActive ? '#ffe66d' : '#6b7280',
-              border: `1px solid ${isActive ? 'rgba(255, 230, 109, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`
-            }}
-          >
-            <DollarSign size={18} />
-            <span>
-              {isIdle && '대기 중'}
-              {isActive && '후원 진행 중'}
-              {isResult && '후원 종료'}
-            </span>
-            {isActive && (
-              <motion.span
-                className="w-2 h-2 rounded-full ml-1"
-                style={{ backgroundColor: '#ffe66d' }}
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              />
-            )}
-          </div>
-
-          {/* 총 후원 금액 */}
-          <div
-            className="px-4 py-2 rounded-xl font-medium flex items-center gap-2"
-            style={{
-              backgroundColor: 'rgba(255, 230, 109, 0.1)',
-              color: '#ffe66d'
-            }}
-          >
-            <Coins size={16} />
-            <motion.span
-              key={donationVote.totalAmount}
-              initial={{ scale: 1.1 }}
-              animate={{ scale: 1 }}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* 왼쪽: 새 도네 투표 만들기 */}
+      <div className="lg:col-span-5 bg-[#1a1a1a] border border-white/5 p-6 rounded-2xl h-fit">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-black flex items-center gap-2 text-white">
+            <DollarSign className="text-[#ffe66d]" size={20} /> 새 도네 투표 만들기
+          </h3>
+          {currentVote && isDonationMode && (
+            <button
+              onClick={handleReset}
+              className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+              title="현재 투표 초기화"
             >
-              {formatAmount(donationVote.totalAmount)}
-            </motion.span>
-          </div>
+              <RotateCcw size={16} />
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 설정 버튼 */}
-          <motion.button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2.5 rounded-xl transition-colors"
-            style={{
-              backgroundColor: showSettings ? 'rgba(255, 230, 109, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              color: showSettings ? '#ffe66d' : '#9ca3af'
-            }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-          </motion.button>
+        <div className="space-y-5">
+          {/* 주제 입력 */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 mb-2">주제</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="도네 투표 제목을 입력하세요"
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ffe66d] transition-all"
+            />
+          </div>
 
-          {/* 메인 액션 버튼 */}
-          {isIdle && (
-            <motion.button
-              onClick={handleStart}
-              disabled={donationVote.items.length < 2}
-              className="px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"
-              style={{
-                backgroundColor: donationVote.items.length >= 2 ? '#ffe66d' : '#333',
-                color: donationVote.items.length >= 2 ? '#000' : '#666',
-                opacity: donationVote.items.length >= 2 ? 1 : 0.5
-              }}
-              whileHover={donationVote.items.length >= 2 ? { scale: 1.02 } : {}}
-              whileTap={donationVote.items.length >= 2 ? { scale: 0.98 } : {}}
-            >
-              <Play size={18} />
-              후원 시작
-            </motion.button>
-          )}
+          {/* 안내 */}
+          <div className="p-3 bg-[#ffe66d]/10 rounded-xl border border-[#ffe66d]/20">
+            <p className="text-xs text-[#ffe66d]">
+              💰 후원 금액에 비례하여 투표가 집계됩니다.
+            </p>
+          </div>
 
-          {isActive && (
-            <motion.button
-              onClick={handleStop}
-              className="px-6 py-2.5 rounded-xl font-bold flex items-center gap-2"
-              style={{
-                backgroundColor: '#ff6b6b',
-                color: '#fff'
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Square size={18} />
-              후원 종료
-            </motion.button>
-          )}
-
-          {isResult && (
-            <div className="flex gap-2">
-              <motion.button
-                onClick={handleTransferToRoulette}
-                className="px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
-                style={{
-                  backgroundColor: 'rgba(255, 107, 107, 0.15)',
-                  color: '#ff6b6b',
-                  border: '1px solid rgba(255, 107, 107, 0.3)'
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <ArrowRight size={18} />
-                룰렛으로
-              </motion.button>
-              <motion.button
-                onClick={handleReset}
-                className="px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff'
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <RotateCcw size={18} />
-                초기화
-              </motion.button>
+          {/* 항목 입력 */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 mb-2">투표 항목</label>
+            <div className="space-y-2">
+              {options.map((opt, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <span className="text-xs text-gray-500 w-5 font-bold">{i + 1}</span>
+                  <input
+                    value={opt}
+                    onChange={e => {
+                      const newOptions = [...options];
+                      newOptions[i] = e.target.value;
+                      setOptions(newOptions);
+                    }}
+                    placeholder={`항목 ${i + 1}`}
+                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ffe66d]"
+                  />
+                  {options.length > 2 && (
+                    <button
+                      onClick={() => handleRemoveOption(i)}
+                      className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {options.length < 10 && (
+                <button
+                  onClick={handleAddOption}
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold flex items-center justify-center gap-2 transition-all text-gray-400 hover:text-white"
+                >
+                  <Plus size={14} /> 항목 추가
+                </button>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* 버튼 */}
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleCreate}
+              className="flex-1 py-3.5 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all"
+            >
+              투표 생성
+            </button>
+            <button
+              onClick={handleCreateAndStart}
+              className="flex-[2] py-3.5 bg-[#ffe66d] text-black font-black rounded-xl hover:bg-[#f5dc5d] transition-all shadow-lg shadow-[#ffe66d]/20"
+            >
+              생성 + 바로 시작
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 설정 패널 */}
-      <AnimatePresence>
-        {showSettings && (
+      {/* 오른쪽: 진행 중인 도네 투표 */}
+      <div className="lg:col-span-7">
+        {!currentVote || !isDonationMode ? (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="h-full min-h-[400px] bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-8 rounded-2xl flex flex-col items-center justify-center text-gray-500"
           >
-            <div
-              className="p-4 rounded-xl space-y-4"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
-              }}
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">후원 명령어 형식</span>
-                <span className="text-sm font-mono" style={{ color: '#ffe66d' }}>
-                  [금액] [번호]
-                </span>
-              </div>
+              <DollarSign size={64} className="mb-6 opacity-20" />
+            </motion.div>
+            <p className="font-black text-xl text-gray-400">진행 중인 도네 투표가 없습니다</p>
+            <p className="text-sm text-gray-600 mt-2">왼쪽에서 새 도네 투표를 만들어보세요</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="h-full bg-gradient-to-br from-zinc-900/80 to-black border border-white/10 p-6 rounded-2xl flex flex-col relative overflow-hidden"
+          >
+            {/* 배경 장식 */}
+            <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#ffe66d]/10 rounded-full blur-3xl pointer-events-none" />
+            {isActive && (
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-[#ffe66d]/5 via-transparent to-[#ffe66d]/5"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">단위 금액</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={donationVote.unitAmount}
-                    onChange={(e) => setDonationSettings({ unitAmount: parseInt(e.target.value) || 1000 })}
-                    className="w-24 px-3 py-1.5 rounded-lg text-sm text-right"
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                      color: '#ffe66d',
-                      border: '1px solid rgba(255, 230, 109, 0.2)'
-                    }}
-                    step={100}
-                    min={100}
-                  />
-                  <span className="text-gray-500 text-sm">원</span>
+            {/* 헤더 */}
+            <div className="flex justify-between items-start mb-6 z-10">
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  {isActive ? (
+                    <motion.div
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#ffe66d] to-[#f5dc5d] rounded-full shadow-lg shadow-[#ffe66d]/30"
+                      animate={{ scale: [1, 1.02, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      <motion.span
+                        className="w-3 h-3 bg-black rounded-full"
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                      />
+                      <span className="text-sm font-black text-black tracking-wider">LIVE</span>
+                    </motion.div>
+                  ) : isReady ? (
+                    <span className="px-4 py-2 bg-yellow-500 rounded-full text-sm font-black text-black">
+                      READY
+                    </span>
+                  ) : (
+                    <span className="px-4 py-2 bg-gray-600 rounded-full text-sm font-black text-white">
+                      ENDED
+                    </span>
+                  )}
+                  <span className="px-3 py-1 bg-[#ffe66d]/20 text-[#ffe66d] rounded-full text-xs font-bold">
+                    💰 후원 비례
+                  </span>
+                </div>
+                <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-white mb-2">{currentVote.title}</h2>
+                <div className="flex items-center gap-4">
+                  <motion.div
+                    className="flex items-center gap-2 bg-[#ffe66d]/10 px-4 py-2 rounded-xl"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ duration: 0.5, repeat: Infinity, delay: 0.25 }}
+                  >
+                    <DollarSign size={18} className="text-[#ffe66d]" />
+                    <span className="font-black text-xl tabular-nums text-[#ffe66d]">
+                      ₩{totalAmount.toLocaleString()}
+                    </span>
+                  </motion.div>
+                  <span className="text-gray-400">{currentVote.totalParticipants || 0}명 참여</span>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">복수 투표 허용</span>
-                <button
-                  onClick={() => setDonationSettings({ allowMultipleVotes: !donationVote.allowMultipleVotes })}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    donationVote.allowMultipleVotes ? 'bg-[#ffe66d]' : 'bg-gray-600'
-                  }`}
+              <div className="flex gap-2">
+                <motion.button
+                  onClick={handleShowOverlay}
+                  className="px-4 py-2 bg-[#ffe66d]/20 rounded-xl text-sm font-bold text-[#ffe66d] hover:bg-[#ffe66d]/30 transition-all border border-[#ffe66d]/30"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <motion.div
-                    className="absolute top-1 w-4 h-4 rounded-full bg-white"
-                    animate={{ left: donationVote.allowMultipleVotes ? '26px' : '4px' }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                </button>
+                  <Eye size={16} className="inline mr-2" />
+                  오버레이
+                </motion.button>
               </div>
+            </div>
+
+            {/* 투표 항목 목록 */}
+            <div className="flex-1 space-y-3 z-10 overflow-y-auto custom-scrollbar pr-2 max-h-[350px]">
+              {sortedOptions.map((opt: VoteOption, i: number) => {
+                const percent = totalAmount > 0 ? Math.round((opt.count / totalAmount) * 100) : 0;
+                const barWidth = maxAmount > 0 ? (opt.count / maxAmount) * 100 : 0;
+                const isLeading = i === 0 && opt.count > 0;
+
+                return (
+                  <motion.div
+                    key={opt.id || i}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className={`group relative h-16 rounded-xl overflow-hidden border transition-all ${
+                      isLeading
+                        ? 'bg-gradient-to-r from-[#ffe66d]/20 to-[#f5dc5d]/10 border-[#ffe66d]/50 shadow-lg shadow-[#ffe66d]/10'
+                        : 'bg-black/40 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    {/* 프로그레스 바 */}
+                    <motion.div
+                      className={`absolute top-0 left-0 h-full ${
+                        isLeading
+                          ? 'bg-gradient-to-r from-[#ffe66d]/40 to-[#f5dc5d]/30'
+                          : 'bg-white/10'
+                      }`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${barWidth}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                    />
+                    {isLeading && (
+                      <motion.div
+                        className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-[#ffe66d]/20 to-transparent"
+                        animate={{ opacity: [0.3, 0.6, 0.3] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-between px-5">
+                      <span className="font-bold flex items-center gap-3 text-lg">
+                        <motion.span
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${
+                            isLeading
+                              ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-lg'
+                              : 'bg-white/10 text-gray-400'
+                          }`}
+                          animate={isLeading ? { scale: [1, 1.1, 1] } : {}}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        >
+                          {isLeading ? <Crown size={16} /> : i + 1}
+                        </motion.span>
+                        <span className={isLeading ? 'text-white' : 'text-gray-300'}>{opt.label}</span>
+                      </span>
+                      <div className="text-right flex items-center gap-3">
+                        <motion.span
+                          className={`font-black text-xl tabular-nums ${isLeading ? 'text-[#ffe66d]' : 'text-gray-300'}`}
+                          key={opt.count}
+                          initial={{ scale: 1.2 }}
+                          animate={{ scale: 1 }}
+                        >
+                          ₩{opt.count.toLocaleString()}
+                        </motion.span>
+                        <span className={`text-sm font-bold px-2 py-1 rounded-lg ${
+                          isLeading ? 'bg-[#ffe66d]/30 text-[#ffe66d]' : 'bg-white/5 text-gray-500'
+                        }`}>
+                          {percent}%
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* 하단 액션 버튼 */}
+            <div className="mt-6 flex gap-3 z-10 pt-4 border-t border-white/10">
+              {isReady && (
+                <motion.button
+                  onClick={handleStart}
+                  className="flex-1 py-4 bg-gradient-to-r from-[#ffe66d] to-[#f5dc5d] text-black font-black rounded-xl shadow-lg shadow-[#ffe66d]/30 flex items-center justify-center gap-3 text-lg"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Play size={22} fill="currentColor" /> 투표 시작
+                </motion.button>
+              )}
+              {isActive && (
+                <motion.button
+                  onClick={handleStop}
+                  className="flex-1 py-4 bg-gradient-to-r from-red-500 to-rose-500 text-white font-black rounded-xl shadow-lg shadow-red-500/30 flex items-center justify-center gap-3 text-lg"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Square size={20} fill="currentColor" /> 투표 마감
+                </motion.button>
+              )}
+              {isEnded && (
+                <motion.button
+                  onClick={handleReset}
+                  className="flex-1 py-4 bg-zinc-700 text-white font-bold rounded-xl hover:bg-zinc-600 transition-all flex items-center justify-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw size={18} /> 새 투표
+                </motion.button>
+              )}
+              <motion.button
+                onClick={handleShowBallots}
+                className="px-5 bg-white/5 rounded-xl font-bold hover:bg-white/10 transition-all border border-white/10"
+                title="투표자 보기"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <List size={20} />
+              </motion.button>
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* 항목 추가 (대기 상태에서만) */}
-      {isIdle && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-            placeholder="후원 항목 추가..."
-            className="flex-1 px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none transition-all"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-          />
-          <motion.button
-            onClick={handleAddItem}
-            disabled={!newItemName.trim()}
-            className="px-4 py-3 rounded-xl font-bold"
-            style={{
-              backgroundColor: newItemName.trim() ? '#ffe66d' : 'rgba(255, 255, 255, 0.05)',
-              color: newItemName.trim() ? '#000' : '#666'
-            }}
-            whileHover={newItemName.trim() ? { scale: 1.02 } : {}}
-            whileTap={newItemName.trim() ? { scale: 0.98 } : {}}
-          >
-            <Plus size={20} />
-          </motion.button>
-        </div>
-      )}
-
-      {/* 후원 항목 리스트 */}
-      <div className="space-y-2">
-        <AnimatePresence mode="popLayout">
-          {sortedItems.map((item, index) => {
-            const percentage = totalVotes > 0 ? (item.votes / totalVotes) * 100 : 0;
-            const barWidth = maxVotes > 0 ? (item.votes / maxVotes) * 100 : 0;
-            const isFirst = index === 0 && item.votes > 0;
-
-            return (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                className="relative overflow-hidden rounded-xl"
-                style={{
-                  backgroundColor: isFirst ? 'rgba(255, 230, 109, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${isFirst ? 'rgba(255, 230, 109, 0.3)' : 'rgba(255, 255, 255, 0.05)'}`
-                }}
-              >
-                {/* 진행 바 */}
-                <motion.div
-                  className="absolute inset-y-0 left-0"
-                  style={{
-                    backgroundColor: isFirst ? 'rgba(255, 230, 109, 0.2)' : 'rgba(255, 255, 255, 0.05)'
-                  }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${barWidth}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-
-                <div className="relative flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    {/* 순위 */}
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm"
-                      style={{
-                        backgroundColor: isFirst ? '#ffe66d' : 'rgba(255, 255, 255, 0.1)',
-                        color: isFirst ? '#000' : '#9ca3af'
-                      }}
-                    >
-                      {isFirst ? <Crown size={16} /> : index + 1}
-                    </div>
-
-                    {/* 항목명 */}
-                    <span className="text-white font-medium">{item.label}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {/* 투표 수 및 비율 */}
-                    <div className="text-right">
-                      <motion.span
-                        className="text-lg font-bold block"
-                        style={{ color: isFirst ? '#ffe66d' : '#fff' }}
-                        key={item.votes}
-                        initial={{ scale: 1.2 }}
-                        animate={{ scale: 1 }}
-                      >
-                        {item.votes.toLocaleString()}표
-                      </motion.span>
-                      <span className="text-xs text-gray-500">
-                        {percentage.toFixed(1)}%
-                      </span>
-                    </div>
-
-                    {/* 삭제 버튼 (대기 상태에서만) */}
-                    {isIdle && (
-                      <motion.button
-                        onClick={() => removeDonationVoteItem(item.id)}
-                        className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Trash2 size={16} />
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-
-        {/* 빈 상태 */}
-        {donationVote.items.length === 0 && (
-          <div
-            className="text-center py-12 rounded-xl"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.02)',
-              border: '1px dashed rgba(255, 255, 255, 0.1)'
-            }}
-          >
-            <DollarSign size={48} className="mx-auto mb-3 text-gray-600" />
-            <p className="text-gray-500">후원 항목을 추가해주세요</p>
-            <p className="text-gray-600 text-sm mt-1">최소 2개 이상의 항목이 필요합니다</p>
-          </div>
-        )}
-
-        {/* 항목이 1개일 때 경고 */}
-        {donationVote.items.length === 1 && (
-          <p className="text-center text-yellow-500 text-sm">
-            후원을 시작하려면 최소 2개의 항목이 필요합니다
-          </p>
-        )}
       </div>
 
-      {/* 결과 요약 (결과 상태에서만) */}
-      {isResult && sortedItems.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-2xl text-center"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 230, 109, 0.15) 0%, rgba(255, 230, 109, 0.05) 100%)',
-            border: '1px solid rgba(255, 230, 109, 0.2)'
-          }}
-        >
-          <Trophy size={48} className="mx-auto mb-3" style={{ color: '#ffe66d' }} />
-          <h3 className="text-2xl font-bold text-white mb-2">
-            {sortedItems[0]?.label}
-          </h3>
-          <p className="text-gray-400">
-            {sortedItems[0]?.votes.toLocaleString()}표로 1위 달성!
-            ({((sortedItems[0]?.votes || 0) / totalVotes * 100).toFixed(1)}%)
-          </p>
-        </motion.div>
-      )}
+      {/* 투표자 목록 모달 */}
+      <AnimatePresence>
+        {isBallotModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setIsBallotModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1a1a1a] rounded-2xl p-6 max-w-2xl w-full border border-white/10 max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-black text-white">후원자 현황</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowNicknames(!showNicknames)}
+                    className="flex items-center gap-2 text-xs font-bold text-[#ffe66d] bg-[#ffe66d]/10 px-3 py-1.5 rounded-lg"
+                  >
+                    {showNicknames ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showNicknames ? '가리기' : '보기'}
+                  </button>
+                  <button
+                    onClick={() => setIsBallotModalOpen(false)}
+                    className="p-2 text-gray-500 hover:text-white transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1 space-y-4">
+                {currentVote?.options?.map((opt: VoteOption) => {
+                  const voters = ballots.filter(b => b.optionId === opt.id);
+                  const totalOptAmount = voters.reduce((sum, b) => sum + b.amount, 0);
+
+                  return (
+                    <div key={opt.id} className="bg-white/5 rounded-xl p-4 border border-white/5">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-bold text-white">{opt.label}</h4>
+                        <span className="text-xs font-bold text-[#ffe66d]">₩{totalOptAmount.toLocaleString()}</span>
+                      </div>
+                      {voters.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {voters.map((b, idx) => (
+                            <div
+                              key={idx}
+                              className="inline-flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg text-sm"
+                            >
+                              <span className="text-gray-400">{showNicknames ? b.nickname : `익명(${b.userIdHash.substring(0, 4)})`}</span>
+                              <span className="text-[#ffe66d] font-bold">₩{b.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">아직 후원자가 없습니다</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

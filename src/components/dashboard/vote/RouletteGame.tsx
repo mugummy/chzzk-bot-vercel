@@ -10,9 +10,10 @@ import {
   Target,
   Settings,
   Trophy,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
-import { useVoteGameStore } from '@/lib/voteGameStore';
+import { useBotStore } from '@/lib/store';
 import RouletteWheel from './RouletteWheel';
 
 const COLORS = [
@@ -21,64 +22,127 @@ const COLORS = [
   '#0984e3', '#6c5ce7', '#00b894', '#e17055'
 ];
 
-export default function RouletteGame() {
-  const {
-    status,
-    roulette,
-    setStatus,
-    addRouletteItem,
-    removeRouletteItem,
-    updateRouletteItem,
-    spinRoulette,
-    clearRouletteItems,
-    setRouletteRotation
-  } = useVoteGameStore();
+interface RouletteItem {
+  id: string;
+  label: string;
+  weight: number;
+  color?: string;
+}
+
+export default function RouletteGame({ onSend }: { onSend: (msg: any) => void }) {
+  const { roulette } = useBotStore();
 
   const [newItemName, setNewItemName] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+  const [newItemWeight, setNewItemWeight] = useState(1);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [targetRotation, setTargetRotation] = useState(0);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [currentWinner, setCurrentWinner] = useState<RouletteItem | null>(null);
+
+  // 로컬 아이템 상태 (서버와 동기화되지 않은 경우를 위해)
+  const [localItems, setLocalItems] = useState<RouletteItem[]>([]);
+
+  // 서버에서 받은 데이터 동기화
+  useEffect(() => {
+    if (roulette?.items && roulette.items.length > 0) {
+      setLocalItems(roulette.items.map((item: any, i: number) => ({
+        id: item.id || `item-${i}`,
+        label: item.label || item.name,
+        weight: item.weight || 1,
+        color: item.color || COLORS[i % COLORS.length]
+      })));
+    }
+  }, [roulette?.items]);
 
   const handleAddItem = () => {
     if (newItemName.trim()) {
-      addRouletteItem(newItemName.trim());
+      const newItem: RouletteItem = {
+        id: `item-${Date.now()}`,
+        label: newItemName.trim(),
+        weight: newItemWeight,
+        color: COLORS[localItems.length % COLORS.length]
+      };
+      setLocalItems([...localItems, newItem]);
+      onSend({ type: 'updateRoulette', items: [...localItems, newItem] });
       setNewItemName('');
+      setNewItemWeight(1);
     }
   };
 
+  const handleRemoveItem = (id: string) => {
+    const updated = localItems.filter(item => item.id !== id);
+    setLocalItems(updated);
+    onSend({ type: 'updateRoulette', items: updated });
+  };
+
+  const handleUpdateItem = (id: string, updates: Partial<RouletteItem>) => {
+    const updated = localItems.map(item =>
+      item.id === id ? { ...item, ...updates } : item
+    );
+    setLocalItems(updated);
+    onSend({ type: 'updateRoulette', items: updated });
+  };
+
   const handleSpin = () => {
-    if (roulette.items.length < 2) return;
+    if (localItems.length < 2) return;
 
     setIsSpinning(true);
-    setStatus('spinning');
 
-    // 스핀 및 당첨자 선정은 store에서 처리
-    spinRoulette();
+    // 가중치 기반 당첨자 선정
+    const totalWeight = localItems.reduce((sum, item) => sum + item.weight, 0);
+    let random = Math.random() * totalWeight;
+    let winnerIndex = 0;
+
+    for (let i = 0; i < localItems.length; i++) {
+      random -= localItems[i].weight;
+      if (random <= 0) {
+        winnerIndex = i;
+        break;
+      }
+    }
+
+    const winner = localItems[winnerIndex];
+    setCurrentWinner(winner);
+
+    // 당첨 위치 각도 계산
+    let winnerStartAngle = 0;
+    for (let i = 0; i < winnerIndex; i++) {
+      winnerStartAngle += (localItems[i].weight / totalWeight) * 360;
+    }
+    const winnerAngle = (winner.weight / totalWeight) * 360;
+    const winnerMiddleAngle = winnerStartAngle + winnerAngle / 2;
+
+    // 최종 회전 각도 계산 (최소 5바퀴 + 당첨 위치)
+    const minSpins = 5;
+    const newRotation = targetRotation + 360 * minSpins + (360 - winnerMiddleAngle);
+
+    setTargetRotation(newRotation);
+
+    // 서버에 결과 전송
+    onSend({ type: 'spinRoulette', winnerId: winner.id, winnerLabel: winner.label });
   };
 
   const handleSpinComplete = () => {
     setIsSpinning(false);
-    setStatus('result');
     setShowWinnerModal(true);
   };
 
   const handleReset = () => {
-    clearRouletteItems();
-    setStatus('idle');
+    setLocalItems([]);
+    setTargetRotation(0);
+    setCurrentWinner(null);
     setShowWinnerModal(false);
+    onSend({ type: 'updateRoulette', items: [] });
   };
 
   const handleCloseModal = () => {
     setShowWinnerModal(false);
   };
 
-  const isIdle = status === 'idle';
-  const isResult = status === 'result';
-
   // 아이템에 색상 추가 및 RouletteWheel에 맞는 형태로 변환
-  const itemsForWheel = roulette.items.map((item, index) => ({
+  const itemsForWheel = localItems.map((item, index) => ({
     id: item.id,
-    name: item.label, // RouletteWheel은 name을 사용
+    name: item.label,
     weight: item.weight,
     color: item.color || COLORS[index % COLORS.length]
   }));
@@ -99,9 +163,7 @@ export default function RouletteGame() {
           >
             <Target size={18} />
             <span>
-              {isIdle && '대기 중'}
-              {isSpinning && '돌리는 중...'}
-              {isResult && !isSpinning && '결과'}
+              {isSpinning ? '돌리는 중...' : '대기 중'}
             </span>
             {isSpinning && (
               <motion.span
@@ -121,27 +183,13 @@ export default function RouletteGame() {
               color: '#9ca3af'
             }}
           >
-            {roulette.items.length}개 항목
+            {localItems.length}개 항목
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 설정 버튼 */}
-          <motion.button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2.5 rounded-xl transition-colors"
-            style={{
-              backgroundColor: showSettings ? 'rgba(255, 107, 107, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              color: showSettings ? '#ff6b6b' : '#9ca3af'
-            }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-          </motion.button>
-
           {/* 초기화 버튼 */}
-          {(isResult || roulette.rotation > 0) && (
+          {localItems.length > 0 && (
             <motion.button
               onClick={handleReset}
               className="px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
@@ -160,15 +208,15 @@ export default function RouletteGame() {
           {/* 스핀 버튼 */}
           <motion.button
             onClick={handleSpin}
-            disabled={isSpinning || roulette.items.length < 2}
+            disabled={isSpinning || localItems.length < 2}
             className="px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"
             style={{
-              backgroundColor: !isSpinning && roulette.items.length >= 2 ? '#ff6b6b' : '#333',
-              color: !isSpinning && roulette.items.length >= 2 ? '#fff' : '#666',
-              opacity: !isSpinning && roulette.items.length >= 2 ? 1 : 0.5
+              backgroundColor: !isSpinning && localItems.length >= 2 ? '#ff6b6b' : '#333',
+              color: !isSpinning && localItems.length >= 2 ? '#fff' : '#666',
+              opacity: !isSpinning && localItems.length >= 2 ? 1 : 0.5
             }}
-            whileHover={!isSpinning && roulette.items.length >= 2 ? { scale: 1.02 } : {}}
-            whileTap={!isSpinning && roulette.items.length >= 2 ? { scale: 0.98 } : {}}
+            whileHover={!isSpinning && localItems.length >= 2 ? { scale: 1.02 } : {}}
+            whileTap={!isSpinning && localItems.length >= 2 ? { scale: 0.98 } : {}}
           >
             <Play size={18} />
             {isSpinning ? '돌리는 중...' : '돌리기'}
@@ -189,7 +237,7 @@ export default function RouletteGame() {
           <RouletteWheel
             items={itemsForWheel}
             spinning={isSpinning}
-            targetRotation={roulette.rotation}
+            targetRotation={targetRotation}
             onSpinComplete={handleSpinComplete}
           />
         </div>
@@ -211,6 +259,20 @@ export default function RouletteGame() {
                 border: '1px solid rgba(255, 255, 255, 0.1)'
               }}
             />
+            <input
+              type="number"
+              value={newItemWeight}
+              onChange={(e) => setNewItemWeight(Math.max(1, parseInt(e.target.value) || 1))}
+              disabled={isSpinning}
+              min={1}
+              className="w-20 px-3 py-3 rounded-xl text-center disabled:opacity-50"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                color: '#ff6b6b',
+                border: '1px solid rgba(255, 107, 107, 0.2)'
+              }}
+              placeholder="가중치"
+            />
             <motion.button
               onClick={handleAddItem}
               disabled={!newItemName.trim() || isSpinning}
@@ -228,14 +290,10 @@ export default function RouletteGame() {
 
           {/* 항목 리스트 */}
           <div
-            className="space-y-2 max-h-[400px] overflow-y-auto pr-2"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#333 transparent'
-            }}
+            className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar"
           >
             <AnimatePresence mode="popLayout">
-              {roulette.items.map((item, index) => (
+              {localItems.map((item, index) => (
                 <motion.div
                   key={item.id}
                   layout
@@ -258,7 +316,7 @@ export default function RouletteGame() {
                   <input
                     type="text"
                     value={item.label}
-                    onChange={(e) => updateRouletteItem(item.id, { label: e.target.value })}
+                    onChange={(e) => handleUpdateItem(item.id, { label: e.target.value })}
                     disabled={isSpinning}
                     className="flex-1 bg-transparent text-white font-medium outline-none disabled:opacity-50"
                   />
@@ -269,7 +327,7 @@ export default function RouletteGame() {
                     <input
                       type="number"
                       value={item.weight}
-                      onChange={(e) => updateRouletteItem(item.id, { weight: Math.max(1, parseInt(e.target.value) || 1) })}
+                      onChange={(e) => handleUpdateItem(item.id, { weight: Math.max(1, parseInt(e.target.value) || 1) })}
                       disabled={isSpinning}
                       min={1}
                       className="w-16 px-2 py-1 rounded-lg text-sm text-center disabled:opacity-50"
@@ -283,7 +341,7 @@ export default function RouletteGame() {
 
                   {/* 삭제 버튼 */}
                   <motion.button
-                    onClick={() => removeRouletteItem(item.id)}
+                    onClick={() => handleRemoveItem(item.id)}
                     disabled={isSpinning}
                     className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
                     whileHover={!isSpinning ? { scale: 1.1 } : {}}
@@ -296,7 +354,7 @@ export default function RouletteGame() {
             </AnimatePresence>
 
             {/* 빈 상태 */}
-            {roulette.items.length === 0 && (
+            {localItems.length === 0 && (
               <div
                 className="text-center py-12 rounded-xl"
                 style={{
@@ -311,7 +369,7 @@ export default function RouletteGame() {
             )}
 
             {/* 항목이 1개일 때 경고 */}
-            {roulette.items.length === 1 && (
+            {localItems.length === 1 && (
               <p className="text-center text-yellow-500 text-sm">
                 룰렛을 돌리려면 최소 2개의 항목이 필요합니다
               </p>
@@ -322,7 +380,7 @@ export default function RouletteGame() {
 
       {/* 당첨자 모달 */}
       <AnimatePresence>
-        {showWinnerModal && roulette.currentWinner && (
+        {showWinnerModal && currentWinner && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -389,13 +447,13 @@ export default function RouletteGame() {
 
                 <h2 className="text-lg text-gray-400 mb-2">당첨!</h2>
                 <h3
-                  className="text-3xl font-bold mb-6"
+                  className="text-3xl font-black mb-6"
                   style={{
                     color: '#ff6b6b',
                     textShadow: '0 0 20px rgba(255, 107, 107, 0.5)'
                   }}
                 >
-                  {roulette.currentWinner.label}
+                  {currentWinner.label}
                 </h3>
 
                 <motion.button
