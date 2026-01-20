@@ -1,19 +1,15 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { 
-  Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  BarChart3, Users, Coins, LogOut, Activity, ShieldCheck, X, RefreshCw, Sparkles,
-  Vote, Gift, Disc
+import {
+  Home, Terminal, Clock, Calculator, Music, HandHelping,
+  Users, Coins, LogOut, Activity, ShieldCheck, X, RefreshCw, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 데모용 정적 컴포넌트들 (Mock Props 전달)
 import DashboardHome from '@/components/dashboard/DashboardHome';
 import CommandTab from '@/components/dashboard/CommandTab';
-import VoteTab from '@/components/dashboard/VoteTab';
-import DrawTab from '@/components/dashboard/DrawTab';
-import RouletteTab from '@/components/dashboard/RouletteTab';
 
 export default function DemoPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -37,12 +33,7 @@ export default function DemoPage() {
     chatHistory: [
       { profile: { nickname: 'Viewer_A', color: '#00ff94' }, message: '와 정말 대단해요!' },
       { profile: { nickname: 'Viewer_B', color: '#00d4ff' }, message: '데모 모드 체험 중입니다.' }
-    ],
-    // [New Features Mock State]
-    vote: { currentVote: { title: '오늘 저녁 메뉴?', status: 'active', mode: 'normal', totalParticipants: 15, options: [{id:'1', label:'치킨', count: 10}, {id:'2', label:'피자', count: 5}] } },
-    draw: { isCollecting: false, participantCount: 10, status: 'idle', winners: [] },
-    roulette: { items: [{id:'1', label:'꽝', weight:1, color:'#ef4444'}, {id:'2', label:'당첨', weight:1, color:'#22c55e'}] },
-    overlay: { isVisible: true, currentView: 'none' }
+    ]
   });
 
   // 가상 채팅 시뮬레이션
@@ -84,9 +75,6 @@ export default function DemoPage() {
         </div>
         <nav className="flex-1 px-4 space-y-2 mt-8">
           <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="vote" icon={<Vote size={22}/>} label="투표" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="draw" icon={<Gift size={22}/>} label="추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="roulette" icon={<Disc size={22}/>} label="룰렛" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>
         <div className="p-6 mt-auto">
@@ -113,9 +101,6 @@ export default function DemoPage() {
           <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             {activeTab === 'dashboard' && <DashboardHome store={mockStore} />}
             {activeTab === 'commands' && <CommandTab onSend={mockSend} />}
-            {activeTab === 'vote' && <VoteTab onSend={mockSend} />}
-            {activeTab === 'draw' && <DrawTab onSend={mockSend} />}
-            {activeTab === 'roulette' && <RouletteTab onSend={mockSend} />}
           </motion.div>
         </AnimatePresence>
       </main>

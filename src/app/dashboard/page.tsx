@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { 
-  Home, Terminal, Clock, Calculator, Music, HandHelping, 
-  BarChart3, Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
+import {
+  Home, Terminal, Clock, Calculator, Music, HandHelping,
+  Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
@@ -15,7 +15,6 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
-import VotesLayout from '@/components/dashboard/VotesLayout';
 
 import ToastContainer from '@/components/ui/Toast';
 import Toggle from '@/components/ui/Toggle';
@@ -27,12 +26,8 @@ export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  
-  const [winner, setWinner] = useState<any | null>(null);
-  const [winnerChats, setWinnerChats] = useState<any[]>([]);
-  
+
   const socketRef = useRef<WebSocket | null>(null);
-  const lastSpokenMsgRef = useRef<string>('');
 
   const getServerUrl = () => process.env.NEXT_PUBLIC_SERVER_URL || 'web-production-19eef.up.railway.app';
 
@@ -64,44 +59,12 @@ export default function DashboardPage() {
       case 'participationRankingUpdate': currentStore.updateParticipationRanking(payload); break;
       case 'greetStateUpdate': currentStore.updateGreet(payload); break;
       case 'chatHistoryLoad': currentStore.setChatHistory(payload); break;
-      
-      // [New Features State Handling]
-      case 'voteStateUpdate': currentStore.updateVote(payload); break;
-      case 'drawStateUpdate': currentStore.updateDraw(payload); break;
-      case 'rouletteStateUpdate': currentStore.updateRoulette(payload); break;
-      case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;
 
-      // [Custom Events for Sub-Tabs]
-      case 'voteBallotsResponse': window.dispatchEvent(new CustomEvent('voteBallotsResponse', { detail: payload })); break;
-      case 'voteHistoryResponse': window.dispatchEvent(new CustomEvent('voteHistoryResponse', { detail: payload })); break;
-      case 'voteWinnerResult': window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload })); break;
-      case 'spinRouletteResult': window.dispatchEvent(new CustomEvent('spinRouletteResult', { detail: payload })); break; // [New]
-
-      case 'newChat':  
-        currentStore.addChat(payload); 
-        if (winner && payload.profile.userIdHash === winner.userIdHash) {
-          setWinnerChats(prev => [payload, ...prev].slice(0, 10));
-          speak(payload.message);
-        }
-        break;
-      case 'drawWinnerResult':
-        const winPlayer = payload.winners[0];
-        setWinner(winPlayer);
-        setWinnerChats([]);
-        notify(`${winPlayer.nickname}님이 당첨되었습니다!`, 'success');
+      case 'newChat':
+        currentStore.addChat(payload);
         break;
     }
-  }, [winner]);
-
-  const speak = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    if (lastSpokenMsgRef.current === text) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    window.speechSynthesis.speak(utterance);
-    lastSpokenMsgRef.current = text;
-  };
+  }, []);
 
   const connectWS = useCallback((token: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
@@ -211,7 +174,6 @@ export default function DashboardPage() {
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="songs" icon={<Music size={22}/>} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="participation" icon={<Users size={22}/>} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="votes" icon={<BarChart3 size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="points" icon={<Coins size={22}/>} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
@@ -241,7 +203,6 @@ export default function DashboardPage() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.5 }}>
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
-            {activeTab === 'votes' && <VotesLayout onSend={send} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
             {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} onSend={send} />}

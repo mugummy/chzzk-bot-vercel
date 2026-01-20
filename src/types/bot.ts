@@ -10,13 +10,6 @@ export interface BotSettings {
     pointsName: string;
     participationCommand: string;
     maxParticipants: number;
-    overlay: {
-        backgroundColor: string;
-        textColor: string;
-        accentColor: string;
-        opacity: number;
-        scale: number;
-    };
 }
 
 export interface CommandItem {
@@ -62,24 +55,4 @@ export interface BotState {
     };
     points: { [key: string]: any };
     chatHistory: any[];
-    
-    // [New Features]
-    vote: {
-        currentVote: any | null;
-    };
-    draw: {
-        isCollecting: boolean;
-        participantCount: number;
-        participantsList?: string[]; // [New]
-        settings: any | null;
-        status: 'idle' | 'rolling' | 'completed';
-        winners: any[];
-    };
-    roulette: {
-        items: any[];
-    };
-    overlay: {
-        isVisible: boolean;
-        currentView: 'none' | 'vote' | 'draw' | 'roulette';
-    };
 }

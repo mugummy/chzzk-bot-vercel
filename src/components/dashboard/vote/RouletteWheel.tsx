@@ -1,273 +1,149 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useMemo } from 'react';
+import { Star } from 'lucide-react';
 
 interface RouletteItem {
   id: string;
-  name: string;
+  label: string;
   weight: number;
-  color: string;
+  color?: string;
 }
 
 interface RouletteWheelProps {
   items: RouletteItem[];
-  spinning: boolean;
-  targetRotation: number;
-  onSpinComplete: () => void;
+  isSpinning: boolean;
+  result: RouletteItem | null;
+  onSpinEnd?: () => void;
 }
 
-const COLORS = [
-  '#ff6b6b', '#4ecdc4', '#ffe66d', '#00ff80',
-  '#ff9f43', '#a55eea', '#26de81', '#fd79a8',
-  '#0984e3', '#6c5ce7', '#00b894', '#e17055'
-];
+const DEFAULT_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1', '#ef4444', '#14b8a6'];
 
-export default function RouletteWheel({
-  items,
-  spinning,
-  targetRotation,
-  onSpinComplete
-}: RouletteWheelProps) {
-  const [currentRotation, setCurrentRotation] = useState(0);
-  const wheelRef = useRef<HTMLDivElement>(null);
+export default function RouletteWheel({ items, isSpinning, result, onSpinEnd }: RouletteWheelProps) {
+  const [rotation, setRotation] = useState(0);
 
-  // 총 가중치 계산
-  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+  const totalWeight = useMemo(() =>
+    items.reduce((sum, item) => sum + item.weight, 0),
+    [items]
+  );
 
-  // 각 섹션의 각도 계산
-  const sections = items.map((item, index) => {
-    const startAngle = items
-      .slice(0, index)
-      .reduce((sum, i) => sum + (i.weight / totalWeight) * 360, 0);
-    const angle = (item.weight / totalWeight) * 360;
+  const gradient = useMemo(() => {
+    if (items.length === 0) return 'conic-gradient(#333 0% 100%)';
 
-    return {
-      ...item,
-      startAngle,
-      angle,
-      color: item.color || COLORS[index % COLORS.length]
-    };
-  });
+    let currentPercent = 0;
+    const segments = items.map((item, idx) => {
+      const start = currentPercent;
+      const weightPercent = (item.weight / totalWeight) * 100;
+      currentPercent += weightPercent;
+      const color = item.color || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
+      return `${color} ${start}% ${currentPercent}%`;
+    });
+    return `conic-gradient(${segments.join(', ')})`;
+  }, [items, totalWeight]);
+
+  const getRotation = (idx: number) => {
+    let previousWeight = 0;
+    for (let i = 0; i < idx; i++) {
+      previousWeight += items[i].weight;
+    }
+    const myWeight = items[idx].weight;
+    const startDeg = (previousWeight / totalWeight) * 360;
+    const endDeg = ((previousWeight + myWeight) / totalWeight) * 360;
+    return startDeg + (endDeg - startDeg) / 2;
+  };
+
+  const shouldShowText = (idx: number) => {
+    const weight = items[idx].weight;
+    const deg = (weight / totalWeight) * 360;
+    return deg > 15;
+  };
 
   useEffect(() => {
-    if (spinning && targetRotation > 0) {
-      setCurrentRotation(targetRotation);
+    if (isSpinning && result) {
+      // Calculate target rotation to land on result
+      const resultIndex = items.findIndex(item => item.id === result.id);
+      if (resultIndex >= 0) {
+        let weightBefore = 0;
+        for (let i = 0; i < resultIndex; i++) {
+          weightBefore += items[i].weight;
+        }
+        const itemWeight = items[resultIndex].weight;
+        const itemCenterDeg = ((weightBefore + itemWeight / 2) / totalWeight) * 360;
+
+        // Spin multiple times + land on target (pointer is at top, so we need to offset)
+        const extraSpins = 360 * 5;
+        const targetRotation = extraSpins + (360 - itemCenterDeg) + 90; // +90 because pointer is at top
+        setRotation(prev => prev + targetRotation);
+      }
+
+      // Call onSpinEnd after animation
+      const timer = setTimeout(() => {
+        onSpinEnd?.();
+      }, 4000);
+
+      return () => clearTimeout(timer);
     }
-  }, [spinning, targetRotation]);
+  }, [isSpinning, result, items, totalWeight, onSpinEnd]);
 
-  // SVG 호(arc) 경로 생성
-  const createArcPath = (
-    centerX: number,
-    centerY: number,
-    radius: number,
-    startAngle: number,
-    endAngle: number
-  ) => {
-    const start = polarToCartesian(centerX, centerY, radius, endAngle);
-    const end = polarToCartesian(centerX, centerY, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-
-    return [
-      'M', centerX, centerY,
-      'L', start.x, start.y,
-      'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-      'Z'
-    ].join(' ');
-  };
-
-  const polarToCartesian = (
-    centerX: number,
-    centerY: number,
-    radius: number,
-    angleInDegrees: number
-  ) => {
-    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians)
-    };
-  };
-
-  // 텍스트 위치 계산
-  const getTextPosition = (startAngle: number, angle: number, radius: number) => {
-    const midAngle = startAngle + angle / 2;
-    const textRadius = radius * 0.65;
-    return polarToCartesian(150, 150, textRadius, midAngle);
-  };
+  if (items.length < 2) {
+    return (
+      <div className="w-[400px] h-[400px] rounded-full bg-[#222] border-8 border-[#333] flex items-center justify-center">
+        <p className="text-gray-500 font-bold">2개 이상의 항목이 필요합니다</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative flex items-center justify-center">
-      {/* 외부 글로우 */}
-      <div
-        className="absolute w-[340px] h-[340px] rounded-full"
-        style={{
-          background: spinning
-            ? 'radial-gradient(circle, rgba(255, 107, 107, 0.3) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%)',
-          filter: 'blur(20px)'
-        }}
-      />
-
-      {/* 룰렛 휠 */}
-      <motion.div
-        ref={wheelRef}
-        className="relative"
-        animate={{ rotate: currentRotation }}
-        transition={{
-          duration: spinning ? 5 : 0,
-          ease: [0.25, 0.1, 0.25, 1], // 커스텀 이징
-          onComplete: spinning ? onSpinComplete : undefined
-        }}
-        onAnimationComplete={() => {
-          if (spinning) {
-            onSpinComplete();
-          }
-        }}
-      >
-        <svg width="300" height="300" viewBox="0 0 300 300">
-          {/* 배경 원 */}
-          <circle
-            cx="150"
-            cy="150"
-            r="148"
-            fill="#111"
-            stroke="#333"
-            strokeWidth="4"
-          />
-
-          {/* 섹션들 */}
-          {sections.map((section, index) => (
-            <g key={section.id}>
-              {/* 섹션 배경 */}
-              <path
-                d={createArcPath(
-                  150,
-                  150,
-                  140,
-                  section.startAngle,
-                  section.startAngle + section.angle
-                )}
-                fill={section.color}
-                stroke="#000"
-                strokeWidth="2"
-                style={{
-                  filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.5))'
-                }}
-              />
-
-              {/* 섹션 텍스트 */}
-              {section.angle > 15 && (
-                <text
-                  x={getTextPosition(section.startAngle, section.angle, 140).x}
-                  y={getTextPosition(section.startAngle, section.angle, 140).y}
-                  fill="#fff"
-                  fontSize={section.angle > 30 ? '12' : '10'}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={`rotate(${section.startAngle + section.angle / 2}, ${
-                    getTextPosition(section.startAngle, section.angle, 140).x
-                  }, ${getTextPosition(section.startAngle, section.angle, 140).y})`}
-                  style={{
-                    textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-                    pointerEvents: 'none'
-                  }}
-                >
-                  {section.name.length > 8
-                    ? section.name.slice(0, 8) + '...'
-                    : section.name}
-                </text>
-              )}
-            </g>
-          ))}
-
-          {/* 중앙 원 */}
-          <circle
-            cx="150"
-            cy="150"
-            r="25"
-            fill="#1a1a1a"
-            stroke="#ff6b6b"
-            strokeWidth="3"
-          />
-          <circle
-            cx="150"
-            cy="150"
-            r="15"
-            fill="#ff6b6b"
-          />
+    <div className="relative">
+      {/* Pointer */}
+      <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-30 text-red-500 text-5xl drop-shadow-lg">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 16l-6-6h12l-6 6z" />
         </svg>
-      </motion.div>
-
-      {/* 포인터 (화살표) */}
-      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-10">
-        <motion.div
-          animate={spinning ? { y: [0, 5, 0] } : {}}
-          transition={{ duration: 0.3, repeat: spinning ? Infinity : 0 }}
-        >
-          <svg width="40" height="50" viewBox="0 0 40 50">
-            <defs>
-              <filter id="pointer-shadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#ff6b6b" floodOpacity="0.5" />
-              </filter>
-            </defs>
-            <path
-              d="M20 45 L5 15 L20 25 L35 15 Z"
-              fill="#ff6b6b"
-              stroke="#fff"
-              strokeWidth="2"
-              filter="url(#pointer-shadow)"
-            />
-          </svg>
-        </motion.div>
       </div>
 
-      {/* 스피닝 이펙트 */}
-      {spinning && (
-        <div className="absolute inset-0 pointer-events-none">
-          <motion.div
-            className="absolute inset-0 rounded-full"
-            style={{
-              border: '2px solid rgba(255, 107, 107, 0.5)'
-            }}
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.5, 0, 0.5]
-            }}
-            transition={{
-              duration: 1,
-              repeat: Infinity
-            }}
-          />
-        </div>
-      )}
+      {/* Wheel */}
+      <div
+        className="w-[400px] h-[400px] rounded-full border-[10px] border-[#222] shadow-2xl relative overflow-hidden bg-[#111]"
+        style={{
+          transform: `rotate(${rotation}deg)`,
+          transition: isSpinning ? 'transform 4s cubic-bezier(0.15, 0.85, 0.35, 1)' : 'none'
+        }}
+      >
+        {/* Segments */}
+        <div className="absolute inset-0 rounded-full" style={{ background: gradient }} />
 
-      {/* 항목이 없을 때 */}
-      {items.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg width="300" height="300" viewBox="0 0 300 300">
-            <circle
-              cx="150"
-              cy="150"
-              r="140"
-              fill="#1a1a1a"
-              stroke="#333"
-              strokeWidth="4"
-            />
-            <text
-              x="150"
-              y="150"
-              fill="#666"
-              fontSize="14"
-              textAnchor="middle"
-              dominantBaseline="middle"
+        {/* Text labels */}
+        <div className="absolute inset-0">
+          {items.map((item, idx) => (
+            <div
+              key={item.id}
+              className="absolute top-0 left-1/2 -translate-x-1/2 h-[200px] w-[40px] origin-bottom flex justify-start pt-8"
+              style={{ transform: `rotate(${getRotation(idx)}deg)` }}
             >
-              항목을 추가해주세요
-            </text>
-          </svg>
+              {shouldShowText(idx) && (
+                <span
+                  className="text-white font-bold text-sm drop-shadow-md whitespace-nowrap"
+                  style={{ writingMode: 'vertical-rl' }}
+                >
+                  {item.label}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
-      )}
+
+        {/* Border */}
+        <div className="absolute inset-0 rounded-full border-4 border-white/10 pointer-events-none" />
+
+        {/* Center */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-[#222] rounded-full z-20 flex items-center justify-center shadow-xl border-4 border-[#333]">
+          <Star className="text-[#00ff80]" size={24} fill="currentColor" />
+        </div>
+      </div>
+
+      {/* Shadow */}
+      <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[320px] h-[32px] bg-black/40 blur-xl rounded-full" />
     </div>
   );
 }

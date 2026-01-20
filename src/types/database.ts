@@ -75,23 +75,6 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['viewer_points']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['viewer_points']['Insert']>;
       };
-      votes: {
-        Row: {
-          id: string;
-          user_id: string;
-          question: string;
-          options: { id: string; text: string }[];
-          results: Record<string, number>;
-          is_active: boolean;
-          duration_seconds: number;
-          start_time: string | null;
-          end_time: string | null;
-          voters: string[];
-          created_at: string;
-        };
-        Insert: Omit<Database['public']['Tables']['votes']['Row'], 'id' | 'created_at'>;
-        Update: Partial<Database['public']['Tables']['votes']['Insert']>;
-      };
       song_queue: {
         Row: {
           id: string;
@@ -128,6 +111,5 @@ export type BotSettings = Database['public']['Tables']['bot_settings']['Row'];
 export type Command = Database['public']['Tables']['commands']['Row'];
 export type Counter = Database['public']['Tables']['counters']['Row'];
 export type ViewerPoints = Database['public']['Tables']['viewer_points']['Row'];
-export type Vote = Database['public']['Tables']['votes']['Row'];
 export type SongQueue = Database['public']['Tables']['song_queue']['Row'];
 export type BotSession = Database['public']['Tables']['bot_sessions']['Row'];

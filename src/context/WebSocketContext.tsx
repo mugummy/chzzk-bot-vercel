@@ -61,17 +61,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
           case 'macrosUpdate':
             store.updateMacros(payload);
             break;
-          
-          // [핵심] 상태 동기화
-          case 'voteStateUpdate':
-            store.updateVote(payload);
-            break;
-          case 'rouletteStateUpdate':
-            store.updateRoulette(payload);
-            break;
-          case 'drawStateUpdate':
-            store.updateDraw(payload);
-            break;
           case 'songStateUpdate':
             store.updateSongs(payload);
             break;
