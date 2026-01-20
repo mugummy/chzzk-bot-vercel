@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import SlotMachine from './vote/SlotMachine';
 import RouletteWheel from './vote/RouletteWheel';
+import ChatBox from './vote/ChatBox';
 
 interface VoteDrawTabProps {
   onSend: (msg: any) => void;
@@ -40,13 +41,45 @@ export default function VoteDrawTab({ onSend }: VoteDrawTabProps) {
   const [isRouletteSpinning, setIsRouletteSpinning] = useState(false);
   const [rouletteResult, setRouletteResult] = useState<any>(null);
 
+  // ChatBox state
+  const [chatMessages, setChatMessages] = useState<{ text: string; emoji?: string }[]>([]);
+  const [showChatBox, setShowChatBox] = useState(false);
+
+  // TTS function
+  const playTTS = (text: string) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 1.0;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
   // Listen for server responses
   useEffect(() => {
     const handleDrawWinner = (e: CustomEvent) => {
       setIsDrawAnimating(true);
+      setChatMessages([]);
+      setShowChatBox(false);
       setTimeout(() => {
         setShowDrawResult(true);
         setIsDrawAnimating(false);
+        // TTS for draw winner
+        if (e.detail?.nickname) {
+          playTTS(`축하합니다! ${e.detail.nickname}님 당첨!`);
+          setShowChatBox(true);
+          // Add sample chat messages for demo
+          const sampleMessages = [
+            { text: '와 축하드려요!', emoji: '🎉' },
+            { text: 'ㅊㅋㅊㅋ' },
+            { text: '대박 ㄹㅇ', emoji: '👏' }
+          ];
+          sampleMessages.forEach((msg, idx) => {
+            setTimeout(() => {
+              setChatMessages(prev => [...prev, msg]);
+            }, (idx + 1) * 800);
+          });
+        }
       }, 6500);
     };
 
@@ -57,12 +90,20 @@ export default function VoteDrawTab({ onSend }: VoteDrawTabProps) {
       }, 4000);
     };
 
+    const handleVoteWinner = (e: CustomEvent) => {
+      if (e.detail?.nickname) {
+        playTTS(`${e.detail.nickname}님이 당첨되었습니다!`);
+      }
+    };
+
     window.addEventListener('drawWinnerResult', handleDrawWinner as EventListener);
     window.addEventListener('rouletteResult', handleRouletteResult as EventListener);
+    window.addEventListener('voteWinnerResult', handleVoteWinner as EventListener);
 
     return () => {
       window.removeEventListener('drawWinnerResult', handleDrawWinner as EventListener);
       window.removeEventListener('rouletteResult', handleRouletteResult as EventListener);
+      window.removeEventListener('voteWinnerResult', handleVoteWinner as EventListener);
     };
   }, []);
 
@@ -123,6 +164,8 @@ export default function VoteDrawTab({ onSend }: VoteDrawTabProps) {
       onSend({ type: 'resetDraw' });
       setShowDrawResult(false);
       setIsDrawAnimating(false);
+      setShowChatBox(false);
+      setChatMessages([]);
     }
   };
 
@@ -282,13 +325,26 @@ export default function VoteDrawTab({ onSend }: VoteDrawTabProps) {
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-8 text-center"
+                      className="mt-8 text-center w-full max-w-md"
                     >
                       <Sparkles className="mx-auto text-yellow-500 mb-2" size={32} />
                       <p className="text-2xl font-black text-emerald-500">{draw.winner.nickname}</p>
                       <p className="text-gray-400">축하합니다!</p>
+
+                      {/* ChatBox */}
+                      <ChatBox
+                        visible={showChatBox}
+                        messages={chatMessages}
+                        winnerName={draw.winner.nickname}
+                      />
+
                       <button
-                        onClick={() => { setShowDrawResult(false); handleResetDraw(); }}
+                        onClick={() => {
+                          setShowDrawResult(false);
+                          setShowChatBox(false);
+                          setChatMessages([]);
+                          handleResetDraw();
+                        }}
                         className="mt-4 px-6 py-2 bg-white/10 rounded-lg font-bold hover:bg-white/20"
                       >
                         닫기

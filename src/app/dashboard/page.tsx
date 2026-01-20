@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Home, Terminal, Clock, Calculator, Music, HandHelping,
-  Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap
+  Users, Coins, LogOut, Activity, Globe, ShieldCheck, Menu, ChevronRight, X, RefreshCw, AlertCircle, Zap, Gift
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
@@ -15,6 +15,7 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
+import VoteDrawTab from '@/components/dashboard/VoteDrawTab';
 
 import ToastContainer from '@/components/ui/Toast';
 import Toggle from '@/components/ui/Toggle';
@@ -62,6 +63,22 @@ export default function DashboardPage() {
 
       case 'newChat':
         currentStore.addChat(payload);
+        break;
+
+      // Vote/Draw/Roulette State
+      case 'voteStateUpdate': currentStore.updateVote(payload); break;
+      case 'drawStateUpdate': currentStore.updateDraw(payload); break;
+      case 'rouletteStateUpdate': currentStore.updateRoulette(payload); break;
+
+      // Result Events
+      case 'drawWinnerResult':
+        window.dispatchEvent(new CustomEvent('drawWinnerResult', { detail: payload }));
+        break;
+      case 'rouletteResult':
+        window.dispatchEvent(new CustomEvent('rouletteResult', { detail: payload }));
+        break;
+      case 'voteWinnerResult':
+        window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload }));
         break;
     }
   }, []);
@@ -178,6 +195,7 @@ export default function DashboardPage() {
           
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="greet" icon={<HandHelping size={22}/>} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="votedraw" icon={<Gift size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>
 
         <div className="p-6 mt-auto">
@@ -209,6 +227,7 @@ export default function DashboardPage() {
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}
             {activeTab === 'points' && <PointTab onSend={send} />}
+            {activeTab === 'votedraw' && <VoteDrawTab onSend={send} />}
           </motion.div>
         </AnimatePresence>
         <ToastContainer />

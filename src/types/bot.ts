@@ -27,6 +27,46 @@ export interface SongItem {
     requestedAt: number;
 }
 
+export interface VoteOption {
+    id: string;
+    label: string;
+    count: number;
+    percent: number;
+    barPercent: number;
+}
+
+export interface VoteState {
+    currentVote: {
+        title: string;
+        options: VoteOption[];
+        status: 'active' | 'ended';
+        totalVotes: number;
+        mode: 'chat' | 'donation';
+    } | null;
+}
+
+export interface DrawState {
+    isRecruiting: boolean;
+    status: 'idle' | 'recruiting' | 'complete';
+    participantCount: number;
+    participants: Array<{ id: string; nickname: string; }>;
+    keyword: string;
+    subsOnly: boolean;
+    winner: { id: string; nickname: string; } | null;
+}
+
+export interface RouletteItem {
+    id: string;
+    label: string;
+    weight: number;
+}
+
+export interface RouletteState {
+    items: RouletteItem[];
+    isSpinning: boolean;
+    result: RouletteItem | null;
+}
+
 export interface BotState {
     isConnected: boolean;
     isReconnecting: boolean;
@@ -55,4 +95,7 @@ export interface BotState {
     };
     points: { [key: string]: any };
     chatHistory: any[];
+    vote: VoteState;
+    draw: DrawState;
+    roulette: RouletteState;
 }
