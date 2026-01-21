@@ -46,7 +46,7 @@ export const useBotStore = create<BotStore>((set) => ({
   chatHistory: [],
   
   // [New Initial States]
-  vote: { currentVote: null },
+  vote: { currentVote: null, remainingSeconds: 0 }, // [Fix] remainingSeconds 추가
   draw: { isCollecting: false, participantCount: 0, participantsList: [], settings: null, status: 'idle', winners: [] },
   roulette: { items: [] },
   overlay: { isVisible: true, currentView: 'none' },
