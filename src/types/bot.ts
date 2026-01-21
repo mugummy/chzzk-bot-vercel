@@ -10,6 +10,15 @@ export interface BotSettings {
     pointsName: string;
     participationCommand: string;
     maxParticipants: number;
+    // [Fix] BotSettings 내부에 overlay 설정 추가
+    overlay: {
+        theme: string;
+        accentColor: string;
+        opacity: number;
+        scale: number;
+        backgroundColor?: string;
+        textColor?: string;
+    };
 }
 
 export interface CommandItem {
