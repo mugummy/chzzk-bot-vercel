@@ -114,4 +114,9 @@ export interface BotState {
     vote: VoteState;
     draw: DrawState;
     roulette: RouletteState;
+    // [Fix] overlay 타입 추가
+    overlay: {
+        isVisible: boolean;
+        currentView: 'none' | 'vote' | 'draw' | 'roulette';
+    };
 }
