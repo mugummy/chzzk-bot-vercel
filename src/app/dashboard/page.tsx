@@ -15,6 +15,7 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
+import VoteTab from '@/components/dashboard/VoteTab';
 
 
 import ToastContainer from '@/components/ui/Toast';
@@ -174,6 +175,7 @@ export default function DashboardPage() {
           <NavItem id="participation" icon={<Users size={22} />} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
 
           <NavItem id="points" icon={<Coins size={22} />} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="vote" icon={<Gift size={22} />} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
 
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="greet" icon={<HandHelping size={22} />} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
@@ -208,6 +210,7 @@ export default function DashboardPage() {
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}
             {activeTab === 'points' && <PointTab onSend={send} />}
+            {activeTab === 'vote' && <VoteTab />}
 
           </motion.div>
         </AnimatePresence>
