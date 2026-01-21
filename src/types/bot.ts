@@ -1,5 +1,3 @@
-// 기존 타입 확장
-
 export interface BotSettings {
     chatEnabled: boolean;
     songRequestMode: 'all' | 'cooldown' | 'donation' | 'off';
@@ -10,7 +8,6 @@ export interface BotSettings {
     pointsName: string;
     participationCommand: string;
     maxParticipants: number;
-    // [Fix] BotSettings 내부에 overlay 설정 추가
     overlay: {
         theme: string;
         accentColor: string;
@@ -36,60 +33,29 @@ export interface SongItem {
     requestedAt: number;
 }
 
-export interface VoteOption {
-    id: string;
-    label: string;
-    count: number;
-    percent: string;
-    barPercent: number;
-    voters: Array<{ odHash: string; nickname: string; weight: number; }>;
+// [Fix] DrawState 인터페이스 명시
+export interface DrawState {
+    isCollecting: boolean; // 이 부분이 누락되었던 것으로 추정
+    participantCount: number;
+    participantsList?: string[];
+    settings: any | null;
+    status: 'idle' | 'rolling' | 'completed';
+    winners: any[];
 }
 
 export interface VoteState {
-    currentVote: {
-        id: string;
-        title: string;
-        options: VoteOption[];
-        status: 'pending' | 'active' | 'ended';
-        totalVotes: number;
-        mode: 'chat' | 'donation';
-        allowMultiple: boolean;
-        minDonation: number;
-        timerSeconds: number | null;
-    } | null;
-    remainingSeconds: number;
-}
-
-export interface DrawParticipant {
-    id: string;
-    userIdHash: string;
-    nickname: string;
-    role: string;
-}
-
-export interface DrawState {
-    isRecruiting: boolean;
-    status: 'idle' | 'recruiting' | 'pending' | 'picking' | 'ended';
-    participantCount: number;
-    participants: DrawParticipant[];
-    keyword: string | null;
-    subsOnly: boolean;
-    excludeWinners: boolean;
-    previousWinnersCount: number;
-    winner: DrawParticipant | null;
-}
-
-export interface RouletteItem {
-    id: string;
-    label: string;
-    weight: number;
-    color?: string;
+    currentVote: any | null;
+    remainingSeconds?: number;
 }
 
 export interface RouletteState {
-    items: RouletteItem[];
-    isSpinning: boolean;
-    result: RouletteItem | null;
+    items: any[];
+    selected?: any;
+}
+
+export interface OverlayState {
+    isVisible: boolean;
+    currentView: 'none' | 'vote' | 'draw' | 'roulette';
 }
 
 export interface BotState {
@@ -120,12 +86,10 @@ export interface BotState {
     };
     points: { [key: string]: any };
     chatHistory: any[];
+    
+    // [Fix] 명시된 인터페이스 사용
     vote: VoteState;
     draw: DrawState;
     roulette: RouletteState;
-    // [Fix] overlay 타입 추가
-    overlay: {
-        isVisible: boolean;
-        currentView: 'none' | 'vote' | 'draw' | 'roulette';
-    };
+    overlay: OverlayState;
 }

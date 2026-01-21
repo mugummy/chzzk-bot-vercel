@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, SongItem } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, SongItem, DrawState, VoteState, RouletteState, OverlayState } from '@/types/bot';
 
 export interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -17,16 +17,16 @@ export interface BotStore extends BotState {
   addChat: (chat: any) => void;
   
   // [New Updaters]
-  updateVote: (payload: any) => void;
-  updateDraw: (payload: any) => void;
-  updateRoulette: (payload: any) => void;
-  updateOverlay: (payload: any) => void;
+  updateVote: (payload: VoteState) => void;
+  updateDraw: (payload: DrawState) => void;
+  updateRoulette: (payload: RouletteState) => void;
+  updateOverlay: (payload: OverlayState) => void;
   
   // [Explicit Property for Type Safety]
-  overlay: {
-      isVisible: boolean;
-      currentView: 'none' | 'vote' | 'draw' | 'roulette';
-  };
+  vote: VoteState;
+  draw: DrawState;
+  roulette: RouletteState;
+  overlay: OverlayState;
 }
 
 export const useBotStore = create<BotStore>((set) => ({
@@ -46,7 +46,7 @@ export const useBotStore = create<BotStore>((set) => ({
   chatHistory: [],
   
   // [New Initial States]
-  vote: { currentVote: null, remainingSeconds: 0 }, // [Fix] remainingSeconds 추가
+  vote: { currentVote: null, remainingSeconds: 0 },
   draw: { isCollecting: false, participantCount: 0, participantsList: [], settings: null, status: 'idle', winners: [] },
   roulette: { items: [] },
   overlay: { isVisible: true, currentView: 'none' },
