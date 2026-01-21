@@ -14,8 +14,14 @@ export default function OverlayPage() {
 
     useEffect(() => {
         if (userId) {
-            // URL from env
-            const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+            const rawUrl = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'localhost:8080';
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
+            let wsUrl = rawUrl;
+            if (!wsUrl.includes('://')) {
+                wsUrl = `${protocol}${wsUrl}`;
+            }
+
             store.connect(wsUrl, userId);
         }
         return () => {
