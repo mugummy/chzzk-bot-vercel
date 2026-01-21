@@ -15,10 +15,18 @@ export interface BotStore extends BotState {
   updateGreet: (payload: any) => void;
   setChatHistory: (history: any[]) => void;
   addChat: (chat: any) => void;
-  // Vote/Draw/Roulette
+  
+  // [New Updaters]
   updateVote: (payload: any) => void;
   updateDraw: (payload: any) => void;
   updateRoulette: (payload: any) => void;
+  updateOverlay: (payload: any) => void;
+  
+  // [Explicit Property for Type Safety]
+  overlay: {
+      isVisible: boolean;
+      currentView: 'none' | 'vote' | 'draw' | 'roulette';
+  };
 }
 
 export const useBotStore = create<BotStore>((set) => ({
