@@ -26,8 +26,18 @@ export default function RouletteDisplay({ items, className, style }: RouletteDis
     const count = items.length;
     if (count === 0) return null;
 
-    const sliceAngle = 360 / count;
+    const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
     const colors = ['#FF4D4D', '#FFB84D', '#FFFF4D', '#4DFF4D', '#4DFFFF', '#4D4DFF', '#B84DFF', '#FF4DB8'];
+
+    // Calculate Gradients
+    let currentGradientAngle = 0;
+    const gradientParts = items.map((item, idx) => {
+        const wedgeAngle = (item.weight / totalWeight) * 360;
+        const start = currentGradientAngle;
+        const end = currentGradientAngle + wedgeAngle;
+        currentGradientAngle += wedgeAngle;
+        return `${colors[idx % colors.length]} ${start}deg ${end}deg`;
+    });
 
     return (
         <div className={`relative w-[500px] h-[500px] ${className}`} style={style}>
@@ -37,60 +47,39 @@ export default function RouletteDisplay({ items, className, style }: RouletteDis
             </div>
 
             {/* Wheel Container */}
-            <div className={`w-full h-full rounded-full border-[10px] border-gray-300 shadow-2xl relative overflow-hidden transition-transform duration-[5000ms] ${store.isSpinning ? 'ease-out' : ''}`}
+            <div className={`w-full h-full rounded-full border-[10px] border-gray-300 shadow-2xl relative overflow-hidden`}
                 style={{
                     transform: `rotate(${store.rouletteRotation}deg)`,
-                    transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1)'
+                    transition: store.rouletteTransition || 'none', // Use store transition
                 }}>
 
-                {/* Slices */}
-                {items.map((item, idx) => {
-                    const rotation = idx * sliceAngle;
-                    const color = colors[idx % colors.length];
-
-                    return (
-                        <div key={idx}
-                            className="absolute top-0 left-1/2 -translate-x-1/2 h-[50%] w-[50%] origin-bottom"
-                            style={{
-                                transform: `rotate(${rotation}deg) skewY(${90 - sliceAngle}deg)`, // Skew needed if generating CSS wedges
-                                // Actually CSS wedges are tricky.
-                                // Let's use Conic Gradient for background? 
-                                // Or the "Div Wedge" method.
-                                // The prototype was using `overflow-visible` and `h-[250px] w-[30px]`. 
-                                // "Star" hub removed in Step 1244.
-
-                                // Alternative: Conic Gradient Background
-                            }}>
-                            {/* This is hard to port exactly without seeing CSS. 
-                                   Let's use a simpler Conic Gradient approach for the Board, 
-                                   and overlaid text.
-                                */}
-                        </div>
-                    )
-                })}
-
-                {/* Better Approach: SVG or Conic Gradient */}
+                {/* Conic Gradient for Wedges */}
                 <div className="absolute inset-0 rounded-full"
                     style={{
-                        background: `conic-gradient(${items.map((_, i) => `${colors[i % colors.length]} ${i * sliceAngle}deg ${(i + 1) * sliceAngle}deg`).join(', ')
-                            })`
+                        background: `conic-gradient(${gradientParts.join(', ')})`
                     }}
                 />
 
                 {/* Text Labels */}
-                {items.map((item, idx) => {
-                    const angle = (idx * sliceAngle) + (sliceAngle / 2); // Center of wedge
-                    return (
-                        <div key={idx}
-                            className="absolute top-0 left-1/2 h-[50%] w-[2px] origin-bottom flex flex-col justify-start items-center pt-8 z-10 pointer-events-none"
-                            style={{ transform: `rotate(${angle}deg)` }}
-                        >
-                            <span className="text-white font-bold text-lg drop-shadow-md whitespace-nowrap" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-                                {item.name}
-                            </span>
-                        </div>
-                    )
-                })}
+                {(() => {
+                    let currentTextAngle = 0;
+                    return items.map((item, idx) => {
+                        const wedgeAngle = (item.weight / totalWeight) * 360;
+                        const angle = currentTextAngle + (wedgeAngle / 2);
+                        currentTextAngle += wedgeAngle;
+
+                        return (
+                            <div key={idx}
+                                className="absolute top-0 left-1/2 h-[50%] w-[2px] origin-bottom flex flex-col justify-start items-center pt-8 z-10 pointer-events-none"
+                                style={{ transform: `rotate(${angle}deg)` }}
+                            >
+                                <span className="text-white font-bold text-lg drop-shadow-md whitespace-nowrap" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
+                                    {item.name}
+                                </span>
+                            </div>
+                        )
+                    });
+                })()}
 
                 {/* Center Pin */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#333] rounded-full z-20 shadow-sm border border-gray-500"></div>

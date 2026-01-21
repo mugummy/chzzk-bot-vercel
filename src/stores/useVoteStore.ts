@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 
 interface VoteState {
-    socket: WebSocket | null;
     isConnected: boolean;
 
     // Vote
@@ -69,7 +68,6 @@ interface VoteState {
 }
 
 export const useVoteStore = create<VoteState>((set, get) => ({
-    socket: null,
     isConnected: false,
     sendFn: null,
 
@@ -117,62 +115,12 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         }
     },
 
-    connect: (url: string, userId: string) => {
-        if (get().socket) return;
-
-        console.log('Connecting to WebSocket:', url);
-        const socket = new WebSocket(url);
-
-        socket.onopen = () => {
-            console.log('VoteStore Connected');
-            set({ isConnected: true });
-            socket.send(JSON.stringify({ type: 'auth', userId }));
-        };
-
-        socket.onclose = () => {
-            console.log('VoteStore Disconnected');
-            set({ isConnected: false, socket: null });
-        };
-
-        socket.onerror = (err) => {
-            console.error('WebSocket Error:', err);
-        };
-
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'voteSync') {
-                    get().handleSync(data.payload);
-                }
-            } catch (e) {
-                console.error('Failed to parse WS message:', e);
-            }
-        };
-
-        set({ socket });
-    },
-
-    disconnect: () => {
-        const { socket } = get();
-        if (socket) {
-            socket.close();
-            set({ socket: null, isConnected: false });
-        }
-        // DO NOT clear sendFn here as it might be set by parent
-    },
-
     send: (payload: any) => {
         // 1. Prefer External Handler (Dashboard)
         const { sendFn } = get();
         if (sendFn) {
             sendFn(payload);
             return;
-        }
-
-        // 2. Fallback to Internal Socket (Overlay)
-        const { socket } = get();
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify(payload));
         }
     },
 
