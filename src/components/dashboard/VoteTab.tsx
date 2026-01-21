@@ -15,12 +15,45 @@ export default function VoteTab() {
     const store = useVoteStore();
     const [activeTab, setActiveTab] = useState<'vote' | 'draw' | 'donate' | 'roulette' | 'settings'>('draw');
 
+    // Local State for Editors
+    const [localVoteItems, setLocalVoteItems] = useState<string[]>([]);
+    const [newVoteItem, setNewVoteItem] = useState('');
+
+    const [localRouletteItems, setLocalRouletteItems] = useState<{ name: string; weight: number }[]>([]);
+    const [newRouletteName, setNewRouletteName] = useState('');
+    const [newRouletteWeight, setNewRouletteWeight] = useState(1);
+
     // Toggle Helper
     const Toggle = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
         <div onClick={onChange} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${checked ? 'bg-[#00ff80]' : 'bg-gray-600'}`}>
             <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
         </div>
     );
+
+    // Handlers
+    const addVoteItem = () => {
+        if (newVoteItem.trim()) {
+            setLocalVoteItems([...localVoteItems, newVoteItem.trim()]);
+            setNewVoteItem('');
+        }
+    };
+    const removeVoteItem = (idx: number) => {
+        setLocalVoteItems(localVoteItems.filter((_, i) => i !== idx));
+    };
+
+    const addRouletteItem = () => {
+        if (newRouletteName.trim()) {
+            setLocalRouletteItems([...localRouletteItems, { name: newRouletteName.trim(), weight: Number(newRouletteWeight) || 1 }]);
+            setNewRouletteName('');
+            setNewRouletteWeight(1);
+        }
+    };
+    const removeRouletteItem = (idx: number) => {
+        setLocalRouletteItems(localRouletteItems.filter((_, i) => i !== idx));
+    };
+    const saveRoulette = () => {
+        store.updateRouletteItems(localRouletteItems);
+    };
 
     // Helpers for Conflict Check
     const checkConflictAndStart = (actionName: string, startFunction: () => void) => {
@@ -158,37 +191,61 @@ export default function VoteTab() {
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll">
-                                    {store.voteItems.map((item, idx) => (
-                                        <div key={item.id} className="flex gap-2 items-center">
-                                            <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs text-gray-500 font-mono">{idx + 1}</div>
-                                            <input
-                                                value={item.name}
-                                                readOnly // Items editing not implemented in Simplified Store yet (needs DB sync for updates)
-                                                className="flex-1 bg-[#262626] text-white px-3 py-3 rounded-lg outline-none text-sm opacity-70 cursor-not-allowed"
-                                            />
-                                        </div>
-                                    ))}
-                                    <div className="text-xs text-center text-gray-500 py-2">항목 수정은 투표 시작 전에 설정해주세요 (현재 읽기 전용)</div>
+                                    {/* Edit Mode (Idle) vs View Mode (Active/Ended) */}
+                                    {store.voteStatus === 'idle' ? (
+                                        <>
+                                            {localVoteItems.map((item, idx) => (
+                                                <div key={idx} className="flex gap-2 items-center group">
+                                                    <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs text-gray-500 font-mono">{idx + 1}</div>
+                                                    <div className="flex-1 bg-[#262626] text-white px-3 py-3 rounded-lg text-sm">{item}</div>
+                                                    <button onClick={() => removeVoteItem(idx)} className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:bg-[#333] rounded-lg transition-all"><Trash2 size={14} /></button>
+                                                </div>
+                                            ))}
+                                            <div className="flex gap-2 mt-2">
+                                                <input
+                                                    value={newVoteItem}
+                                                    onChange={(e) => setNewVoteItem(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && addVoteItem()}
+                                                    placeholder="새 항목 추가..."
+                                                    className="flex-1 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-[#00ff80] outline-none"
+                                                />
+                                                <button onClick={addVoteItem} className="px-3 bg-[#333] text-white rounded-lg font-bold hover:bg-[#444]">+</button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        // View Mode
+                                        store.voteItems.map((item, idx) => (
+                                            <div key={item.id} className="flex gap-2 items-center">
+                                                <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs text-gray-500 font-mono">{idx + 1}</div>
+                                                <div className="flex-1 bg-[#262626]/50 text-white px-3 py-3 rounded-lg text-sm opacity-90">
+                                                    {item.name} <span className="float-right font-bold text-[#00ff80]">{item.count}표</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
 
                                 <div className="mt-4 pt-4 border-t border-[#333] space-y-2 relative z-10">
                                     <button onClick={() => checkConflictAndStart('룰렛 연동', store.transferVotesToRoulette)} className="w-full py-3 rounded-xl font-bold bg-[#333] text-gray-300 hover:bg-[#444] hover:text-white transition-all border border-[#444] flex items-center justify-center gap-2">
                                         <Shuffle size={16} /> 투표 결과로 룰렛 만들기
                                     </button>
-                                    <button onClick={store.resetVote} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all flex items-center justify-center gap-2">
+                                    <button onClick={() => { store.resetVote(); setLocalVoteItems([]); }} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all flex items-center justify-center gap-2">
                                         <Trash2 size={16} /> 투표 초기화
                                     </button>
                                     <button
                                         onClick={() => {
                                             if (store.voteStatus === 'active') store.endVote();
-                                            else checkConflictAndStart('투표', () => store.startVote({
-                                                title: store.voteTitle || '투표',
-                                                mode: activeTab === 'vote' ? 'numeric' : 'donation',
-                                                items: ['항목1', '항목2'], // TODO: UI to add items locally before start
-                                                duration: 60,
-                                                allowMulti: store.allowMultiVote,
-                                                unit: store.voteUnit
-                                            }));
+                                            else checkConflictAndStart('투표', () => {
+                                                if (localVoteItems.length < 2) return alert('최소 2개의 항목이 필요합니다.');
+                                                store.startVote({
+                                                    title: store.voteTitle || '투표',
+                                                    mode: activeTab === 'vote' ? 'numeric' : 'donation',
+                                                    items: localVoteItems,
+                                                    duration: 60,
+                                                    allowMulti: store.allowMultiVote,
+                                                    unit: store.voteUnit
+                                                });
+                                            });
                                         }}
                                         className={`w-full py-4 rounded-xl font-black text-lg transition-all shadow-lg active:scale-95 ${store.voteStatus === 'active' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00ff80] text-black hover:bg-[#00cc66]'}`}
                                     >
@@ -202,17 +259,60 @@ export default function VoteTab() {
                         {activeTab === 'roulette' && (
                             <div className="flex flex-col gap-3 h-full relative z-10">
                                 <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll">
-                                    {store.rouletteItems.map((item, idx) => (
-                                        <div key={idx} className="flex gap-2 items-center group">
+                                    {/* Existing Items */}
+                                    {localRouletteItems.map((item, idx) => (
+                                        <div key={idx} className="flex gap-2 items-center group bg-[#262626] p-2 rounded-lg border border-transparent hover:border-[#444]">
                                             <div className="w-1 h-8 rounded-full" style={{ background: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'][idx % 6] }}></div>
-                                            <div className="flex-1 bg-[#262626] text-white px-3 py-2 rounded-lg text-sm">{item.name}</div>
-                                            <div className="w-12 bg-[#262626] text-white px-2 py-2 rounded-lg text-xs text-center">{item.weight}</div>
+                                            <input
+                                                value={item.name}
+                                                onChange={(e) => {
+                                                    const newItems = [...localRouletteItems];
+                                                    newItems[idx].name = e.target.value;
+                                                    setLocalRouletteItems(newItems);
+                                                }}
+                                                className="flex-1 bg-transparent text-white text-sm outline-none"
+                                            />
+                                            <div className="flex items-center gap-1 bg-[#111] rounded px-2">
+                                                <span className="text-xs text-gray-500">x</span>
+                                                <input
+                                                    type="number"
+                                                    value={item.weight}
+                                                    onChange={(e) => {
+                                                        const newItems = [...localRouletteItems];
+                                                        newItems[idx].weight = Number(e.target.value);
+                                                        setLocalRouletteItems(newItems);
+                                                    }}
+                                                    className="w-8 bg-transparent text-center text-xs outline-none"
+                                                />
+                                            </div>
+                                            <button onClick={() => removeRouletteItem(idx)} className="text-red-400 p-1 hover:bg-[#333] rounded"><Trash2 size={14} /></button>
                                         </div>
                                     ))}
-                                    <div className="text-center text-xs text-gray-500 py-4 border border-dashed border-[#444] rounded-lg">아이템 수정은 준비중입니다</div>
+
+                                    {/* Add New */}
+                                    <div className="flex gap-2 mt-2 p-2 bg-[#222] rounded-lg border border-dashed border-[#444]">
+                                        <input
+                                            value={newRouletteName}
+                                            onChange={(e) => setNewRouletteName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && addRouletteItem()}
+                                            placeholder="항목 이름"
+                                            className="flex-1 bg-transparent text-sm text-white outline-none"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={newRouletteWeight}
+                                            onChange={(e) => setNewRouletteWeight(Number(e.target.value))}
+                                            className="w-12 bg-[#111] border border-[#333] rounded text-center text-xs outline-none"
+                                        />
+                                        <button onClick={addRouletteItem} className="px-3 bg-[#444] text-white rounded text-xs hover:bg-[#555] font-bold">추가</button>
+                                    </div>
+
+                                    <button onClick={saveRoulette} className="w-full py-2 mt-2 rounded-lg bg-[#333] text-[#00ff80] font-bold text-xs hover:bg-[#444] flex items-center justify-center gap-1">
+                                        <Save size={14} /> 서버에 저장 (리스트 업데이트)
+                                    </button>
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-[#333] flex flex-col gap-2 relative z-10">
-                                    <button onClick={store.resetRoulette} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all flex items-center justify-center gap-2">
+                                    <button onClick={() => { store.resetRoulette(); setLocalRouletteItems([]); }} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all flex items-center justify-center gap-2">
                                         <Trash2 size={16} /> 룰렛 초기화
                                     </button>
                                     <button
