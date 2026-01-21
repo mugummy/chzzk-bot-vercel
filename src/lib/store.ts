@@ -37,8 +37,18 @@ export const useBotStore = create<BotStore>((set) => ({
   points: {},
   chatHistory: [],
   // Vote/Draw/Roulette initial states
-  vote: { currentVote: null },
-  draw: { isRecruiting: false, status: 'idle', participantCount: 0, participants: [], keyword: '!참여', subsOnly: false, winner: null },
+  vote: { currentVote: null, remainingSeconds: 0 },
+  draw: {
+    isRecruiting: false,
+    status: 'idle',
+    participantCount: 0,
+    participants: [],
+    keyword: null,
+    subsOnly: false,
+    excludeWinners: false,
+    previousWinnersCount: 0,
+    winner: null
+  },
   roulette: { items: [], isSpinning: false, result: null },
 
   setAuth: (user) => set({ currentUser: user }),

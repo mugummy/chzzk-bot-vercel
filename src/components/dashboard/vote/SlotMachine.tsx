@@ -10,8 +10,9 @@ interface Candidate {
 interface SlotMachineProps {
   candidates: Candidate[];
   isRolling: boolean;
+  isOpen?: boolean; // When ChatBox is visible below
   winner: Candidate | null;
-  onFinish?: () => void;
+  onFinish?: (winner: Candidate) => void;
   width?: number;
   height?: number;
 }
@@ -19,6 +20,7 @@ interface SlotMachineProps {
 export default function SlotMachine({
   candidates,
   isRolling,
+  isOpen = false,
   winner,
   onFinish,
   width = 500,
@@ -27,7 +29,7 @@ export default function SlotMachine({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number | null>(null);
 
-  const runSlotAnimation = useCallback((pool: Candidate[], finalWinner: Candidate) => {
+  const runSlotAnimation = useCallback((pool: Candidate[]) => {
     const canvas = canvasRef.current;
     if (!canvas || pool.length === 0) return;
 
@@ -43,8 +45,9 @@ export default function SlotMachine({
     let startDecelOffset = 0;
     let targetOffset = 0;
 
-    const winnerIndex = pool.findIndex(p => p.nickname === finalWinner.nickname);
-    const actualWinnerIndex = winnerIndex >= 0 ? winnerIndex : 0;
+    // Randomly select winner from pool
+    const finalWinner = pool[Math.floor(Math.random() * pool.length)];
+    const winnerIndex = pool.indexOf(finalWinner);
     const totalHeight = pool.length * itemHeight;
 
     // Physics constants
@@ -89,7 +92,7 @@ export default function SlotMachine({
           state = 'landing';
 
           const currentAbsOffset = offset;
-          const relativeTarget = actualWinnerIndex * itemHeight;
+          const relativeTarget = winnerIndex * itemHeight;
           const currentMod = currentAbsOffset % totalHeight;
           let distToNext = relativeTarget - currentMod;
           if (distToNext < 0) distToNext += totalHeight;
@@ -101,7 +104,7 @@ export default function SlotMachine({
         }
       } else if (state === 'landing') {
         const t = Math.min((timestamp - startDecelTime) / landingDuration, 1);
-        const ease = 1 - Math.pow(1 - t, 5);
+        const ease = 1 - Math.pow(1 - t, 5); // Strong ease out
         const totalDist = targetOffset - startDecelOffset;
         offset = startDecelOffset + (totalDist * ease);
 
@@ -128,7 +131,7 @@ export default function SlotMachine({
         ctx.scale(scale, scale);
         ctx.globalAlpha = opacity;
 
-        if (item.nickname === finalWinner.nickname && state === 'stopped') {
+        if (item === finalWinner && state === 'stopped') {
           ctx.fillStyle = "#00ff80";
           ctx.font = "900 60px 'Pretendard', sans-serif";
           ctx.shadowColor = "#00ff80";
@@ -146,7 +149,7 @@ export default function SlotMachine({
       if (state !== 'stopped') {
         animationIdRef.current = requestAnimationFrame(draw);
       } else {
-        onFinish?.();
+        onFinish?.(finalWinner);
       }
     };
 
@@ -154,8 +157,8 @@ export default function SlotMachine({
   }, [width, height, onFinish]);
 
   useEffect(() => {
-    if (isRolling && candidates.length > 0 && winner) {
-      runSlotAnimation(candidates, winner);
+    if (isRolling && candidates.length > 0) {
+      runSlotAnimation(candidates);
     }
 
     return () => {
@@ -163,7 +166,7 @@ export default function SlotMachine({
         cancelAnimationFrame(animationIdRef.current);
       }
     };
-  }, [isRolling, candidates, winner, runSlotAnimation]);
+  }, [isRolling, candidates, runSlotAnimation]);
 
   // Draw initial state when not rolling
   useEffect(() => {
@@ -174,8 +177,6 @@ export default function SlotMachine({
         ctx.fillRect(0, 0, width, height);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = "#333";
-        ctx.font = "700 24px 'Pretendard', sans-serif";
 
         if (winner) {
           ctx.fillStyle = "#00ff80";
@@ -184,8 +185,12 @@ export default function SlotMachine({
           ctx.shadowBlur = 30;
           ctx.fillText(winner.nickname, width / 2, height / 2);
         } else if (candidates.length > 0) {
+          ctx.fillStyle = "#333";
+          ctx.font = "700 24px 'Pretendard', sans-serif";
           ctx.fillText(`${candidates.length}명 대기 중`, width / 2, height / 2);
         } else {
+          ctx.fillStyle = "#333";
+          ctx.font = "700 24px 'Pretendard', sans-serif";
           ctx.fillText('참여자 없음', width / 2, height / 2);
         }
       }
@@ -194,7 +199,9 @@ export default function SlotMachine({
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl border border-[#333] shadow-2xl"
+      className={`relative w-full bg-[#111] overflow-hidden border border-[#333] shadow-2xl z-20 ${
+        isOpen ? 'rounded-t-xl border-b-0' : 'rounded-xl'
+      }`}
       style={{
         maskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)'
@@ -208,11 +215,15 @@ export default function SlotMachine({
         width={width}
         height={height}
         className="w-full"
-        style={{ height: `${height}px`, background: '#111' }}
+        style={{ height: `${height}px` }}
       />
 
-      {/* Bottom highlight line */}
-      <div className="absolute bottom-0 left-0 w-full h-1.5 bg-white shadow-[0_0_15px_white] z-20" />
+      {/* Bottom highlight line - disappears when open */}
+      <div
+        className={`absolute bottom-0 left-0 w-full h-1.5 bg-white shadow-[0_0_15px_white] z-20 transition-all duration-700 ${
+          isOpen ? 'translate-y-4 opacity-0' : ''
+        }`}
+      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={`${inter.className} bg-[#050505] antialiased custom-scrollbar`}>
+      <body className={`${inter.className} antialiased custom-scrollbar`}>
         {children}
       </body>
     </html>

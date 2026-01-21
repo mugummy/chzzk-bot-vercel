@@ -28,17 +28,16 @@ export default function ChatBox({ visible, messages, winnerName }: ChatBoxProps)
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ maxHeight: 0, opacity: 0, y: -20 }}
-          animate={{ maxHeight: 400, opacity: 1, y: 0 }}
-          exit={{ maxHeight: 0, opacity: 0, y: -20 }}
+          initial={{ maxHeight: 0, opacity: 0 }}
+          animate={{ maxHeight: 400, opacity: 1 }}
+          exit={{ maxHeight: 0, opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full rounded-b-xl flex flex-col pt-2 pb-4 z-10 -mt-1 shadow-2xl relative overflow-hidden"
+          className="w-full rounded-b-xl flex flex-col pt-2 pb-4 z-10 -mt-[1px] shadow-2xl relative overflow-hidden border border-[#333] border-t-0"
           style={{
             background: 'rgba(20, 20, 20, 0.95)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 -10px 40px -10px rgba(0, 0, 0, 0.5)'
+            boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.5)'
           }}
         >
           {/* Neon Line */}
