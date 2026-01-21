@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBotStore } from '@/lib/store';
+import { useVoteStore } from '@/stores/useVoteStore';
 
 import DashboardHome from '@/components/dashboard/DashboardHome';
 import CommandTab from '@/components/dashboard/CommandTab';
@@ -46,6 +47,7 @@ export default function DashboardPage() {
     switch (type) {
       case 'connectResult':
         currentStore.setBotStatus(data.success);
+        useVoteStore.setState({ isConnected: data.success });
         if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
         setIsLoading(false);
         if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -67,6 +69,7 @@ export default function DashboardPage() {
         break;
 
       case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;
+      case 'voteSync': useVoteStore.getState().handleSync(payload); break;
     }
   }, []);
 
@@ -91,6 +94,7 @@ export default function DashboardPage() {
 
     ws.onclose = () => {
       useBotStore.getState().setBotStatus(false, true);
+      useVoteStore.setState({ isConnected: false });
       socketRef.current = null;
       setTimeout(() => connectWS(token), 3000);
     };
@@ -111,6 +115,11 @@ export default function DashboardPage() {
     send({ type: 'updateSettings', data: { chatEnabled: enabled } });
     notify(enabled ? '봇 채팅 연동이 켜졌습니다.' : '봇 채팅 연동이 꺼졌습니다.', enabled ? 'success' : 'info');
   };
+
+  // Sync VoteStore with Dashboard Socket
+  useEffect(() => {
+    useVoteStore.getState().setSendFn(send);
+  }, [send]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

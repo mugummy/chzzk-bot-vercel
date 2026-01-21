@@ -12,12 +12,19 @@ export default function VoteTab() {
     const [userId, setUserId] = useState<string>('');
 
     useEffect(() => {
-        // Auth Logic: Reuse existing token logic or store
         const id = localStorage.getItem('userId') || 'test-user';
         setUserId(id);
 
-        // Connect to WS
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+        // Fix WS URL Construction
+        const rawUrl = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'localhost:8080';
+        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+
+        let wsUrl = rawUrl;
+        if (!wsUrl.includes('://')) {
+            wsUrl = `${protocol}${wsUrl}`;
+        }
+
+        console.log('[VoteTab] Connecting to:', wsUrl);
         store.connect(wsUrl, id);
 
         return () => { store.disconnect(); }
@@ -36,14 +43,12 @@ export default function VoteTab() {
 
     return (
         <div className="flex flex-col h-full text-white overflow-hidden">
-            {/* Header Section inside Tab */}
             <div className="flex justify-between items-center mb-6 shrink-0">
                 <div>
                     <h2 className="text-3xl font-bold text-white">상호작용</h2>
                     <p className="text-sm text-gray-500 mt-1">투표, 추첨, 룰렛을 관리합니다.</p>
                 </div>
 
-                {/* Internal Tabs */}
                 <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/5">
                     {['vote', 'draw', 'roulette'].map(tab => (
                         <button
@@ -59,17 +64,12 @@ export default function VoteTab() {
                 </div>
             </div>
 
-            {/* Content Area */}
             <div className="flex-1 flex gap-6 min-h-0 overflow-hidden">
-
-                {/* Left: Controls */}
                 <div className="w-[350px] flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 shrink-0">
-                    {/* VOTE CONTROLS */}
                     {activeTab === 'vote' && (
                         <div className="space-y-4">
                             <div className="bg-[#1a1a1a] p-6 rounded-[1.5rem] border border-white/5 space-y-4 shadow-lg">
                                 <h3 className="font-bold text-lg border-b border-white/5 pb-2">투표 설정</h3>
-
                                 <div className="space-y-2">
                                     <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">투표 모드</label>
                                     <div className="grid grid-cols-2 gap-2">
@@ -83,7 +83,6 @@ export default function VoteTab() {
                                         </button>
                                     </div>
                                 </div>
-
                                 <div className="space-y-2">
                                     <label className="text-xs text-gray-400 font-bold uppercase tracking-wider">투표 주제</label>
                                     <input
@@ -93,8 +92,6 @@ export default function VoteTab() {
                                         placeholder="주제를 입력하세요"
                                     />
                                 </div>
-
-                                {/* Start/Stop Buttons */}
                                 {store.voteStatus === 'active' ? (
                                     <button onClick={store.endVote} className="w-full py-4 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/50 text-red-500 rounded-xl font-bold transition-all shadow-lg hover:shadow-red-500/20">
                                         투표 종료
@@ -103,7 +100,7 @@ export default function VoteTab() {
                                     <button onClick={() => store.startVote({
                                         title: '테스트 투표',
                                         mode: 'numeric',
-                                        items: ['찬성', '반대'], // Simple default
+                                        items: ['찬성', '반대'],
                                         duration: 60,
                                         allowMulti: false,
                                         unit: 1000
@@ -115,7 +112,6 @@ export default function VoteTab() {
                         </div>
                     )}
 
-                    {/* DRAW CONTROLS */}
                     {activeTab === 'draw' && (
                         <div className="space-y-4">
                             <div className="bg-[#1a1a1a] p-6 rounded-[1.5rem] border border-white/5 space-y-4 shadow-lg">
@@ -132,7 +128,6 @@ export default function VoteTab() {
                                     <input type="checkbox" checked={store.drawSubsOnly} onChange={(e) => store.send({ type: 'updateDraw', subsOnly: e.target.checked })} className="w-4 h-4 accent-[#00ff80]" />
                                     <label className="text-sm text-gray-300">구독자 전용</label>
                                 </div>
-
                                 {store.drawStatus === 'recruiting' ? (
                                     <div className="grid grid-cols-2 gap-2">
                                         <button onClick={() => store.pickDrawWinner(1)} className="py-4 bg-[#00ff80] text-black rounded-xl font-bold hover:bg-[#00cc66] shadow-lg">
@@ -151,7 +146,6 @@ export default function VoteTab() {
                         </div>
                     )}
 
-                    {/* ROULETTE CONTROLS */}
                     {activeTab === 'roulette' && (
                         <div className="space-y-4">
                             <div className="bg-[#1a1a1a] p-6 rounded-[1.5rem] border border-white/5 space-y-4 shadow-lg">
@@ -163,19 +157,14 @@ export default function VoteTab() {
                                 <button onClick={store.resetRoulette} className="w-full py-3 bg-[#333] hover:bg-[#444] rounded-xl font-bold text-gray-300">
                                     초기화
                                 </button>
-
-                                {/* Item Edit Mockup */}
                                 <div className="text-xs text-gray-500 mt-2 text-center">* 룰렛 항목은 현재 고정입니다 (Database Sync)</div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Center: Preview / Display */}
                 <div className="flex-1 bg-[#151515] rounded-[2rem] border border-white/5 relative flex items-center justify-center p-8 shadow-inner overflow-hidden">
-                    {/* Background Grid Pattern */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-
                     <div className="relative z-10 w-full max-w-3xl h-full flex flex-col justify-center">
                         {activeTab === 'vote' && <VoteDisplay mode="dashboard" />}
                         {activeTab === 'draw' && <DrawDisplay mode="dashboard" />}

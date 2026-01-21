@@ -38,11 +38,18 @@ interface VoteState {
     disconnect: () => void;
     send: (payload: any) => void;
 
+    // Shared Connection Support
+    sendFn: ((payload: any) => void) | null;
+    setSendFn: (fn: (payload: any) => void) => void;
+    handleSync: (payload: any) => void;
+
     // Vote Commands
     startVote: (params: { title: string, mode: string, items: string[], duration: number, allowMulti: boolean, unit: number }) => void;
     endVote: () => void;
     stopVote: () => void;
     toggleVoteOverlay: (show: boolean) => void;
+
+    // ... (rest same)
 
     // Draw Commands
     startDrawRecruit: (params: { keyword: string, subsOnly: boolean, duration: number }) => void;
@@ -61,10 +68,51 @@ interface VoteState {
 export const useVoteStore = create<VoteState>((set, get) => ({
     socket: null,
     isConnected: false,
+    sendFn: null,
 
     voteId: null, voteTitle: '', voteItems: [], voteStatus: 'idle', voteMode: 'numeric', voteTimer: 0, allowMultiVote: false, showVoteOverlay: false, voteUnit: 1000,
     drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false,
     rouletteItems: [], rouletteActiveItems: [], isSpinning: false, rouletteWinner: null, rouletteRotation: 0, showRouletteOverlay: false,
+
+    setSendFn: (fn) => set({ sendFn: fn }),
+
+    handleSync: (payload: any) => {
+        if (payload.vote) {
+            set({
+                voteId: payload.vote.voteId,
+                voteTitle: payload.vote.title,
+                voteItems: payload.vote.items,
+                voteStatus: payload.vote.status,
+                voteMode: payload.vote.mode,
+                voteTimer: payload.vote.timer,
+                allowMultiVote: payload.vote.allowMultiVote,
+                showVoteOverlay: payload.vote.showOverlay,
+                voteUnit: payload.vote.voteUnit
+            });
+        }
+        if (payload.draw) {
+            set({
+                drawSessionId: payload.draw.sessionId,
+                drawStatus: payload.draw.status,
+                drawKeyword: payload.draw.keyword,
+                drawCandidates: payload.draw.candidates,
+                drawWinner: payload.draw.winner,
+                drawTimer: payload.draw.timer,
+                showDrawOverlay: payload.draw.showOverlay,
+                drawSubsOnly: payload.draw.subsOnly
+            });
+        }
+        if (payload.roulette) {
+            set({
+                rouletteItems: payload.roulette.items,
+                rouletteActiveItems: payload.roulette.activeItems || [],
+                isSpinning: payload.roulette.isSpinning,
+                rouletteWinner: payload.roulette.winner,
+                rouletteRotation: payload.roulette.rotation,
+                showRouletteOverlay: payload.roulette.showOverlay,
+            });
+        }
+    },
 
     connect: (url: string, userId: string) => {
         if (get().socket) return;
@@ -75,7 +123,6 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         socket.onopen = () => {
             console.log('VoteStore Connected');
             set({ isConnected: true });
-            // Auth
             socket.send(JSON.stringify({ type: 'auth', userId }));
         };
 
@@ -91,51 +138,8 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-
-                // Server sends "broadcast" wrapped in { type, payload } usually? 
-                // broadcastToUser sends raw JSON. 
-                // VoteManager.broadcast calls bot.broadcast('voteSync', states).
-                // Index.ts sends JSON.stringify({ type: 'voteSync', payload: states }).
-
                 if (data.type === 'voteSync') {
-                    const payload = data.payload;
-                    // payload = { vote, draw, roulette }
-                    if (payload.vote) {
-                        set({
-                            voteId: payload.vote.voteId,
-                            voteTitle: payload.vote.title,
-                            voteItems: payload.vote.items,
-                            voteStatus: payload.vote.status,
-                            voteMode: payload.vote.mode,
-                            voteTimer: payload.vote.timer,
-                            allowMultiVote: payload.vote.allowMultiVote,
-                            showVoteOverlay: payload.vote.showOverlay,
-                            voteUnit: payload.vote.voteUnit
-                        });
-                    }
-                    if (payload.draw) {
-                        set({
-                            drawSessionId: payload.draw.sessionId,
-                            drawStatus: payload.draw.status,
-                            drawKeyword: payload.draw.keyword,
-                            drawCandidates: payload.draw.candidates,
-                            drawWinner: payload.draw.winner,
-                            drawTimer: payload.draw.timer,
-                            showDrawOverlay: payload.draw.showOverlay,
-                            drawSubsOnly: payload.draw.subsOnly
-                        });
-                    }
-                    if (payload.roulette) {
-                        set({
-                            rouletteItems: payload.roulette.items,
-                            // If backend has activeItems, use it? Backend logic assumes snapshot.
-                            rouletteActiveItems: payload.roulette.activeItems || [],
-                            isSpinning: payload.roulette.isSpinning,
-                            rouletteWinner: payload.roulette.winner,
-                            rouletteRotation: payload.roulette.rotation,
-                            showRouletteOverlay: payload.roulette.showOverlay,
-                        });
-                    }
+                    get().handleSync(data.payload);
                 }
             } catch (e) {
                 console.error('Failed to parse WS message:', e);
@@ -151,9 +155,18 @@ export const useVoteStore = create<VoteState>((set, get) => ({
             socket.close();
             set({ socket: null, isConnected: false });
         }
+        // DO NOT clear sendFn here as it might be set by parent
     },
 
     send: (payload: any) => {
+        // 1. Prefer External Handler (Dashboard)
+        const { sendFn } = get();
+        if (sendFn) {
+            sendFn(payload);
+            return;
+        }
+
+        // 2. Fallback to Internal Socket (Overlay)
         const { socket } = get();
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(payload));
