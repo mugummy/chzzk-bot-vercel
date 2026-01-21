@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BotState, BotSettings, CommandItem, SongItem, DrawState, VoteState, RouletteState, OverlayState } from '@/types/bot';
+import { BotState, BotSettings, CommandItem, SongItem, OverlayState } from '@/types/bot';
 
 export interface BotStore extends BotState {
   setAuth: (user: any) => void;
@@ -15,17 +15,15 @@ export interface BotStore extends BotState {
   updateGreet: (payload: any) => void;
   setChatHistory: (history: any[]) => void;
   addChat: (chat: any) => void;
-  
+
   // [New Updaters]
-  updateVote: (payload: VoteState) => void;
-  updateDraw: (payload: DrawState) => void;
-  updateRoulette: (payload: RouletteState) => void;
+
+
   updateOverlay: (payload: OverlayState) => void;
-  
+
   // [Explicit Property for Type Safety]
-  vote: VoteState;
-  draw: DrawState;
-  roulette: RouletteState;
+
+
   overlay: OverlayState;
 }
 
@@ -44,27 +42,26 @@ export const useBotStore = create<BotStore>((set) => ({
   greet: { settings: { enabled: true, type: 1, message: "반갑습니다!" }, historyCount: 0 },
   points: {},
   chatHistory: [],
-  
+
   // [New Initial States]
-  vote: { currentVote: null, remainingSeconds: 0 },
-  draw: { isCollecting: false, participantCount: 0, participantsList: [], settings: null, status: 'idle', winners: [] },
-  roulette: { items: [] },
+
+
   overlay: { isVisible: true, currentView: 'none' },
 
   setAuth: (user) => set({ currentUser: user }),
   setBotStatus: (connected, reconnecting = false) => set({ isConnected: connected, isReconnecting: reconnecting }),
   setStreamInfo: (info, live) => set({ channelInfo: info, liveStatus: live }),
-  
-  updateSettings: (newSettings) => set((state) => ({ 
+
+  updateSettings: (newSettings) => set((state) => ({
     settings: state.settings ? { ...state.settings, ...newSettings } : (newSettings as BotSettings)
   })),
-  
+
   updateCommands: (cmds) => set({ commands: cmds }),
   updateCounters: (counters) => set({ counters }),
   updateMacros: (macros) => set({ macros }),
-  
+
   updateSongs: (payload) => set({ songs: { queue: payload.queue, current: payload.currentSong, isPlaying: payload.isPlaying || false } }),
-  updateParticipation: (payload) => set((state) => ({ 
+  updateParticipation: (payload) => set((state) => ({
     participation: { ...state.participation, queue: payload.queue, active: payload.participants, isActive: payload.isParticipationActive, max: payload.maxParticipants }
   })),
   updateParticipationRanking: (ranking) => set((state) => ({ participation: { ...state.participation, ranking } })),
@@ -73,8 +70,7 @@ export const useBotStore = create<BotStore>((set) => ({
   addChat: (chat) => set((state) => ({ chatHistory: [chat, ...state.chatHistory].slice(0, 50) })),
 
   // [New Actions Implementation]
-  updateVote: (payload) => set({ vote: payload }),
-  updateDraw: (payload) => set({ draw: payload }),
-  updateRoulette: (payload) => set({ roulette: payload }),
+
+
   updateOverlay: (payload) => set({ overlay: payload }),
 }));

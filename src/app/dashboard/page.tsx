@@ -15,7 +15,7 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
-import VotesLayout from '@/components/dashboard/VotesLayout'; // [Fix] 교체 완료
+
 
 import ToastContainer from '@/components/ui/Toast';
 import Toggle from '@/components/ui/Toggle';
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     const currentStore = useBotStore.getState();
 
     switch (type) {
-      case 'connectResult': 
+      case 'connectResult':
         currentStore.setBotStatus(data.success);
         if (data.channelInfo) currentStore.setStreamInfo(data.channelInfo, data.liveStatus);
         setIsLoading(false);
@@ -65,14 +65,7 @@ export default function DashboardPage() {
         currentStore.addChat(payload);
         break;
 
-      case 'voteStateUpdate': currentStore.updateVote(payload); break;
-      case 'drawStateUpdate': currentStore.updateDraw(payload); break;
-      case 'rouletteStateUpdate': currentStore.updateRoulette(payload); break;
       case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;
-
-      case 'voteBallotsResponse': window.dispatchEvent(new CustomEvent('voteBallotsResponse', { detail: payload })); break;
-      case 'voteHistoryResponse': window.dispatchEvent(new CustomEvent('voteHistoryResponse', { detail: payload })); break;
-      case 'voteWinnerResult': window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload })); break;
     }
   }, []);
 
@@ -81,10 +74,10 @@ export default function DashboardPage() {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${getServerUrl()}/?token=${token}`;
-    
+
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
-    
+
     ws.onopen = () => {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
@@ -92,7 +85,7 @@ export default function DashboardPage() {
     };
 
     ws.onmessage = (e) => {
-      try { handleIncomingData(JSON.parse(e.data)); } catch (err) {}
+      try { handleIncomingData(JSON.parse(e.data)); } catch (err) { }
     };
 
     ws.onclose = () => {
@@ -128,18 +121,18 @@ export default function DashboardPage() {
     }
     const token = localStorage.getItem('chzzk_session_token');
     if (!token) { window.location.href = '/'; return; }
-    
+
     fetch(`https://${getServerUrl()}/api/auth/session?t=${Date.now()}`, { headers: { 'Authorization': `Bearer ${token}` } })
-    .then(res => res.json()).then(data => {
-      if (data.authenticated && data.user) {
-        store.setAuth(data.user);
-        connectWS(token);
-      } else {
-        localStorage.removeItem('chzzk_session_token');
-        window.location.href = '/';
-      }
-    }).catch(() => setAuthError('서버 통신 장애'));
-    
+      .then(res => res.json()).then(data => {
+        if (data.authenticated && data.user) {
+          store.setAuth(data.user);
+          connectWS(token);
+        } else {
+          localStorage.removeItem('chzzk_session_token');
+          window.location.href = '/';
+        }
+      }).catch(() => setAuthError('서버 통신 장애'));
+
     return () => { if (socketRef.current) socketRef.current.close(); };
   }, [connectWS]);
 
@@ -148,7 +141,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      <AnimatePresence>{store.isReconnecting && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black uppercase animate-pulse italic">Reconnecting...</p></motion.div>}</AnimatePresence>
+      <AnimatePresence>{store.isReconnecting && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center gap-6"><RefreshCw className="text-emerald-500 animate-spin" size={48} /><p className="text-xl font-black uppercase animate-pulse italic">Reconnecting...</p></motion.div>}</AnimatePresence>
 
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-24'} bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-500 z-50 shadow-2xl`}>
         <div className="p-8 flex items-center gap-4">
@@ -170,20 +163,20 @@ export default function DashboardPage() {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
-          <NavItem id="dashboard" icon={<Home size={22}/>} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          
+          <NavItem id="dashboard" icon={<Home size={22} />} label="대시보드" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
-          <NavItem id="commands" icon={<Terminal size={22}/>} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="macros" icon={<Clock size={22}/>} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          
+          <NavItem id="commands" icon={<Terminal size={22} />} label="명령어" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="macros" icon={<Clock size={22} />} label="매크로" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
-          <NavItem id="songs" icon={<Music size={22}/>} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="participation" icon={<Users size={22}/>} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="votes" icon={<Gift size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="points" icon={<Coins size={22}/>} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          
+          <NavItem id="songs" icon={<Music size={22} />} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="participation" icon={<Users size={22} />} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+
+          <NavItem id="points" icon={<Coins size={22} />} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
-          <NavItem id="greet" icon={<HandHelping size={22}/>} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="greet" icon={<HandHelping size={22} />} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>
 
         <div className="p-6 mt-auto">
@@ -211,11 +204,11 @@ export default function DashboardPage() {
             {activeTab === 'dashboard' && <DashboardHome store={store} />}
             {activeTab === 'commands' && <CommandTab onSend={send} />}
             {activeTab === 'macros' && <MacroTab onSend={send} />}
-            {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({type:'controlMusic', action: a, index: idx})} onSend={send} />}
+            {activeTab === 'songs' && <SongTab onControl={(a, idx) => send({ type: 'controlMusic', action: a, index: idx })} onSend={send} />}
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}
             {activeTab === 'points' && <PointTab onSend={send} />}
-            {activeTab === 'votes' && <VotesLayout onSend={send} />}
+
           </motion.div>
         </AnimatePresence>
         <ToastContainer />

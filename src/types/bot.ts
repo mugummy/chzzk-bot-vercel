@@ -33,25 +33,11 @@ export interface SongItem {
     requestedAt: number;
 }
 
-// [Fix] DrawState 인터페이스 명시
-export interface DrawState {
-    isCollecting: boolean; // 이 부분이 누락되었던 것으로 추정
-    participantCount: number;
-    participantsList?: string[];
-    settings: any | null;
-    status: 'idle' | 'rolling' | 'completed';
-    winners: any[];
-}
 
-export interface VoteState {
-    currentVote: any | null;
-    remainingSeconds?: number;
-}
 
-export interface RouletteState {
-    items: any[];
-    selected?: any;
-}
+
+
+
 
 export interface OverlayState {
     isVisible: boolean;
@@ -86,10 +72,8 @@ export interface BotState {
     };
     points: { [key: string]: any };
     chatHistory: any[];
-    
+
     // [Fix] 명시된 인터페이스 사용
-    vote: VoteState;
-    draw: DrawState;
-    roulette: RouletteState;
+
     overlay: OverlayState;
 }
