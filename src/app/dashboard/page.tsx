@@ -15,7 +15,7 @@ import SongTab from '@/components/dashboard/SongTab';
 import GreetTab from '@/components/dashboard/GreetTab';
 import ParticipationTab from '@/components/dashboard/ParticipationTab';
 import PointTab from '@/components/dashboard/PointTab';
-import VoteDrawTab from '@/components/dashboard/VoteDrawTab';
+import VotesLayout from '@/components/dashboard/VotesLayout'; // [Fix] 교체 완료
 
 import ToastContainer from '@/components/ui/Toast';
 import Toggle from '@/components/ui/Toggle';
@@ -65,21 +65,14 @@ export default function DashboardPage() {
         currentStore.addChat(payload);
         break;
 
-      // Vote/Draw/Roulette State
       case 'voteStateUpdate': currentStore.updateVote(payload); break;
       case 'drawStateUpdate': currentStore.updateDraw(payload); break;
       case 'rouletteStateUpdate': currentStore.updateRoulette(payload); break;
+      case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;
 
-      // Result Events
-      case 'drawWinnerResult':
-        window.dispatchEvent(new CustomEvent('drawWinnerResult', { detail: payload }));
-        break;
-      case 'rouletteResult':
-        window.dispatchEvent(new CustomEvent('rouletteResult', { detail: payload }));
-        break;
-      case 'voteWinnerResult':
-        window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload }));
-        break;
+      case 'voteBallotsResponse': window.dispatchEvent(new CustomEvent('voteBallotsResponse', { detail: payload })); break;
+      case 'voteHistoryResponse': window.dispatchEvent(new CustomEvent('voteHistoryResponse', { detail: payload })); break;
+      case 'voteWinnerResult': window.dispatchEvent(new CustomEvent('voteWinnerResult', { detail: payload })); break;
     }
   }, []);
 
@@ -95,8 +88,6 @@ export default function DashboardPage() {
     ws.onopen = () => {
       useBotStore.getState().setBotStatus(true, false);
       ws.send(JSON.stringify({ type: 'connect' }));
-      
-      // [Fix] 5초 타임아웃: 서버 응답 없어도 로딩 해제
       setTimeout(() => setIsLoading(false), 5000);
     };
 
@@ -116,8 +107,6 @@ export default function DashboardPage() {
   const send = useCallback((msg: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(msg));
-      
-      // 토글 액션에 대한 클라이언트 측 즉시 피드백
       if (msg.type === 'toggleCommand') notify(msg.data.enabled ? '활성화되었습니다.' : '비활성화되었습니다.', 'info');
       if (msg.type === 'toggleCounter') notify(msg.data.enabled ? '활성화되었습니다.' : '비활성화되었습니다.', 'info');
       if (msg.type === 'toggleMacro') notify(msg.data.enabled ? '활성화되었습니다.' : '비활성화되었습니다.', 'info');
@@ -167,7 +156,6 @@ export default function DashboardPage() {
           {isSidebarOpen && <h1 className="font-black text-2xl tracking-tighter uppercase italic">gummybot</h1>}
         </div>
 
-        {/* [복구] 봇 마스터 스위치 (여기에 토글 버튼이 있습니다) */}
         <div className="px-6 py-4">
           <div className={`bg-white/5 p-5 rounded-[2rem] border border-white/5 transition-all ${!(store.settings?.chatEnabled) ? 'opacity-50' : ''}`}>
             <div className="flex justify-between items-center mb-3">
@@ -191,11 +179,11 @@ export default function DashboardPage() {
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="songs" icon={<Music size={22}/>} label="신청곡" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="participation" icon={<Users size={22}/>} label="시참" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
+          <NavItem id="votes" icon={<Gift size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           <NavItem id="points" icon={<Coins size={22}/>} label="포인트" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
           
           <div className="my-4 h-[1px] bg-white/5 mx-2" />
           <NavItem id="greet" icon={<HandHelping size={22}/>} label="인사" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
-          <NavItem id="votedraw" icon={<Gift size={22}/>} label="투표/추첨" active={activeTab} setter={setActiveTab} collapsed={!isSidebarOpen} />
         </nav>
 
         <div className="p-6 mt-auto">
@@ -227,7 +215,7 @@ export default function DashboardPage() {
             {activeTab === 'greet' && <GreetTab onSend={send} />}
             {activeTab === 'participation' && <ParticipationTab onSend={send} />}
             {activeTab === 'points' && <PointTab onSend={send} />}
-            {activeTab === 'votedraw' && <VoteDrawTab onSend={send} />}
+            {activeTab === 'votes' && <VotesLayout onSend={send} />}
           </motion.div>
         </AnimatePresence>
         <ToastContainer />
