@@ -20,6 +20,7 @@ interface VoteState {
     drawKeyword: string;
     drawCandidates: { name: string; role: string; lastMessage: string }[];
     drawWinner: any | null;
+    previousWinners: string[];
     drawTimer: number;
     showDrawOverlay: boolean;
     drawSubsOnly: boolean;
@@ -30,6 +31,7 @@ interface VoteState {
     isSpinning: boolean;
     rouletteWinner: string | null;
     rouletteRotation: number;
+    rouletteTransition: string;
     showRouletteOverlay: boolean;
 
     // Actions
@@ -50,11 +52,10 @@ interface VoteState {
     resetVote: () => void;
     transferVotesToRoulette: () => void;
 
-    // ... (rest same)
-
     // Draw Commands
     startDrawRecruit: (params: { keyword: string, subsOnly: boolean, duration: number }) => void;
     pickDrawWinner: (count: number) => void;
+    undoLastWinner: () => void;
     stopDraw: () => void;
     toggleDrawOverlay: (show: boolean) => void;
     resetDraw: () => void;
@@ -72,8 +73,8 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     sendFn: null,
 
     voteId: null, voteTitle: '', voteItems: [], voteStatus: 'idle', voteMode: 'numeric', voteTimer: 0, allowMultiVote: false, showVoteOverlay: false, voteUnit: 1000,
-    drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false,
-    rouletteItems: [], rouletteActiveItems: [], isSpinning: false, rouletteWinner: null, rouletteRotation: 0, showRouletteOverlay: false,
+    drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, previousWinners: [], drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false,
+    rouletteItems: [], rouletteActiveItems: [], isSpinning: false, rouletteWinner: null, rouletteRotation: 0, rouletteTransition: 'none', showRouletteOverlay: false,
 
     setSendFn: (fn) => set({ sendFn: fn }),
 
@@ -98,6 +99,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 drawKeyword: payload.draw.keyword,
                 drawCandidates: payload.draw.candidates,
                 drawWinner: payload.draw.winner,
+                previousWinners: payload.draw.previousWinners || [],
                 drawTimer: payload.draw.timer,
                 showDrawOverlay: payload.draw.showOverlay,
                 drawSubsOnly: payload.draw.subsOnly
@@ -110,10 +112,14 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 isSpinning: payload.roulette.isSpinning,
                 rouletteWinner: payload.roulette.winner,
                 rouletteRotation: payload.roulette.rotation,
+                rouletteTransition: payload.roulette.transition,
                 showRouletteOverlay: payload.roulette.showOverlay,
             });
         }
     },
+
+    connect: () => { }, // Handled by BotInstance/DashboardPage usually
+    disconnect: () => { },
 
     send: (payload: any) => {
         // 1. Prefer External Handler (Dashboard)
@@ -133,6 +139,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
     startDrawRecruit: (params) => get().send({ type: 'startDrawRecruit', ...params }),
     pickDrawWinner: (count) => get().send({ type: 'pickDrawWinner', count }),
+    undoLastWinner: () => get().send({ type: 'undoLastWinner' }),
     stopDraw: () => get().send({ type: 'stopDraw' }),
     toggleDrawOverlay: (show) => get().send({ type: 'toggleDrawOverlay', show }),
     resetDraw: () => get().send({ type: 'resetDraw' }),
