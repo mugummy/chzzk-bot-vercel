@@ -48,6 +48,8 @@ interface VoteState {
     endVote: () => void;
     stopVote: () => void;
     toggleVoteOverlay: (show: boolean) => void;
+    resetVote: () => void;
+    transferVotesToRoulette: () => void;
 
     // ... (rest same)
 
@@ -56,6 +58,7 @@ interface VoteState {
     pickDrawWinner: (count: number) => void;
     stopDraw: () => void;
     toggleDrawOverlay: (show: boolean) => void;
+    resetDraw: () => void;
 
     // Roulette Commands
     updateRouletteItems: (items: any[]) => void;
@@ -177,11 +180,14 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     endVote: () => get().send({ type: 'endVote' }),
     stopVote: () => get().send({ type: 'stopVote' }),
     toggleVoteOverlay: (show) => get().send({ type: 'toggleVoteOverlay', show }),
+    resetVote: () => get().send({ type: 'resetVote' }),
+    transferVotesToRoulette: () => get().send({ type: 'transferVotesToRoulette' }),
 
     startDrawRecruit: (params) => get().send({ type: 'startDrawRecruit', ...params }),
     pickDrawWinner: (count) => get().send({ type: 'pickDrawWinner', count }),
     stopDraw: () => get().send({ type: 'stopDraw' }),
     toggleDrawOverlay: (show) => get().send({ type: 'toggleDrawOverlay', show }),
+    resetDraw: () => get().send({ type: 'resetDraw' }),
 
     updateRouletteItems: (items) => get().send({ type: 'updateRoulette', items }),
     spinRoulette: () => get().send({ type: 'spinRoulette' }),
