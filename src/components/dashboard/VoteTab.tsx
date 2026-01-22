@@ -118,7 +118,7 @@ export default function VoteTab() {
             if (confirm(`현재 [${activeTasks.join(', ')}] 기능이 진행 중입니다.\n기존 작업을 중단하고 [${actionName}]을(를) 시작하시겠습니까?`)) {
                 // Stop existing
                 if (store.drawStatus === 'recruiting') store.stopDraw();
-                if (store.voteStatus === 'active') store.stopVote();
+                if (store.voteStatus === 'active') store.endVote();
                 startFunction();
             }
         } else {

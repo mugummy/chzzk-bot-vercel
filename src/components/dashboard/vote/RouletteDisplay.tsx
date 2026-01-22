@@ -4,12 +4,13 @@ import React, { useMemo } from 'react';
 import { useVoteStore } from '@/stores/useVoteStore';
 
 interface RouletteDisplayProps {
-    items: { name: string; weight: number }[];
+    items?: { name: string; weight: number }[];
     className?: string;
     style?: React.CSSProperties;
+    mode?: 'dashboard' | 'overlay';
 }
 
-export default function RouletteDisplay({ items, className, style }: RouletteDisplayProps) {
+export default function RouletteDisplay({ items, className, style, mode = 'dashboard' }: RouletteDisplayProps) {
     const store = useVoteStore();
 
     // Color Palette from Legacy Vue

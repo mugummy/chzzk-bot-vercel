@@ -17,7 +17,7 @@ interface WinnerModalProps {
 }
 
 export default function WinnerModal({ visible, mode, candidates, isRunning, target, winner, onClose, onRepick }: WinnerModalProps) {
-    const { winnerChatLog } = useVoteStore(); // Fixed import usage
+    const winnerChatLog = winner?.lastMessage;
     if (!visible) return null;
 
     // Display Candidates (Shuffle if running for visual noise, or passed list)

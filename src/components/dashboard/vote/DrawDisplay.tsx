@@ -39,7 +39,7 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
 
                     <h2 className="text-2xl font-bold text-yellow-400 mb-2 tracking-widest uppercase drop-shadow-md">WINNER</h2>
                     <div className="text-5xl md:text-7xl font-black text-white mb-4 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] tracking-tight">
-                        {store.drawWinner}
+                        {store.drawWinner.name}
                     </div>
                     <p className="text-gray-400 text-lg font-medium">축하합니다!</p>
                 </div>
@@ -97,8 +97,8 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                 {!isOverlay && store.drawCandidates.length > 0 && (
                     <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#111] to-transparent p-6 flex items-end justify-center pointer-events-none">
                         <div className="flex gap-2 opacity-50 overflow-hidden px-10 max-w-full justify-center flex-wrap h-8">
-                            {store.drawCandidates.slice(-5).map((name, i) => (
-                                <span key={i} className="text-xs font-bold text-gray-500 bg-[#222] px-2 py-1 rounded animate-fadeIn">{name}</span>
+                            {store.drawCandidates.slice(-5).map((candidate, i) => (
+                                <span key={i} className="text-xs font-bold text-gray-500 bg-[#222] px-2 py-1 rounded animate-fadeIn">{candidate.name}</span>
                             ))}
                             {store.drawCandidates.length > 5 && <span className="text-xs text-gray-600">...</span>}
                         </div>

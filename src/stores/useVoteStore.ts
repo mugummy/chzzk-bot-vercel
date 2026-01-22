@@ -67,6 +67,11 @@ interface VoteState {
     rouletteRotation: number;
     rouletteTransition: string;
 
+    // Overlay Visibility
+    showDrawOverlay: boolean;
+    showVoteOverlay: boolean;
+    showRouletteOverlay: boolean;
+
     // TTS & Overlay Settings (Mirrored from LocalStorage or Server in future)
     ttsVolume: number;
     ttsRate: number;
@@ -75,6 +80,7 @@ interface VoteState {
 
     // Actions
     connect: (channelId: string) => void;
+    disconnect: () => void;
     send: (event: any) => void; // Generic send if needed
 
     // Draw Actions
@@ -99,6 +105,11 @@ interface VoteState {
     // Settings
     updateTTSSettings: (settings: { volume: number; rate: number; voice: string; enabled: boolean }) => void;
     updateOverlaySettings: (settings: any) => void;
+
+    // Bridge to Dashboard Socket
+    sendFn: ((msg: any) => void) | null;
+    handleSync: (payload: any) => void;
+    setSendFn: (fn: (msg: any) => void) => void;
 }
 
 export const useVoteStore = create<VoteState>((set, get) => ({
@@ -143,6 +154,10 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     rouletteRotation: 0,
     rouletteTransition: 'none',
 
+    showDrawOverlay: true, // Default to true or specific logic
+    showVoteOverlay: false,
+    showRouletteOverlay: false,
+
     ttsVolume: 1.0,
     ttsRate: 1.0,
     ttsVoice: '',
@@ -178,7 +193,17 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         set({ socket });
     },
 
+    disconnect: () => {
+        const { socket } = get();
+        if (socket) socket.disconnect();
+        set({ isConnected: false, socket: null });
+    },
+
     send: (event: any) => {
+        // Use bridge if available
+        const s = get();
+        if (s.sendFn) s.sendFn(event);
+
         // Generic state updates sent from UI that might need handling
         // For now, update local state
         if (event.type === 'updateDraw') {
@@ -388,7 +413,12 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     updateOverlaySettings: (settings) => {
         // Would emit to socket for overlay sync
         console.log('Update Overlay', settings);
-    }
+    },
+
+    // Bridge Implementation
+    sendFn: null,
+    handleSync: (payload) => set((state) => ({ ...state, ...payload })),
+    setSendFn: (fn) => set({ sendFn: fn })
 }));
 
 
