@@ -15,15 +15,11 @@ export default function VoteTab() {
     const store = useVoteStore();
     const [activeTab, setActiveTab] = useState<'vote' | 'draw' | 'donate' | 'roulette' | 'settings'>('draw');
 
-    // Local State for Items Editor
+    // Local State
     const [localVoteItems, setLocalVoteItems] = useState<string[]>([]);
     const [newVoteItem, setNewVoteItem] = useState('');
-
     const [localRouletteItems, setLocalRouletteItems] = useState<{ name: string; weight: number }[]>([]);
-    const [newRouletteName, setNewRouletteName] = useState('');
-    const [newRouletteWeight, setNewRouletteWeight] = useState(10);
 
-    // Local State for Inputs
     const [localDrawKeyword, setLocalDrawKeyword] = useState('!참여');
     const [localVoteTitle, setLocalVoteTitle] = useState('');
 
@@ -36,7 +32,7 @@ export default function VoteTab() {
     const [selectedVoteItem, setSelectedVoteItem] = useState<any>(null);
     const [showRealNames, setShowRealNames] = useState(false);
 
-    // Settings State (Local)
+    // Settings State
     const [settingCategory, setSettingCategory] = useState<'tts' | 'overlay'>('tts');
     const [localSettings, setLocalSettings] = useState({
         ttsVolume: 1.0, ttsRate: 1.0, ttsVoice: '', useTTS: true,
@@ -52,7 +48,7 @@ export default function VoteTab() {
             const v = window.speechSynthesis.getVoices();
             if (v.length > 0) {
                 setVoices(v);
-                if (!store.ttsVoice) { // store voice not set
+                if (!store.ttsVoice) {
                     const ko = v.find(voice => voice.lang.includes('ko'));
                     if (ko) store.updateTTSSettings({
                         volume: localSettings.ttsVolume,
@@ -65,7 +61,6 @@ export default function VoteTab() {
             }
         };
         loadVoices();
-        window.speechSynthesis.onvoiceschanged = loadVoices;
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }, []);
 
@@ -102,7 +97,6 @@ export default function VoteTab() {
         }
     };
 
-    // Tabs
     const tabs = [
         { id: 'draw', name: '시청자 추첨', icon: <Users size={16} /> },
         { id: 'vote', name: '숫자 투표', icon: <BarChart2 size={16} /> },
@@ -122,8 +116,8 @@ export default function VoteTab() {
     };
 
     return (
-        <div className="h-screen w-full flex flex-col p-4 md:p-6 max-w-[1920px] mx-auto relative text-white bg-[#111]">
-            <header className="flex justify-between items-center mb-6 shrink-0">
+        <div className="h-screen w-full flex flex-col p-4 md:p-6 max-w-[1920px] mx-auto relative text-white bg-[#111] overflow-hidden">
+            <header className="flex justify-between items-center mb-4 shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#00ff80] rounded-lg flex items-center justify-center text-black shadow-[0_0_15px_rgba(0,255,128,0.4)]">
                         <Zap size={20} fill="currentColor" />
@@ -149,27 +143,31 @@ export default function VoteTab() {
 
             <main className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 relative z-0">
                 {/* LEFT PANEL (CONTROLS) */}
-                <section className="w-full md:w-[380px] flex flex-col shrink-0">
+                <section className="w-full md:w-[380px] flex flex-col shrink-0 h-full max-h-full">
                     <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-5 flex-1 flex flex-col shadow-2xl relative overflow-hidden">
-                        <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-white relative z-10">
+                        <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-white relative z-10 shrink-0">
                             <Sliders size={18} className="text-[#00ff80]" /> 설정 및 제어
                         </h2>
 
                         {/* DRAW CONTROL */}
                         {activeTab === 'draw' && (
-                            <div className="flex flex-col gap-4 h-full relative z-10">
-                                <div className="space-y-3">
-                                    <div onClick={() => store.send({ type: 'updateDraw', subsOnly: !store.drawSubsOnly })} className="flex justify-between items-center p-3 bg-[#262626] rounded-xl cursor-pointer hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
-                                        <span className={`text-sm font-bold ${store.drawSubsOnly ? 'text-white' : 'text-gray-300'}`}>구독자 전용 추첨</span>
-                                        <Toggle checked={store.drawSubsOnly} onChange={() => { }} />
+                            <div className="flex flex-col gap-4 h-full relative z-10 overflow-hidden">
+                                <div className="space-y-3 overflow-y-auto custom-scroll pr-1 pb-2">
+                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
+                                        <span className={`text-sm font-bold ${store.useDrawCommand ? 'text-white' : 'text-gray-400'}`}>명령어 추첨 켜기 (!참여)</span>
+                                        <Toggle checked={store.useDrawCommand} onChange={() => store.send({ type: 'updateDraw', useCommand: !store.useDrawCommand })} />
                                     </div>
-                                    <div onClick={() => store.send({ type: 'updateDraw', excludeWinners: !store.excludeWinners })} className="flex justify-between items-center p-3 bg-[#262626] rounded-xl cursor-pointer hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
+                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
+                                        <span className={`text-sm font-bold ${store.drawSubsOnly ? 'text-white' : 'text-gray-300'}`}>구독자 전용 추첨</span>
+                                        <Toggle checked={store.drawSubsOnly} onChange={() => store.send({ type: 'updateDraw', subsOnly: !store.drawSubsOnly })} />
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
                                         <span className={`text-sm font-bold ${store.excludeWinners ? 'text-white' : 'text-gray-300'}`}>이미 뽑힌 사람 제외</span>
-                                        <Toggle checked={store.excludeWinners} onChange={() => { }} />
+                                        <Toggle checked={store.excludeWinners} onChange={() => store.send({ type: 'updateDraw', excludeWinners: !store.excludeWinners })} />
                                     </div>
                                     <div className="bg-[#262626] rounded-xl overflow-hidden border border-transparent hover:border-[#444] transition shadow-sm p-3">
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="text-sm font-bold text-gray-300">명령어 추첨 (!참여)</span>
+                                            <span className="text-sm font-bold text-gray-300">명령어 설정</span>
                                         </div>
                                         <input
                                             value={localDrawKeyword}
@@ -179,20 +177,15 @@ export default function VoteTab() {
                                             placeholder="예: !참여"
                                         />
                                     </div>
-                                    <div className="p-3 bg-[#262626] rounded-xl border border-transparent transition shadow-sm">
-                                        <div className="flex justify-between items-center mb-2 cursor-pointer group" onClick={() => { /* Toggle Timer Use? store doesn't have direct toggle action for this yet, assuming always on or handled by duration > 0 in legacy */ }}>
-                                            <div className="flex items-center gap-2">
-                                                <Clock size={16} className="text-[#00ff80]" />
-                                                <span className="text-sm font-bold text-white">타이머 설정</span>
-                                            </div>
-                                        </div>
+                                    <div className="p-3 bg-[#262626] rounded-xl border border-transparent transition shadow-sm flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <input type="number" placeholder="60" defaultValue={60} className="flex-1 bg-[#111] text-center text-[#00ff80] font-bold py-1 rounded outline-none border border-[#333] focus:border-[#00ff80] transition-colors" />
-                                            <span className="text-gray-400 text-sm">초</span>
+                                            <Clock size={16} className="text-[#00ff80]" />
+                                            <span className="text-sm font-bold text-white">타이머 (초)</span>
                                         </div>
+                                        <input type="number" placeholder="60" defaultValue={60} className="w-16 bg-[#111] text-center text-[#00ff80] font-bold py-1 rounded outline-none border border-[#333] focus:border-[#00ff80] transition-colors" />
                                     </div>
                                 </div>
-                                <div className="mt-auto pt-4 flex flex-col gap-2 relative z-10">
+                                <div className="mt-auto pt-2 flex flex-col gap-2 relative z-10 shrink-0">
                                     <button onClick={store.undoLastWinner} className="w-full py-3 rounded-xl font-bold text-orange-400 bg-[#222] hover:bg-orange-500/10 hover:text-orange-500 border border-[#444] transition-all flex items-center justify-center gap-2"><RotateCcw size={16} /> 당첨 취소</button>
                                     <button onClick={store.resetDraw} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all"><Trash2 size={16} className="inline mr-2" /> 명단 초기화</button>
                                     <button onClick={() => {
@@ -207,9 +200,9 @@ export default function VoteTab() {
 
                         {/* VOTE & DONATE CONTROL */}
                         {(activeTab === 'vote' || activeTab === 'donate') && (
-                            <div className="flex flex-col gap-3 h-full relative z-10">
+                            <div className="flex flex-col gap-3 h-full relative z-10 overflow-hidden">
                                 {activeTab === 'donate' && (
-                                    <div className="bg-[#222] p-3 rounded-xl border border-[#333] flex items-start gap-3">
+                                    <div className="bg-[#222] p-3 rounded-xl border border-[#333] flex items-start gap-3 shrink-0">
                                         <div className="mt-1 w-5 h-5 rounded-full bg-[#333] flex items-center justify-center text-[#00ff80]"><Zap size={12} /></div>
                                         <div className="text-xs text-gray-400 leading-relaxed">
                                             <p className="font-bold text-white">투표 참여 방법</p>
@@ -230,17 +223,17 @@ export default function VoteTab() {
                                 </div>
 
                                 {activeTab === 'donate' && (
-                                    <div className="bg-[#262626] p-4 rounded-xl border border-[#333] space-y-3 shadow-sm">
+                                    <div className="bg-[#262626] p-4 rounded-xl border border-[#333] space-y-3 shadow-sm shrink-0">
                                         <div className="flex justify-between text-xs text-gray-400"><span>투표 1표당 금액</span><span className="text-[#00ff80]">{store.voteUnit}원</span></div>
                                         <input type="number" value={store.voteUnit} onChange={(e) => store.startVote({ ...store, unit: Number(e.target.value) } as any)} className="w-full bg-transparent text-white font-bold outline-none border-b border-[#444] focus:border-[#00ff80] transition-colors" />
-                                        <div onClick={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })} className="flex justify-between items-center cursor-pointer pt-2 border-t border-[#333]">
+                                        <div className="flex justify-between items-center pt-2 border-t border-[#333]">
                                             <span className={`text-xs font-bold ${store.allowMultiVote ? 'text-white' : 'text-gray-400'}`}>복수투표 허용</span>
-                                            <Toggle checked={store.allowMultiVote} onChange={() => { }} />
+                                            <Toggle checked={store.allowMultiVote} onChange={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })} />
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll">
+                                <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll min-h-0">
                                     {store.voteStatus === 'idle' ? (
                                         <>
                                             {localVoteItems.map((item, idx) => (
@@ -251,7 +244,7 @@ export default function VoteTab() {
                                                 </div>
                                             ))}
                                             <div className="flex gap-2 mt-2">
-                                                <input value={newVoteItem} onChange={(e) => setNewVoteItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVoteItem()} placeholder="새 항목 추가" className="flex-1 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-[#00ff80] outline-none" />
+                                                <input value={newVoteItem} onChange={(e) => setNewVoteItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVoteItem()} placeholder="새 항목 추가 (Enter)" className="flex-1 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-[#00ff80] outline-none" />
                                                 <button onClick={addVoteItem} className="px-3 bg-[#333] text-white rounded-lg font-bold hover:bg-[#444]">+</button>
                                             </div>
                                         </>
@@ -266,16 +259,13 @@ export default function VoteTab() {
                                         ))
                                     )}
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-[#333] space-y-2 relative z-10">
-                                    <div className="p-3 bg-[#262626] rounded-xl cursor-pointer flex justify-between items-center shadow-sm hover:bg-[#2f2f2f] transition-colors" onClick={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })}>
+                                <div className="mt-4 pt-4 border-t border-[#333] space-y-2 relative z-10 shrink-0">
+                                    <div className="p-3 bg-[#262626] rounded-xl flex justify-between items-center shadow-sm hover:bg-[#2f2f2f] transition-colors">
                                         <span className={`text-sm font-bold ${store.isAutoSort ? 'text-white' : 'text-gray-400'}`}>내림차순 정렬</span>
-                                        <Toggle checked={store.isAutoSort} onChange={() => { }} />
+                                        <Toggle checked={store.isAutoSort} onChange={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })} />
                                     </div>
                                     <button onClick={() => checkConflictAndStart('룰렛 연동', store.transferVotesToRoulette)} className="w-full py-3 rounded-xl font-bold bg-[#333] text-gray-300 hover:bg-[#444] hover:text-white transition-all border border-[#444]">
                                         <Shuffle size={16} className="inline mr-2" /> 투표 결과로 룰렛 만들기
-                                    </button>
-                                    <button onClick={() => { store.resetVote(); setLocalVoteItems([]); }} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all">
-                                        <Trash2 size={16} className="inline mr-2" /> 투표 초기화
                                     </button>
                                     <button onClick={() => {
                                         if (store.voteStatus === 'active') store.endVote();
@@ -299,8 +289,8 @@ export default function VoteTab() {
 
                         {/* ROULETTE CONTROL */}
                         {activeTab === 'roulette' && (
-                            <div className="flex flex-col gap-3 h-full relative z-10">
-                                <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll">
+                            <div className="flex flex-col gap-3 h-full relative z-10 overflow-hidden">
+                                <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll min-h-0">
                                     {localRouletteItems.map((item, idx) => (
                                         <div key={idx} className="flex gap-2 items-center group">
                                             <div className="w-1 h-8 rounded-full" style={{ background: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'][idx % 6] }}></div>
@@ -311,7 +301,7 @@ export default function VoteTab() {
                                     ))}
                                     <button onClick={() => setLocalRouletteItems([...localRouletteItems, { name: '', weight: 10 }])} className="w-full py-2 border border-dashed border-[#444] text-gray-500 text-xs hover:border-[#00ff80] hover:text-[#00ff80] transition-all">+ 항목 추가</button>
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-[#333] flex flex-col gap-2 relative z-10">
+                                <div className="mt-4 pt-4 border-t border-[#333] flex flex-col gap-2 relative z-10 shrink-0">
                                     <button onClick={() => store.updateRouletteItems(localRouletteItems)} className="w-full py-3 rounded-xl font-bold bg-[#333] hover:bg-[#444] transition-all">룰렛 업데이트</button>
                                     <button onClick={store.resetRoulette} className="w-full py-3 rounded-xl font-bold text-red-400 bg-[#222] hover:bg-red-500/10 hover:text-red-500 border border-[#444] transition-all"><Trash2 size={16} className="inline mr-2" /> 룰렛 초기화</button>
                                     <button onClick={() => checkConflictAndStart('룰렛 돌리기', store.spinRoulette)} disabled={!store.rouletteItems.length || store.isSpinning} className="w-full py-4 rounded-xl font-black bg-white text-black text-lg shadow-lg active:scale-95 disabled:opacity-50 transition-all">
@@ -332,7 +322,7 @@ export default function VoteTab() {
                 </section>
 
                 {/* RIGHT PANEL (CONTENT) */}
-                <section className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-2xl relative overflow-hidden flex flex-col shadow-2xl">
+                <section className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-2xl relative overflow-hidden flex flex-col shadow-2xl h-full max-h-full">
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#333 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 
                     {/* HEADER */}
@@ -384,7 +374,6 @@ export default function VoteTab() {
                                                     <input type="range" value={localSettings.ttsVolume} min="0" max="1" step="0.1" onChange={(e) => setLocalSettings({ ...localSettings, ttsVolume: Number(e.target.value) })} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00ff80]" />
                                                 </div>
                                             </div>
-                                            {/* Voice List */}
                                             <div className="bg-[#222] p-6 rounded-2xl border border-[#333]">
                                                 <h3 className="text-xl font-black text-white mb-6 text-center">TTS 음성 선택</h3>
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto custom-scroll">
@@ -399,11 +388,50 @@ export default function VoteTab() {
                                             <div className="flex justify-center mt-8 pb-8">
                                                 <button onClick={() => {
                                                     store.updateTTSSettings({
-                                                        volume: localSettings.ttsVolume, rate: localSettings.ttsRate,
-                                                        voice: localSettings.ttsVoice, enabled: localSettings.useTTS
+                                                        volume: localSettings.ttsVolume,
+                                                        rate: localSettings.ttsRate,
+                                                        voice: localSettings.ttsVoice,
+                                                        enabled: localSettings.useTTS
                                                     });
                                                     alert('저장되었습니다.');
                                                 }} className="px-16 py-4 bg-[#00ff80] hover:bg-[#00cc66] text-black font-black text-xl rounded-xl shadow-[0_0_20px_rgba(0,255,128,0.3)] transition-all flex items-center gap-2"><Save /> 저장하기</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {settingCategory === 'overlay' && (
+                                        <div className="space-y-8 max-w-5xl mx-auto py-4">
+                                            <div className="bg-[#222] p-6 rounded-2xl border border-[#333] shadow-lg">
+                                                <h3 className="text-lg font-bold text-white mb-4">OBS 오버레이 URL</h3>
+                                                <div className="flex gap-2">
+                                                    <input readOnly value={localSettings.overlayUrl} className="flex-1 bg-[#111] p-3 rounded-xl border border-[#333] text-gray-400 font-mono text-sm" />
+                                                    <button onClick={() => { navigator.clipboard.writeText(localSettings.overlayUrl); alert('복사되었습니다.'); }} className="bg-[#333] hover:bg-[#444] text-white px-4 rounded-xl font-bold"><Copy size={18} /></button>
+                                                    <button onClick={() => window.open(localSettings.overlayUrl, '_blank')} className="bg-[#333] hover:bg-[#444] text-white px-4 rounded-xl font-bold"><Link size={18} /></button>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-2">이 주소를 OBS 브라우저 소스에 위 URL을 입력하세요. (권장 크기: 1920x1080)</p>
+                                            </div>
+                                            <div className="flex flex-col md:flex-row gap-6">
+                                                <div className="flex-1 bg-[#222] p-6 rounded-2xl border border-[#333] flex items-center justify-between">
+                                                    <div><h3 className="text-lg font-bold text-white mb-1">배경 투명화</h3><p className="text-xs text-gray-500">배경을 투명하게 (크로마키 대체)</p></div>
+                                                    <Toggle checked={localSettings.overlayChroma === 'transparent'} onChange={() => setLocalSettings(p => ({ ...p, overlayChroma: p.overlayChroma === 'transparent' ? '#00ff00' : 'transparent' }))} />
+                                                </div>
+                                                <div className="flex-1 bg-[#222] p-6 rounded-2xl border border-[#333] flex items-center justify-between">
+                                                    <div><h3 className="text-lg font-bold text-white mb-1">오버레이 TTS</h3><p className="text-xs text-gray-500">방송 화면에서도 TTS 소리 출력</p></div>
+                                                    <Toggle checked={localSettings.overlayTTS} onChange={() => setLocalSettings(p => ({ ...p, overlayTTS: !p.overlayTTS }))} />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-center mt-8 pb-8">
+                                                <button onClick={() => {
+                                                    store.updateOverlaySettings({
+                                                        chromaKey: localSettings.overlayChroma,
+                                                        opacity: localSettings.overlayOpacity,
+                                                        showTimer: localSettings.overlayTimer,
+                                                        enableTTS: localSettings.overlayTTS,
+                                                        theme: localSettings.overlayTheme,
+                                                        accentColor: localSettings.overlayAccent,
+                                                        scale: localSettings.overlayScale
+                                                    });
+                                                    alert('설정이 OBS에 적용되었습니다.');
+                                                }} className="px-16 py-4 bg-[#00ff80] hover:bg-[#00cc66] text-black font-black text-xl rounded-xl shadow-[0_0_20px_rgba(0,255,128,0.3)] transition-all flex items-center gap-2"><Save /> 설정 적용하기</button>
                                             </div>
                                         </div>
                                     )}

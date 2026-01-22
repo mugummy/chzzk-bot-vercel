@@ -25,6 +25,7 @@ interface VoteState {
     excludeWinners: boolean;
     previousWinners: string[];
     drawKeyword: string;
+    useDrawCommand: boolean;
     drawCandidates: { name: string; role: string; lastMessage: string }[];
     drawWinner: any | null;
     drawTarget: any | null;
@@ -77,7 +78,7 @@ interface VoteState {
     connect: (cid: string, mode?: 'dashboard' | 'overlay') => void;
     disconnect: () => void;
     send: (msg: any) => void;
-    setSendFn: (fn: any) => void; // Legacy support if needed, but we use socket direct here
+    setSendFn: (fn: any) => void; // Legacy support
     getStateSnapshot: () => any;
     applyStateSnapshot: (state: any) => void;
     handleSync: (state: any) => void;
@@ -110,6 +111,10 @@ interface VoteState {
 }
 
 export const useVoteStore = create<VoteState>((set, get) => {
+
+    // Timer Refs (Closure scoped)
+    let _drawTimerId: NodeJS.Timeout | null = null;
+    let _voteTimerId: NodeJS.Timeout | null = null;
 
     // Helper: Emit Sync
     const emitSync = () => {
@@ -160,6 +165,7 @@ export const useVoteStore = create<VoteState>((set, get) => {
         excludeWinners: true,
         previousWinners: [],
         drawKeyword: '!참여',
+        useDrawCommand: true,
         drawCandidates: [],
         drawWinner: null,
         drawTarget: null,
@@ -211,9 +217,7 @@ export const useVoteStore = create<VoteState>((set, get) => {
             scale: 1.0
         },
 
-        // Implementations
-
-        setSendFn: () => { }, // No-op now
+        setSendFn: () => { },
 
         getStateSnapshot: () => {
             const s = get();
@@ -232,6 +236,7 @@ export const useVoteStore = create<VoteState>((set, get) => {
                 voteWinner: s.voteWinner,
                 rouletteItems: s.rouletteItems,
                 rouletteWinner: s.rouletteWinner,
+                rouletteRotation: s.rouletteRotation,
                 isSpinning: s.isSpinning,
                 winnerChatLog: s.winnerChatLog,
                 isWinnerChatActive: s.isWinnerChatActive,
@@ -266,32 +271,32 @@ export const useVoteStore = create<VoteState>((set, get) => {
         },
 
         disconnect: () => {
+            if (_drawTimerId) clearInterval(_drawTimerId);
+            if (_voteTimerId) clearInterval(_voteTimerId);
             get().socket?.disconnect();
             set({ socket: null, isConnected: false });
         },
 
         send: (msg) => {
             const state = get();
-
-            // Handle Legacy/VoteTab generic sends
             if (msg.type === 'updateDraw') {
                 const updates: any = {};
                 if (msg.keyword !== undefined) updates.drawKeyword = msg.keyword;
                 if (msg.subsOnly !== undefined) updates.drawSubsOnly = msg.subsOnly;
                 if (msg.excludeWinners !== undefined) updates.excludeWinners = msg.excludeWinners;
+                if (msg.useCommand !== undefined) updates.useDrawCommand = msg.useCommand;
                 set(updates);
-                state.socket?.emit('sync-state', get().getStateSnapshot());
+                emitSync(); // Fixed: Use local emitSync
             }
             else if (msg.type === 'updateVoteSettings') {
                 const updates: any = {};
                 if (msg.title !== undefined) updates.voteTitle = msg.title;
+                if (msg.allowMulti !== undefined) updates.allowMultiVote = msg.allowMulti;
+                if (msg.autoSort !== undefined) updates.isAutoSort = msg.autoSort;
                 set(updates);
-                state.socket?.emit('sync-state', get().getStateSnapshot());
+                emitSync();
             }
-            else if (msg.type === 'pickVoteWinner') {
-                // Bridge for VoteTab calling send({type:'pickVoteWinner'...})
-                get().pickVoteWinner(msg.itemId);
-            }
+            else if (msg.type === 'pickVoteWinner') get().pickVoteWinner(msg.itemId);
         },
 
         handleChat: (chat) => {
@@ -306,11 +311,9 @@ export const useVoteStore = create<VoteState>((set, get) => {
             else if (userRole === 'streaming_channel_manager' || userRole === 'manager') role = '매니저';
             else if (chat.extras?.isSubscriber || profile.isSubscriber) role = '구독자';
 
-            // 1. Winner Chat Log
             if (state.isWinnerChatActive) {
                 const currentWinner = state.drawWinner || state.voteWinner;
                 const winnerName = currentWinner?.name || currentWinner?.nickname;
-
                 if (winnerName && winnerName === profile.nickname) {
                     const newLog = [...state.winnerChatLog, { text: msg, time: Date.now() }];
                     set({ winnerChatLog: newLog });
@@ -320,9 +323,13 @@ export const useVoteStore = create<VoteState>((set, get) => {
                 }
             }
 
-            // 2. Draw Recruitment
             if (state.drawStatus === 'recruiting') {
-                if (state.drawKeyword && !msg.startsWith(state.drawKeyword)) return;
+                if (state.useDrawCommand) {
+                    if (state.drawKeyword && !msg.startsWith(state.drawKeyword)) return;
+                } else {
+                    return; // Ignore chat if command disabled
+                }
+
                 if (state.drawSubsOnly && role !== '구독자' && role !== '계정주') return;
 
                 const exists = state.drawCandidates.find(p => p.name === profile.nickname);
@@ -333,14 +340,12 @@ export const useVoteStore = create<VoteState>((set, get) => {
                 }
             }
 
-            // 3. Numeric Vote
             if (state.voteStatus === 'active' && state.voteMode === 'numeric' && msg.startsWith('!투표')) {
                 const num = parseInt(msg.replace('!투표', '').trim());
                 if (!isNaN(num)) {
                     const items = [...state.voteItems];
                     const item = items.find(v => v.id === num);
                     if (item) {
-                        // Check Multi
                         const alreadyVoted = items.some(v => v.voters.some((p: any) => p.name === profile.nickname));
                         if (!state.allowMultiVote && alreadyVoted) return;
 
@@ -381,13 +386,17 @@ export const useVoteStore = create<VoteState>((set, get) => {
         },
 
         startDrawRecruit: (opts) => {
+            if (_drawTimerId) clearInterval(_drawTimerId);
+
+            const duration = opts.duration || 60;
+
             set({
                 isRecruiting: true,
                 drawStatus: 'recruiting',
                 drawKeyword: opts.keyword || '!참여',
                 drawSubsOnly: opts.subsOnly || false,
-                drawTimer: opts.duration || 60,
-                drawTimerDuration: opts.duration || 60,
+                drawTimer: duration,
+                drawTimerDuration: duration,
                 showDrawOverlay: true,
                 showVoteOverlay: false,
                 showRouletteOverlay: false,
@@ -397,16 +406,29 @@ export const useVoteStore = create<VoteState>((set, get) => {
                 isWinnerChatActive: false
             });
             emitSync();
+
+            _drawTimerId = setInterval(() => {
+                const s = get();
+                if (s.drawTimer > 0) {
+                    set({ drawTimer: s.drawTimer - 1 });
+                    emitSync();
+                } else {
+                    if (_drawTimerId) clearInterval(_drawTimerId);
+                }
+            }, 1000);
         },
         stopDraw: () => {
+            if (_drawTimerId) clearInterval(_drawTimerId);
             set({ isRecruiting: false, drawStatus: 'idle' });
             emitSync();
         },
         resetDraw: () => {
+            if (_drawTimerId) clearInterval(_drawTimerId);
             set({ drawCandidates: [], drawWinner: null, drawStatus: 'idle', isRecruiting: false, winnerChatLog: [], isWinnerChatActive: false });
             emitSync();
         },
         pickDrawWinner: (count = 1) => {
+            if (_drawTimerId) clearInterval(_drawTimerId);
             const { drawCandidates, drawSubsOnly, excludeWinners, previousWinners, isTestMode } = get();
             let pool = [...drawCandidates];
             if (drawSubsOnly) pool = pool.filter(p => p.role === '구독자' || p.role === '계정주');
@@ -440,12 +462,15 @@ export const useVoteStore = create<VoteState>((set, get) => {
         },
 
         startVote: (opts) => {
+            if (_voteTimerId) clearInterval(_voteTimerId);
+            const duration = opts.duration || 60;
             set({
                 voteStatus: 'active',
                 voteTitle: opts.title,
                 voteMode: opts.mode,
                 voteItems: opts.items.map((name, i) => ({ id: i + 1, name, count: 0, voters: [] })),
-                voteTimer: opts.duration || 60,
+                voteTimer: duration,
+                voteTimerDuration: duration,
                 allowMultiVote: opts.allowMulti,
                 voteUnit: opts.unit || 1000,
                 showVoteOverlay: true,
@@ -456,10 +481,29 @@ export const useVoteStore = create<VoteState>((set, get) => {
                 isWinnerChatActive: false
             });
             emitSync();
+
+            _voteTimerId = setInterval(() => {
+                const s = get();
+                if (s.voteTimer > 0) {
+                    set({ voteTimer: s.voteTimer - 1 });
+                    emitSync();
+                } else {
+                    if (_voteTimerId) clearInterval(_voteTimerId);
+                }
+            }, 1000);
         },
-        endVote: () => { set({ voteStatus: 'ended' }); emitSync(); },
-        stopVote: () => { set({ voteStatus: 'idle' }); emitSync(); }, // Reset to idle
-        resetVote: () => { set({ voteStatus: 'idle', voteItems: [], voteWinner: null, winnerChatLog: [], isWinnerChatActive: false }); emitSync(); },
+        endVote: () => {
+            if (_voteTimerId) clearInterval(_voteTimerId);
+            set({ voteStatus: 'ended' }); emitSync();
+        },
+        stopVote: () => {
+            if (_voteTimerId) clearInterval(_voteTimerId);
+            set({ voteStatus: 'idle' }); emitSync();
+        },
+        resetVote: () => {
+            if (_voteTimerId) clearInterval(_voteTimerId);
+            set({ voteStatus: 'idle', voteItems: [], voteWinner: null, winnerChatLog: [], isWinnerChatActive: false }); emitSync();
+        },
         pickVoteWinner: (itemId) => {
             const { voteItems, isVoteSubsOnly } = get();
             const item = voteItems.find(v => v.id === itemId);
@@ -501,22 +545,51 @@ export const useVoteStore = create<VoteState>((set, get) => {
         updateRouletteItems: (items) => { set({ rouletteItems: items }); emitSync(); },
         resetRoulette: () => { set({ rouletteWinner: null, isSpinning: false, isRouletteGenerated: false }); emitSync(); },
         spinRoulette: () => {
-            const { rouletteItems } = get();
+            const { rouletteItems, rouletteRotation } = get();
             if (rouletteItems.length < 2) return alert('항목 부족');
-            set({ isSpinning: true, rouletteWinner: null, showRouletteOverlay: true });
-            emitSync();
 
+            // 1. Calculate Winner
             const total = rouletteItems.reduce((a, b) => a + b.weight, 0);
             let r = Math.random() * total;
-            let winner = rouletteItems[0].name;
-            for (let i = 0; i < rouletteItems.length; i++) {
-                r -= rouletteItems[i].weight;
-                if (r <= 0) { winner = rouletteItems[i].name; break; }
-            }
+            let winner = rouletteItems[0];
+            let winnerIndex = 0;
 
-            // Simple Timeout for Spin
+            let currentWeight = 0;
+            for (let i = 0; i < rouletteItems.length; i++) {
+                currentWeight += rouletteItems[i].weight;
+                if (r <= currentWeight) {
+                    winner = rouletteItems[i];
+                    winnerIndex = i;
+                    break;
+                }
+            }
+            if (!winner) { winner = rouletteItems[rouletteItems.length - 1]; winnerIndex = rouletteItems.length - 1; }
+
+            // 2. Calculate Rotation
+            let previousWeight = 0;
+            for (let i = 0; i < winnerIndex; i++) previousWeight += rouletteItems[i].weight;
+            const startAngle = (previousWeight / total) * 360;
+            const wedgeAngle = (winner.weight / total) * 360;
+            const centerAngle = startAngle + (wedgeAngle / 2);
+
+            const targetBase = 360 - centerAngle;
+            const extraSpins = 360 * 5;
+            const currentRot = rouletteRotation;
+            // Always spin forward
+            const nextBaseObj = Math.ceil(currentRot / 360) * 360 + extraSpins;
+            const finalRot = nextBaseObj + targetBase;
+
+            set({
+                isSpinning: true,
+                rouletteWinner: null,
+                showRouletteOverlay: true,
+                rouletteRotation: finalRot,
+                rouletteTransition: 'transform 4s cubic-bezier(0.2, 0.8, 0.2, 1)'
+            });
+            emitSync();
+
             setTimeout(() => {
-                set({ isSpinning: false, rouletteWinner: winner });
+                set({ isSpinning: false, rouletteWinner: winner.name });
                 emitSync();
             }, 4000);
         },
