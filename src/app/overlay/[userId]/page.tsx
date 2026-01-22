@@ -22,7 +22,7 @@ export default function OverlayPage() {
                 wsUrl = `${protocol}${wsUrl}`;
             }
 
-            store.connect(wsUrl, userId);
+            store.connect(wsUrl, 'overlay');
         }
         return () => {
             store.disconnect();
