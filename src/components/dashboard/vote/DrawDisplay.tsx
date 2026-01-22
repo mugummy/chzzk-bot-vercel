@@ -160,87 +160,103 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
     }
 
     // RENDER: PICKING (Spinning) & WINNER
+    // Revert to "Lines" design per user request
+
+    // Win Timestamp for filtering chat
+    const [winTime, setWinTime] = useState<number>(0);
+
+    useEffect(() => {
+        if (store.drawWinner) {
+            setWinTime(Date.now());
+        }
+    }, [store.drawWinner]);
+
     return (
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-[#161616]">
 
-            {/* Slot Machine Container */}
-            <div className={`relative flex flex-col items-center transition-all duration-700 ${showChatReveal ? '-translate-y-16 scale-90' : 'scale-110'}`}>
-                {/* Decorative Elements */}
-                <div className="absolute inset-0 bg-[#00ff80]/5 blur-[100px] rounded-full"></div>
+            {/* Reverted Design: Simple Lines & Center Text */}
+            <div className={`relative flex flex-col items-center transition-all duration-700 ${showChatReveal ? '-translate-y-24' : ''}`}>
 
-                {/* Slot Window */}
-                <div className="relative bg-[#0f0f0f] border-4 border-[#333] rounded-3xl p-2 shadow-2xl overflow-hidden min-w-[300px] md:min-w-[500px]">
-                    {/* Glass Reflection */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none z-20"></div>
+                {/* Top Line */}
+                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mb-8"></div>
 
-                    {/* The Slot Roller */}
-                    <div className="h-[120px] md:h-[150px] relative overflow-hidden bg-[#111] rounded-2xl flex flex-col items-center justify-center">
-                        {/* If Picking, we simulate vertical blur motion */}
-                        {store.drawStatus === 'picking' ? (
-                            <div className="animate-slot-spin flex flex-col items-center text-4xl md:text-6xl font-black text-gray-500 blur-[1px]">
-                                {[...Array(10)].map((_, i) => (
-                                    <span key={i} className="py-2">WAITING...</span>
-                                ))}
-                            </div>
-                        ) : (
-                            // Stopped / Result
-                            <div className="flex flex-col items-center justify-center animate-land">
-                                <span className={`text-4xl md:text-6xl font-black tracking-tight text-center px-4 leading-none ${store.drawWinner ? 'text-[#00ff80] drop-shadow-[0_0_20px_rgba(0,255,128,0.6)]' : 'text-gray-600'}`}>
-                                    {slotName}
+                {/* Name Area - Masked for Spinning Effect */}
+                <div className="h-[80px] md:h-[120px] overflow-hidden relative flex items-center justify-center w-full">
+                    {store.drawStatus === 'picking' ? (
+                        <div className="flex flex-col items-center animate-text-spin blur-sm opacity-80">
+                            {/* Repeated list for visual spinning effect */}
+                            {Array.from({ length: 20 }).map((_, i) => (
+                                <span key={i} className="text-5xl md:text-8xl font-black text-gray-500 py-4 block">
+                                    {['WAITING', 'PICKING', 'LUCKY', 'WINNER', 'CHZZK'][i % 5]}
                                 </span>
-                            </div>
-                        )}
-
-                        {/* Center Highlight Line (Visual Only) */}
-                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-red-500/30 -translate-y-1/2 pointer-events-none z-10 w-full"></div>
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="animate-land">
+                            <span className={`text-6xl md:text-8xl font-black tracking-tight px-4 leading-none ${store.drawWinner ? 'text-[#00ff80] drop-shadow-[0_0_30px_rgba(0,255,128,0.6)]' : 'text-gray-600'}`}>
+                                {slotName}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Winner Label (Badges) */}
+                {/* Bottom Line */}
+                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mt-8"></div>
+
+                {/* Winner Badge */}
                 {store.drawWinner && !store.isSpinning && (
-                    <div className="mt-8 flex flex-col items-center animate-bounce-in">
-                        <div className="flex gap-2 mb-2">
-                            <span className="bg-[#00ff80] text-black px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">WINNER</span>
-                            <span className="bg-[#222] text-gray-300 border border-[#333] px-3 py-1 rounded-full text-xs font-bold">{store.drawWinner.role}</span>
+                    <div className="absolute -top-20 animate-bounce">
+                        <div className="flex flex-col items-center gap-2">
+                            <Crown className="text-yellow-400 w-12 h-12 drop-shadow-md" fill="currentColor" />
+                            <div className="px-3 py-1 bg-[#222] border border-[#333] rounded-full text-xs text-gray-300 font-bold">{store.drawWinner.role}</div>
                         </div>
                     </div>
                 )}
             </div>
 
             <style jsx>{`
-                @keyframes slot-spin {
+                @keyframes text-spin {
                     0% { transform: translateY(0); }
                     100% { transform: translateY(-50%); }
                 }
-                .animate-slot-spin {
-                    animation: slot-spin 0.2s linear infinite;
+                .animate-text-spin {
+                    animation: text-spin 0.5s linear infinite;
+                }
+                 .animate-land {
+                    animation: land 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                @keyframes land {
+                    0% { transform: scale(0.5); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
                 }
             `}</style>
 
             {/* Chat Reveal Section (Only if Winner) */}
             {store.drawWinner && (
                 <div className={`absolute bottom-0 w-full max-w-3xl px-6 transition-all duration-700 ease-out flex flex-col items-center ${showChatReveal ? 'h-[40%] opacity-100 mb-8' : 'h-0 opacity-0 mb-0'}`}>
-                    <div className="flex-1 w-full bg-[#1a1a1a]/95 backdrop-blur-md rounded-2xl border border-[#333] overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                        <div className="bg-[#222] px-6 py-3 border-b border-[#333] flex justify-between items-center shrink-0">
-                            <span className="text-xs font-bold text-gray-400 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div> 당첨자 채팅 라이브</span>
+                    <div className="w-full h-[1px] bg-gray-800 mb-4"></div>
+                    <div className="flex-1 w-full bg-[#1a1a1a]/90 backdrop-blur-md rounded-xl border border-[#333] overflow-hidden flex flex-col shadow-2xl">
+                        <div className="bg-[#222] px-4 py-2 border-b border-[#333] flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-400">당첨자 채팅 (당첨 이후)</span>
+                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll" ref={scrollRef}>
-                            {store.chatHistory.length === 0 ? (
-                                <div className="text-center text-gray-600 text-xs py-10">채팅 기록이 없습니다.</div>
+                            {store.chatHistory.filter(msg => msg.timestamp >= winTime).length === 0 ? (
+                                <div className="text-center text-gray-600 text-xs py-10">당첨자가 아직 채팅을 입력하지 않았습니다.</div>
                             ) : (
-                                store.chatHistory.map((msg, idx) => (
-                                    <div key={idx} className={`text-sm flex gap-3 ${msg.nickname === store.drawWinner?.name ? 'bg-[#00ff80]/5 border border-[#00ff80]/20 rounded-xl p-3' : 'opacity-50'}`}>
-                                        <div className="font-bold text-gray-400 shrink-0 whitespace-nowrap">{msg.nickname}</div>
-                                        <div className={`${msg.nickname === store.drawWinner?.name ? 'text-[#00ff80] font-medium' : 'text-gray-500'}`}>{msg.message}</div>
+                                store.chatHistory.filter(msg => msg.timestamp >= winTime).map((msg, idx) => (
+                                    <div key={idx} className={`text-sm ${msg.nickname === store.drawWinner?.name ? 'bg-[#00ff80]/10 border border-[#00ff80]/30 rounded-lg p-2' : 'opacity-40'}`}>
+                                        <span className={`font-bold mr-2 ${msg.nickname === store.drawWinner?.name ? 'text-[#00ff80]' : 'text-gray-500'}`}>{msg.nickname}:</span>
+                                        <span className="text-gray-200">{msg.message}</span>
                                     </div>
                                 ))
                             )}
                         </div>
                     </div>
                     {isDashboard && (
-                        <div className="flex gap-3 mt-4 animate-fadeIn shrink-0">
-                            <button onClick={() => store.pickDrawWinner(1)} className="px-8 py-3 bg-[#00ff80] text-black hover:bg-[#00cc66] rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"><Shuffle size={18} /> 다시 추첨하기</button>
-                            <button onClick={store.resetDraw} className="px-6 py-3 bg-[#222] hover:bg-[#333] text-gray-300 border border-[#444] rounded-xl font-bold transition-all">목록으로 돌아가기</button>
+                        <div className="flex gap-2 mt-4 animate-fadeIn">
+                            <button onClick={() => store.pickDrawWinner(1)} className="px-6 py-2 bg-[#00ff80] text-black hover:bg-[#00cc66] rounded-lg font-bold text-sm transition-all shadow-lg">다시 추첨하기</button>
+                            <button onClick={store.resetDraw} className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white rounded-lg font-bold text-sm transition-all border border-[#444]">목록으로</button>
                         </div>
                     )}
                 </div>

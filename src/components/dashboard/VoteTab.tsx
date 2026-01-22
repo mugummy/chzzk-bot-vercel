@@ -94,7 +94,7 @@ export default function VoteTab() {
     const currentOverlayUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/overlay/${store.channelId || 'demo'}` : '';
 
     return (
-        <div className="h-screen w-full flex flex-col p-4 md:p-6 max-w-screen-2xl mx-auto relative text-white bg-neutral-900 overflow-hidden">
+        <div className="h-screen w-full flex flex-col p-4 max-w-screen-2xl mx-auto relative text-white bg-transparent overflow-hidden">
 
             {/* Connection Modal */}
             {!store.isConnected && !store.isTestMode && (
