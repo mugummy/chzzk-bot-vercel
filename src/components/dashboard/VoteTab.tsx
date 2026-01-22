@@ -15,13 +15,32 @@ export default function VoteTab() {
     const store = useVoteStore();
     const [activeTab, setActiveTab] = useState<'vote' | 'draw' | 'donate' | 'roulette' | 'settings'>('draw');
 
-    // Local State for Editors
+    // Local State for Items Editor
     const [localVoteItems, setLocalVoteItems] = useState<string[]>([]);
     const [newVoteItem, setNewVoteItem] = useState('');
 
     const [localRouletteItems, setLocalRouletteItems] = useState<{ name: string; weight: number }[]>([]);
     const [newRouletteName, setNewRouletteName] = useState('');
     const [newRouletteWeight, setNewRouletteWeight] = useState(1);
+
+    // Local State for Inputs (to avoid freezing)
+    const [localDrawKeyword, setLocalDrawKeyword] = useState('!참여');
+    const [localVoteTitle, setLocalVoteTitle] = useState('');
+
+    // Sync Store -> Local (One way sync when store updates, if needed)
+    React.useEffect(() => {
+        if (store.drawKeyword) setLocalDrawKeyword(store.drawKeyword);
+    }, [store.drawKeyword]);
+
+    React.useEffect(() => {
+        if (store.voteTitle) setLocalVoteTitle(store.voteTitle);
+    }, [store.voteTitle]);
+
+    const handleVoteTitleBlur = () => {
+        if (localVoteTitle !== store.voteTitle) {
+            store.send({ type: 'updateVoteSettings', title: localVoteTitle });
+        }
+    };
 
     // Modal State
     const [showVoteDetailModal, setShowVoteDetailModal] = useState(false);
@@ -200,12 +219,18 @@ export default function VoteTab() {
                                         <Toggle checked={store.drawSubsOnly} onChange={() => store.send({ type: 'updateDraw', subsOnly: !store.drawSubsOnly })} />
                                     </div>
                                     <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl border border-transparent shadow-sm">
-                                        <div className="flex flex-col">
+                                        <span className={`text-sm font-bold ${store.excludeWinners ? 'text-white' : 'text-gray-300'}`}>이미 뽑힌 사람 제외</span>
+                                        <Toggle checked={store.excludeWinners} onChange={() => store.send({ type: 'updateDraw', excludeWinners: !store.excludeWinners })} />
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl border border-transparent shadow-sm">
+                                        <div className="flex flex-col w-full">
                                             <span className="text-sm font-bold text-gray-300">명령어 추첨 (!참여)</span>
                                             <input
-                                                value={store.drawKeyword}
-                                                onChange={(e) => store.send({ type: 'updateDraw', keyword: e.target.value })}
-                                                className="bg-[#111] text-white p-2 mt-1 rounded-lg border border-[#333] text-sm outline-none focus:border-[#00ff80]"
+                                                value={localDrawKeyword}
+                                                onChange={(e) => setLocalDrawKeyword(e.target.value)}
+                                                onBlur={() => store.send({ type: 'updateDraw', keyword: localDrawKeyword })}
+                                                onKeyDown={(e) => e.key === 'Enter' && store.send({ type: 'updateDraw', keyword: localDrawKeyword })}
+                                                className="bg-[#111] text-white p-2 mt-1 rounded-lg border border-[#333] text-sm outline-none focus:border-[#00ff80] w-full"
                                             />
                                         </div>
                                     </div>
@@ -258,8 +283,10 @@ export default function VoteTab() {
                                 <div className="bg-[#262626] p-4 rounded-xl border border-[#333] space-y-2 shadow-sm shrink-0">
                                     <div className="text-xs text-gray-400 font-bold">투표 주제</div>
                                     <input
-                                        value={store.voteTitle}
-                                        onChange={(e) => store.send({ type: 'updateVoteSettings', title: e.target.value })}
+                                        value={localVoteTitle}
+                                        onChange={(e) => setLocalVoteTitle(e.target.value)}
+                                        onBlur={handleVoteTitleBlur}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleVoteTitleBlur()}
                                         placeholder="투표 주제를 입력하세요..."
                                         className="w-full bg-transparent text-white font-bold text-lg outline-none border-b border-[#444] focus:border-[#00ff80] transition-colors placeholder-gray-600"
                                     />

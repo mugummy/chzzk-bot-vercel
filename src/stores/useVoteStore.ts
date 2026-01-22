@@ -30,6 +30,7 @@ interface VoteState {
     drawTimer: number;
     showDrawOverlay: boolean;
     drawSubsOnly: boolean;
+    excludeWinners: boolean;
 
     // Roulette
     rouletteItems: { name: string; weight: number }[];
@@ -80,7 +81,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
     voteId: null, voteTitle: '', voteItems: [], voteStatus: 'idle', voteMode: 'numeric', voteTimer: 0,
     allowMultiVote: false, showVoteOverlay: false, voteUnit: 1000, isAutoSort: false, includeZeroVotes: true,
-    drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, previousWinners: [], drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false,
+    drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, previousWinners: [], drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false, excludeWinners: false,
     rouletteItems: [], rouletteActiveItems: [], isSpinning: false, rouletteWinner: null, rouletteRotation: 0, rouletteTransition: 'none', showRouletteOverlay: false,
 
     setSendFn: (fn) => set({ sendFn: fn }),
@@ -109,7 +110,8 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 previousWinners: payload.draw.previousWinners || [],
                 drawTimer: payload.draw.timer,
                 showDrawOverlay: payload.draw.showOverlay,
-                drawSubsOnly: payload.draw.subsOnly
+                drawSubsOnly: payload.draw.subsOnly,
+                excludeWinners: payload.draw.excludeWinners
             });
         }
         if (payload.roulette) {
