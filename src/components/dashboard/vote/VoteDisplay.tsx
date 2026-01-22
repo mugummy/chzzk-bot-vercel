@@ -12,30 +12,16 @@ interface VoteDisplayProps {
 export default function VoteDisplay({ mode, showControls = true }: VoteDisplayProps) {
     const store = useVoteStore();
 
-    // Sorting: Manual order in overlay?
-    // Original Vue logic: Overlay fixed order, Dashboard auto sort if enabled.
-    // For now, let's keep simple: sorted by ID or just list order
-    // Wait, backend sends `items`.
-    // Let's sort by count descending for dashboard visual?
-    // Vue Code: (Step 1269) sort items.
-
-    // Sorting & Filtering
     const sortedItems = React.useMemo(() => {
         let items = [...store.voteItems];
+        if (mode === 'overlay') return items; // Overlay keeps original order usually
 
-        // Filter 0 votes if configured (Dashboard only)
         if (mode === 'dashboard' && !store.includeZeroVotes) {
             items = items.filter(i => i.count > 0);
         }
-
-        // Auto Sort by Count Descending (Dashboard only)
         if (mode === 'dashboard' && store.isAutoSort) {
             items.sort((a, b) => b.count - a.count);
-        } else {
-            // Default: Sort by ID (Creation Order) to maintain stability
-            items.sort((a, b) => a.id - b.id);
         }
-
         return items;
     }, [store.voteItems, store.isAutoSort, store.includeZeroVotes, mode]);
 
@@ -43,15 +29,12 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
 
     return (
         <div className={`flex flex-col h-full w-full p-2 ${mode === 'overlay' ? 'gap-4' : 'gap-3'}`}>
-            {/* Overlay Header shows Title, so we don't need it here for Overlay. */}
-            {/* Dashboard Title */}
             {mode === 'dashboard' && store.voteTitle && (
                 <div className="shrink-0 mb-2 px-2 pb-4 border-b border-white/10">
                     <h2 className="text-xl font-bold text-white text-center">{store.voteTitle}</h2>
                 </div>
             )}
 
-            {/* Closed Status */}
             {mode === 'overlay' && store.voteStatus !== 'active' && (
                 <div className="shrink-0 mb-2 mx-1 bg-red-600/90 text-white font-black text-3xl text-center py-4 rounded-xl border-2 border-white/20 shadow-[0_0_30px_rgba(255,0,0,0.5)] animate-pulse">
                     ⛔ 투표 마감 (CLOSED)
@@ -65,6 +48,7 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
                         return (
                             <motion.div
                                 key={item.id}
+                                layout
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
@@ -72,10 +56,10 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
                                relative rounded-xl overflow-hidden border transition-all
                                ${mode === 'overlay'
                                         ? 'h-24 border-white/20 bg-black/40 shadow-lg'
-                                        : 'h-20 bg-[#333] border-[#444] cursor-pointer hover:border-[#00ff80]'}
+                                        : 'h-20 bg-[#333] border-[#444] group hover:border-[#00ff80] cursor-pointer active:scale-[0.99]'}
                            `}
                             >
-                                {/* Bar BG */}
+                                {/* Progress Bar Background */}
                                 <motion.div
                                     className={`absolute top-0 left-0 h-full transition-all duration-500 ${mode === 'overlay' ? 'bg-[#00ff80]/40 shadow-[0_0_20px_rgba(0,255,128,0.2)]' : 'bg-[#444]/50'}`}
                                     initial={{ width: 0 }}
@@ -113,6 +97,12 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
                         <span className="text-gray-300 font-bold text-xl mr-3 tracking-widest">TOTAL</span>
                         <span className="text-[#00ff80] font-black text-3xl">{totalVotes}</span>
                     </div>
+                </div>
+            )}
+            {/* Dashboard Total Footer (Legacy Style) */}
+            {!showControls && mode === 'dashboard' && (
+                <div className="text-center mt-2 border-t border-white/5 pt-2">
+                    <span className="text-gray-500 font-bold">Total: <span className="text-white">{totalVotes}</span></span>
                 </div>
             )}
         </div>

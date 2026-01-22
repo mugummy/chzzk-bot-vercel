@@ -55,17 +55,7 @@ export default function WinnerModal({ visible, mode, candidates, isRunning, targ
                         chatLog={winnerChatLog}
                     />
 
-                    {/* Winner Celebration */}
-                    {winner && !isRunning && (
-                        <motion.div
-                            initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                            className="text-center space-y-4"
-                        >
-                            <div className="text-gray-300 text-xl font-bold">당첨을 축하합니다!</div>
-                            <div className="text-5xl font-black text-white">{winner.name || winner.nickname}</div>
-                            <div className="text-[#00ff80]">{winner.role}</div>
-                        </motion.div>
-                    )}
+
 
                     {/* Controls */}
                     {showControls && (
