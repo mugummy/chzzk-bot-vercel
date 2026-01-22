@@ -14,16 +14,16 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
 
     const sortedItems = React.useMemo(() => {
         let items = [...store.voteItems];
-        if (mode === 'overlay') return items; // Overlay keeps original order usually
+        // Overlay keeps original order usually
+        if (mode === 'overlay') return items;
 
-        if (mode === 'dashboard' && !store.includeZeroVotes) {
-            items = items.filter(i => i.count > 0);
-        }
+        // Dashboard: Always show all items (legacy parity)
+        // Only sort if enabled
         if (mode === 'dashboard' && store.isAutoSort) {
             items.sort((a, b) => b.count - a.count);
         }
         return items;
-    }, [store.voteItems, store.isAutoSort, store.includeZeroVotes, mode]);
+    }, [store.voteItems, store.isAutoSort, mode]);
 
     const totalVotes = store.voteItems.reduce((sum, item) => sum + item.count, 0);
 
