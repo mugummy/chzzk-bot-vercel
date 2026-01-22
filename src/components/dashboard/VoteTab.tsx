@@ -23,6 +23,20 @@ export default function VoteTab() {
     const [newRouletteName, setNewRouletteName] = useState('');
     const [newRouletteWeight, setNewRouletteWeight] = useState(1);
 
+    // Modal State
+    const [showVoteDetailModal, setShowVoteDetailModal] = useState(false);
+    const [selectedVoteItem, setSelectedVoteItem] = useState<any>(null);
+    const [showRealNames, setShowRealNames] = useState(false);
+
+    // Settings State (Local)
+    const [settingCategory, setSettingCategory] = useState<'tts' | 'overlay'>('tts');
+    const [localSettings, setLocalSettings] = useState({
+        ttsVolume: 1.0, ttsRate: 1.0, ttsVoice: '', useTTS: true,
+        overlayChroma: 'transparent', overlayTTS: false, overlayTimer: true,
+        overlayOpacity: 0.9, overlayTheme: 'basic', overlayAccent: '#10b981', overlayScale: 1.0,
+        overlayUrl: 'http://localhost:3000/overlay' // Placeholder
+    });
+
     // Toggle Helper
     const Toggle = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
         <div onClick={onChange} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${checked ? 'bg-[#00ff80]' : 'bg-gray-600'}`}>
@@ -71,6 +85,16 @@ export default function VoteTab() {
         } else {
             startFunction();
         }
+    };
+
+    const handleVoteItemClick = (item: any) => {
+        setSelectedVoteItem(item);
+        setShowVoteDetailModal(true);
+    };
+
+    const pickVoteWinner = (item: any) => {
+        store.send({ type: 'pickVoteWinner', itemId: item.id, count: 1 });
+        setShowVoteDetailModal(false);
     };
 
     return (
@@ -215,10 +239,14 @@ export default function VoteTab() {
                                     ) : (
                                         // View Mode
                                         store.voteItems.map((item, idx) => (
-                                            <div key={item.id} className="flex gap-2 items-center">
-                                                <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs text-gray-500 font-mono">{idx + 1}</div>
-                                                <div className="flex-1 bg-[#262626]/50 text-white px-3 py-3 rounded-lg text-sm opacity-90">
-                                                    {item.name} <span className="float-right font-bold text-[#00ff80]">{item.count}표</span>
+                                            <div
+                                                key={item.id}
+                                                onClick={() => handleVoteItemClick(item)}
+                                                className="flex gap-2 items-center cursor-pointer hover:bg-[#222] p-1 rounded-lg transition-colors group"
+                                            >
+                                                <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs text-gray-500 font-mono group-hover:bg-[#00ff80] group-hover:text-black transition-colors">{idx + 1}</div>
+                                                <div className="flex-1 bg-[#262626]/50 text-white px-3 py-3 rounded-lg text-sm opacity-90 group-hover:opacity-100 border border-transparent group-hover:border-[#333]">
+                                                    {item.name} <span className="float-right font-bold text-[#00ff80]">{item.count}표 ({(item as any).percent || 0}%)</span>
                                                 </div>
                                             </div>
                                         ))
@@ -260,34 +288,39 @@ export default function VoteTab() {
                             <div className="flex flex-col gap-3 h-full relative z-10">
                                 <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scroll">
                                     {/* Existing Items */}
-                                    {localRouletteItems.map((item, idx) => (
-                                        <div key={idx} className="flex gap-2 items-center group bg-[#262626] p-2 rounded-lg border border-transparent hover:border-[#444]">
-                                            <div className="w-1 h-8 rounded-full" style={{ background: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'][idx % 6] }}></div>
-                                            <input
-                                                value={item.name}
-                                                onChange={(e) => {
-                                                    const newItems = [...localRouletteItems];
-                                                    newItems[idx].name = e.target.value;
-                                                    setLocalRouletteItems(newItems);
-                                                }}
-                                                className="flex-1 bg-transparent text-white text-sm outline-none"
-                                            />
-                                            <div className="flex items-center gap-1 bg-[#111] rounded px-2">
-                                                <span className="text-xs text-gray-500">x</span>
+                                    {localRouletteItems.map((item, idx) => {
+                                        const totalWeight = localRouletteItems.reduce((acc, curr) => acc + (Number(curr.weight) || 0), 0) || 1;
+                                        const percent = Math.round((Number(item.weight) / totalWeight) * 100);
+
+                                        return (
+                                            <div key={idx} className="flex gap-2 items-center group bg-[#262626] p-2 rounded-lg border border-transparent hover:border-[#444]">
+                                                <div className="w-1 h-8 rounded-full" style={{ background: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'][idx % 6] }}></div>
                                                 <input
-                                                    type="number"
-                                                    value={item.weight}
+                                                    value={item.name}
                                                     onChange={(e) => {
                                                         const newItems = [...localRouletteItems];
-                                                        newItems[idx].weight = Number(e.target.value);
+                                                        newItems[idx].name = e.target.value;
                                                         setLocalRouletteItems(newItems);
                                                     }}
-                                                    className="w-8 bg-transparent text-center text-xs outline-none"
+                                                    className="flex-1 bg-transparent text-white text-sm outline-none"
                                                 />
+                                                <div className="flex items-center gap-1 bg-[#111] rounded px-2">
+                                                    <input
+                                                        type="number"
+                                                        value={item.weight}
+                                                        onChange={(e) => {
+                                                            const newItems = [...localRouletteItems];
+                                                            newItems[idx].weight = Number(e.target.value);
+                                                            setLocalRouletteItems(newItems);
+                                                        }}
+                                                        className="w-10 bg-transparent text-center text-xs outline-none font-bold"
+                                                    />
+                                                    <span className="text-xs text-gray-500 w-8 text-right font-mono">{percent}%</span>
+                                                </div>
+                                                <button onClick={() => removeRouletteItem(idx)} className="text-red-400 p-1 hover:bg-[#333] rounded"><Trash2 size={14} /></button>
                                             </div>
-                                            <button onClick={() => removeRouletteItem(idx)} className="text-red-400 p-1 hover:bg-[#333] rounded"><Trash2 size={14} /></button>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {/* Add New */}
                                     <div className="flex gap-2 mt-2 p-2 bg-[#222] rounded-lg border border-dashed border-[#444]">
@@ -326,11 +359,90 @@ export default function VoteTab() {
                             </div>
                         )}
 
-                        {/* SETTINGS (Simplified) */}
+                        {/* SETTINGS (Full Implementation) */}
                         {activeTab === 'settings' && (
-                            <div className="flex flex-col gap-2 h-full justify-center text-center text-gray-500">
-                                <Settings className="mx-auto mb-2 opacity-50" size={48} />
-                                <p>설정 메뉴는 준비중입니다.</p>
+                            <div className="flex flex-col gap-2 h-full relative z-10">
+                                <div className="flex gap-2 mb-4">
+                                    {(['tts', 'overlay'] as const).map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setSettingCategory(cat)}
+                                            className={`flex-1 py-3 font-bold rounded-xl border transition-all ${settingCategory === cat ? 'bg-[#262626] text-[#00ff80] border-[#00ff80]' : 'text-gray-400 border-transparent hover:bg-[#222]'}`}
+                                        >
+                                            {cat === 'tts' ? 'TTS 설정' : 'OBS 오버레이'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto custom-scroll p-1">
+                                    {settingCategory === 'tts' && (
+                                        <div className="space-y-6">
+                                            {/* TTS Toggle & Volume */}
+                                            <div className="flex flex-col md:flex-row gap-4">
+                                                <div className="flex-1 bg-[#222] p-4 rounded-2xl border border-[#333] flex justify-between items-center">
+                                                    <div>
+                                                        <h3 className="font-bold text-white">TTS 사용</h3>
+                                                        <p className="text-xs text-gray-500">채팅 음성 읽기</p>
+                                                    </div>
+                                                    <Toggle checked={localSettings.useTTS} onChange={() => setLocalSettings({ ...localSettings, useTTS: !localSettings.useTTS })} />
+                                                </div>
+                                                <div className="flex-1 bg-[#222] p-4 rounded-2xl border border-[#333]">
+                                                    <div className="flex justify-between text-xs font-bold mb-2">
+                                                        <span className="text-gray-400">음량</span>
+                                                        <span className="text-[#00ff80]">{(localSettings.ttsVolume * 100).toFixed(0)}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range" min="0" max="1" step="0.1"
+                                                        value={localSettings.ttsVolume}
+                                                        onChange={(e) => setLocalSettings({ ...localSettings, ttsVolume: Number(e.target.value) })}
+                                                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00ff80]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Voice List Placeholder */}
+                                            <div className="bg-[#222] p-4 rounded-2xl border border-[#333] text-center py-8">
+                                                <p className="text-gray-500 text-sm">브라우저 음성 목록을 불러오는 중...</p>
+                                                {/* In a real implementation, we would list window.speechSynthesis.getVoices() here */}
+                                            </div>
+
+                                            <button className="w-full py-4 bg-[#00ff80] text-black font-black rounded-xl hover:bg-[#00cc66] transition shadow-lg">
+                                                <Save className="inline mr-2" size={18} /> 설정 저장하기
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {settingCategory === 'overlay' && (
+                                        <div className="space-y-6">
+                                            {/* URL Section */}
+                                            <div className="bg-[#222] p-4 rounded-2xl border border-[#333]">
+                                                <h3 className="font-bold text-white mb-2 flex items-center gap-2"><Link size={16} className="text-[#00ff80]" /> 오버레이 URL</h3>
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-xs font-mono text-gray-400 truncate">
+                                                        {localSettings.overlayUrl}
+                                                    </div>
+                                                    <button onClick={() => navigator.clipboard.writeText(localSettings.overlayUrl)} className="px-3 bg-[#333] text-white rounded-lg hover:bg-[#444]"><Copy size={16} /></button>
+                                                </div>
+                                            </div>
+
+                                            {/* Controls */}
+                                            <div className="bg-[#222] p-4 rounded-2xl border border-[#333] space-y-4">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-sm text-gray-300">오버레이 음성 출력</span>
+                                                    <Toggle checked={localSettings.overlayTTS} onChange={() => setLocalSettings({ ...localSettings, overlayTTS: !localSettings.overlayTTS })} />
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-sm text-gray-300">타이머 표시</span>
+                                                    <Toggle checked={localSettings.overlayTimer} onChange={() => setLocalSettings({ ...localSettings, overlayTimer: !localSettings.overlayTimer })} />
+                                                </div>
+                                            </div>
+
+                                            <button className="w-full py-4 bg-[#00ff80] text-black font-black rounded-xl hover:bg-[#00cc66] transition shadow-lg">
+                                                <Save className="inline mr-2" size={18} /> 설정 저장하기
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -374,6 +486,56 @@ export default function VoteTab() {
                 </div>
 
             </div>
+
+            {/* VOTE DETAIL MODAL */}
+            {showVoteDetailModal && selectedVoteItem && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowVoteDetailModal(false)}>
+                    <div className="bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-6 border-b border-[#333] flex justify-between items-center bg-[#222]">
+                            <div>
+                                <span className="text-[#00ff80] font-bold text-sm tracking-widest mb-1 block">VOTE DETAIL</span>
+                                <h2 className="text-2xl font-black text-white">{selectedVoteItem.name}</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setShowRealNames(!showRealNames)} className="flex items-center gap-2 cursor-pointer bg-[#333] px-3 py-1.5 rounded-lg hover:bg-[#444] transition text-gray-300 text-xs font-bold">
+                                    {showRealNames ? <Eye size={14} className="text-[#00ff80]" /> : <EyeOff size={14} />} 닉네임 보기
+                                </button>
+                                <button onClick={() => setShowVoteDetailModal(false)} className="w-8 h-8 rounded-full hover:bg-[#333] flex items-center justify-center text-gray-500 hover:text-white">
+                                    <Trash2 size={16} className="rotate-45" /> {/* Close Icon substitute */}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Voter List */}
+                        <div className="flex-1 overflow-y-auto p-4 custom-scroll bg-[#111]">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {(selectedVoteItem.voters || []).map((voter: any, idx: number) => (
+                                    <div key={idx} className="bg-[#222] p-3 rounded-lg border border-[#333] flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${voter.role === '구독자' ? 'bg-[#00ff80] text-black' : 'bg-[#333] text-gray-400 border border-[#444]'}`}>
+                                            {voter.role === '구독자' ? '구' : '팬'}
+                                        </div>
+                                        <div className="truncate text-sm font-bold text-gray-300">
+                                            {showRealNames ? voter.name : (voter.name.substring(0, 2) + '***')}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-[#333] bg-[#222]">
+                            <button
+                                onClick={() => pickVoteWinner(selectedVoteItem)}
+                                disabled={store.voteStatus !== 'idle'}
+                                className="w-full py-4 rounded-xl font-black text-black bg-[#00ff80] hover:bg-[#00cc66] disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg flex items-center justify-center gap-2 text-xl"
+                            >
+                                <Crown size={20} /> 이 항목에서 추첨하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
