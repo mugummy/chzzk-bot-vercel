@@ -31,7 +31,7 @@ interface VoteState {
     currentTab: 'draw' | 'vote' | 'donate' | 'roulette' | 'settings';
 
     // Draw State
-    drawStatus: 'idle' | 'recruiting' | 'picking';
+    drawStatus: 'idle' | 'recruiting' | 'ready' | 'picking';
     drawCandidates: User[];
     drawKeyword: string;
     useDrawCommand: boolean;
@@ -269,7 +269,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     },
 
     stopDraw: () => {
-        set({ drawStatus: 'idle' });
+        set({ drawStatus: 'ready' }); // Go to Ready state to review list
     },
 
     pickDrawWinner: (count) => {
@@ -345,6 +345,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 }
             }, 1000);
         }
+
     },
 
     endVote: () => set({ voteStatus: 'ended' }),
@@ -453,7 +454,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
         // Total rotations so far: currentRotation.
         // Determine "Angle Mod 360" of current position? No, just keep adding.
 
-        const extraSpins = 5 * 360; // 5 full spins
+        const extraSpins = (10 + Math.floor(Math.random() * 5)) * 360; // 10-15 spins for heavier feel
         // We want final position % 360 to be such that targetWedgeAngle is at top.
         // Position of wedge `w` at rotation `R` is `(w + R) % 360`.
         // We want `(targetWedgeAngle + FinalR) % 360 = 0` (assuming indicator is at 0/Top).
@@ -489,7 +490,8 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
         // Step B: Spin Forward (after recoil delay)
         setTimeout(() => {
-            const spinDuration = 5000; // 4s spin
+            // Random Duration 4s - 5s
+            const spinDuration = 4000 + Math.random() * 1000;
             set({
                 rouletteTransition: `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.35, 1)`, // Soft stop custom bezier
                 rouletteRotation: targetRotation

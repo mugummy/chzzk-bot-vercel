@@ -79,15 +79,18 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                     {activeTab === 'donate' && (
                         <div className="flex items-center gap-4">
                             <label className="text-xl font-bold text-white w-24">금액</label>
-                            <input
-                                type="number"
-                                value={store.voteUnit}
-                                onChange={(e) => store.send({ type: 'updateVoteSettings', unit: Number(e.target.value) })}
-                                className="flex-1 bg-[#262626] border border-[#333] rounded-xl px-4 py-3 text-white focus:border-[#00ff80] outline-none transition-all font-bold text-right"
-                            />
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })}>
+                            <div className="flex-1 relative">
+                                <input
+                                    type="number"
+                                    value={store.voteUnit}
+                                    onChange={(e) => store.send({ type: 'updateVoteSettings', unit: Number(e.target.value) })}
+                                    className="w-full bg-[#262626] border border-[#333] rounded-xl pl-4 pr-12 py-3 text-white focus:border-[#00ff80] outline-none transition-all font-bold text-right text-xl"
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
+                            </div>
+                            <div className="flex items-center gap-2 cursor-pointer bg-[#262626] px-4 py-3 rounded-xl border border-[#333] hover:border-[#555]" onClick={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })}>
                                 <Toggle checked={store.allowMultiVote} onChange={() => { }} />
-                                <span className="text-sm text-gray-400">복수투표 허용 (금액만큼 배수 투표됩니다)</span>
+                                <span className="text-sm text-gray-400 font-bold">복수투표 허용</span>
                             </div>
                         </div>
                     )}
@@ -183,7 +186,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                             </ul>
                         )}
                         <ul className="list-disc list-inside space-y-1">
-                            <li>{store.voteMode === 'donation' ? '도네 시' : '채팅 시'} 반드시 <span className="text-[#00ff80] font-bold">메시지 가장 앞에 \'!투표{store.voteItems[0]?.id}\' 혹은 \'!투표 {store.voteItems[0]?.id}\'</span>과 같이 입력해주세요</li>
+                            <li>{store.voteMode === 'donation' ? '도네 시' : '채팅 시'} 반드시 <span className="text-[#00ff80] font-bold">메시지 가장 앞에 \'!투표 [번호]\' 혹은 \'!투표[번호]\'</span>와 같이 입력해주세요 (예: !투표 1)</li>
                             {store.voteMode === 'donation' && (
                                 <li className="text-[#00ff80] font-bold">익명 도네 시 투표가 들어가지 않습니다. 주의하세요!</li>
                             )}
@@ -248,9 +251,9 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
             {/* Active/Ended Footer Controls */}
             {mode === 'dashboard' && (
                 <div className="mt-4 flex justify-between items-center bg-[#161616] p-2 border-t border-[#333] pt-4">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })}>
+                    <div className="flex items-center gap-2 cursor-pointer hover:bg-[#222] p-2 rounded-lg transition-colors" onClick={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })}>
                         <Toggle checked={!!store.isAutoSort} onChange={() => { }} />
-                        <span className="text-gray-500 font-bold text-sm">투표수가 높은 순으로 표시하기</span>
+                        <span className="text-gray-400 font-bold text-sm">투표수가 높은 순으로 표시하기</span>
                     </div>
 
                     <div className="flex gap-2">
@@ -337,12 +340,14 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                                                 {/* List Header */}
                                                 <div className="p-4 border-b border-[#333] flex justify-between items-center bg-[#1a1a1a]">
                                                     <div className="text-gray-400 text-sm font-bold flex gap-4">
-                                                        <span className="flex items-center gap-2" onClick={() => setShowRealNames(!showRealNames)}>
-                                                            <Toggle checked={!showRealNames} onChange={() => { }} />
+                                                        <span className="flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => setShowRealNames(!showRealNames)}>
+                                                            <div className={`w-10 h-6 rounded-full relative transition-colors ${!showRealNames ? 'bg-[#00ff80]' : 'bg-[#333]'}`}>
+                                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${!showRealNames ? 'left-5' : 'left-1'}`}></div>
+                                                            </div>
                                                             <span>익명으로 보기</span>
                                                         </span>
-                                                        <span className="flex items-center gap-2">
-                                                            <Toggle checked={store.voteExcludeWinners} onChange={() => store.send({ type: 'updateVoteSettings', voteExcludeWinners: !store.voteExcludeWinners })} />
+                                                        <span className="flex items-center gap-2 cursor-pointer hover:text-white" onClick={() => store.send({ type: 'updateVoteSettings', voteExcludeWinners: !store.voteExcludeWinners })}>
+                                                            <Toggle checked={store.voteExcludeWinners} onChange={() => { }} />
                                                             <span>이미 뽑힌 참여자 제외하기</span>
                                                         </span>
                                                     </div>

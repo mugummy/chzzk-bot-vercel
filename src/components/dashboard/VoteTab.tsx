@@ -126,35 +126,24 @@ export default function VoteTab() {
                 </div>
             )}
 
-            {/* Header */}
-            <header className="flex justify-between items-center mb-6 shrink-0 z-20">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#00ff80] rounded-lg flex items-center justify-center text-black shadow-[0_0_15px_rgba(0,255,128,0.4)]">
-                        <Zap size={20} fill="currentColor" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl md:text-2xl font-black tracking-tight text-white">CHZZK <span className="text-[#00ff80]">BOT</span></h1>
-                        <p className="text-xs text-gray-500 font-medium">Dashboard Controller</p>
-                    </div>
-                </div>
-
-                {/* Navigation / Back Button */}
+            {/* Navigation Bar (Minimal) */}
+            <div className="flex justify-end mb-4 shrink-0 z-20">
                 {activeTab === 'menu' ? (
                     <button
                         onClick={() => setActiveTab('settings')}
-                        className="px-4 py-2 rounded-lg text-sm font-bold bg-[#1a1a1a] text-gray-400 hover:text-white hover:bg-[#222] border border-[#333] transition-all flex items-center gap-2"
+                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#333] transition-all flex items-center gap-2"
                     >
-                        <Settings size={18} /> 설정
+                        <Settings size={20} />
                     </button>
                 ) : (
                     <button
                         onClick={() => setActiveTab('menu')}
-                        className="px-4 py-2 rounded-lg text-sm font-bold bg-[#1a1a1a] text-gray-400 hover:text-white hover:bg-[#222] border border-[#333] transition-all flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg text-sm font-bold bg-[#222] text-gray-300 hover:text-white hover:bg-[#333] border border-[#444] transition-all flex items-center gap-2"
                     >
-                        <RotateCcw size={18} className="rotate-90" /> 메뉴로 돌아가기
+                        <RotateCcw size={16} className="rotate-90" /> 메뉴로
                     </button>
                 )}
-            </header>
+            </div>
 
             <main className="flex-1 flex flex-col min-h-0 relative z-0">
 
