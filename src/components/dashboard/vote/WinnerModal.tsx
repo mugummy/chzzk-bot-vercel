@@ -3,6 +3,7 @@
 import React from 'react';
 import SlotMachine from './SlotMachine';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBotStore } from '@/lib/store';
 
 interface WinnerModalProps {
     visible: boolean;
@@ -16,6 +17,7 @@ interface WinnerModalProps {
 }
 
 export default function WinnerModal({ visible, mode, candidates, isRunning, target, winner, onClose, onRepick }: WinnerModalProps) {
+    const { chatHistory } = useBotStore();
     if (!visible) return null;
 
     // Display Candidates (Shuffle if running for visual noise, or passed list)
@@ -50,6 +52,7 @@ export default function WinnerModal({ visible, mode, candidates, isRunning, targ
                         showResult={!!winner}
                         winnerName={winner?.name || winner?.nickname || ''}
                         className="mb-8"
+                        chatLog={chatHistory.map(c => ({ text: c.message || c.msg || c.content || '', time: c.time || Date.now() }))}
                     />
 
                     {/* Winner Celebration */}

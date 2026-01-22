@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SlotMachineProps {
     candidates: { name: string;[key: string]: any }[];
@@ -9,12 +10,21 @@ interface SlotMachineProps {
     showResult: boolean;
     winnerName: string;
     className?: string;
+    chatLog?: { text: string; time?: number }[];
 }
 
-export default function SlotMachine({ candidates, isRunning, target, showResult, winnerName, className }: SlotMachineProps) {
+export default function SlotMachine({ candidates, isRunning, target, showResult, winnerName, className, chatLog = [] }: SlotMachineProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationIdRef = useRef<number | null>(null);
     const [winner, setWinner] = useState<any>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    // Auto Scroll Chat
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [chatLog]);
 
     // Canvas Logic
     const runSlot = (pool: any[]) => {
@@ -151,7 +161,7 @@ export default function SlotMachine({ candidates, isRunning, target, showResult,
         <div className={`relative w-full flex flex-col items-center justify-center transition-all duration-700 ${className} ${showResult ? 'gap-4' : 'gap-0'}`}>
             {/* Slot Frame */}
             <div className="relative w-full h-40 flex items-center justify-center shrink-0">
-                <div className="absolute w-[90%] h-[2px] bg-white/50 top-0 z-30"></div>
+                <div className="absolute w-[90%] h-[2px] bg-white/50 top-0 z-30 transition-all duration-700"></div>
 
                 <div className="relative w-full h-full overflow-hidden">
                     <canvas
@@ -162,15 +172,46 @@ export default function SlotMachine({ candidates, isRunning, target, showResult,
                     />
 
                     {showResult && (
-                        <div className="w-full h-full flex items-center justify-center animate-fadeIn">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-full h-full flex items-center justify-center"
+                        >
                             <h2 className="text-6xl font-black text-[#00ff80] drop-shadow-[0_0_15px_rgba(0,255,128,0.5)]">
                                 {winnerName}
                             </h2>
-                        </div>
+                        </motion.div>
                     )}
                 </div>
 
-                <div className="absolute w-[90%] h-[2px] bg-white/50 bottom-0 z-30"></div>
+                <div className="absolute w-[90%] h-[2px] bg-white/50 bottom-0 z-30 transition-all duration-700"></div>
+            </div>
+
+            {/* Chat Log (Like Legacy) */}
+            <div
+                className={`w-[80%] relative overflow-hidden transition-all duration-700 ease-in-out flex flex-col ${showResult ? 'h-64 opacity-100' : 'h-0 opacity-0'}`}
+            >
+                <div className="flex-1 overflow-y-auto custom-scroll w-full pb-2" ref={chatContainerRef}>
+                    <AnimatePresence mode='popLayout'>
+                        {chatLog.map((chat, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="text-white text-lg py-1 border-b border-white/5 last:border-0 flex items-start gap-2"
+                            >
+                                <span className="text-gray-500 text-xs mt-1 shrink-0">
+                                    {new Date(chat.time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="break-words font-medium">{chat.text}</span>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+                {/* Bottom Line */}
+                <div className="w-full h-[2px] bg-white/50 mt-1 shrink-0"></div>
             </div>
         </div>
     );
