@@ -43,6 +43,9 @@ interface VoteState {
     drawWinner: User | null;
     previousWinners: string[];
 
+    // Chat & History
+    chatHistory: { nickname: string; message: string; timestamp: number }[];
+
     // Vote State
     voteStatus: 'idle' | 'active' | 'ended';
     voteTitle: string;
@@ -58,6 +61,7 @@ interface VoteState {
     voteWinner: User | null;
     voteExcludeWinners: boolean;
     isVoteSubsOnly: boolean;
+    isVotePicking: boolean;
 
     // Roulette State
     rouletteItems: RouletteItem[]; // Setup items
@@ -94,6 +98,7 @@ interface VoteState {
     startVote: (options: { title: string; mode: 'numeric' | 'donation'; items: string[] | VoteItem[]; duration: number; allowMulti: boolean; unit: number }) => void;
     endVote: () => void;
     pickVoteWinner: (itemId: number) => void;
+    resetVoteWinner: () => void;
     resetVote: () => void;
 
     // Roulette Actions
@@ -135,6 +140,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     useDrawTimer: false,
     drawWinner: null,
     previousWinners: [],
+    chatHistory: [],
 
     voteStatus: 'idle',
     voteTitle: '',
@@ -150,6 +156,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     voteWinner: null,
     voteExcludeWinners: false,
     isVoteSubsOnly: false,
+    isVotePicking: false,
 
     rouletteItems: [],
     activeRouletteItems: [],
@@ -216,6 +223,7 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 drawKeyword: event.keyword !== undefined ? event.keyword : state.drawKeyword,
                 useDrawCommand: event.useCommand !== undefined ? event.useCommand : state.useDrawCommand,
                 drawSubsOnly: event.subsOnly !== undefined ? event.subsOnly : state.drawSubsOnly,
+                useDrawTimer: event.useTimer !== undefined ? event.useTimer : state.useDrawTimer,
                 excludeWinners: event.excludeWinners !== undefined ? event.excludeWinners : state.excludeWinners
             }));
         }
@@ -266,26 +274,33 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
     pickDrawWinner: (count) => {
         const { drawCandidates, excludeWinners, previousWinners, isTestMode } = get();
-        let pool = [...drawCandidates];
 
+        // 1. Validation
+        let pool = [...drawCandidates];
         if (excludeWinners) {
             pool = pool.filter(p => !previousWinners.includes(p.name));
         }
 
         if (pool.length === 0) {
             if (isTestMode) {
-                // Mock Winners
-                pool = Array.from({ length: 5 }, (_, i) => ({ name: `TestUser${i}`, role: '팬' }));
+                pool = Array.from({ length: 5 }, (_, i) => ({ name: `ТеstUser${i}`, role: '팬', lastMessage: '테스트 메시지입니다.' }));
             } else {
-                return alert('추첨할 대상이 없습니다.');
+                return alert('참여자가 부족하여 추첨할 수 없습니다.');
             }
         }
 
-        const winner = pool[Math.floor(Math.random() * pool.length)];
-        set(state => ({
-            drawWinner: winner,
-            previousWinners: [...state.previousWinners, winner.name]
-        }));
+        // 2. Start Animation (Picking State)
+        set({ drawStatus: 'picking', drawWinner: null });
+
+        // 3. Delay & Pick
+        setTimeout(() => {
+            const winner = pool[Math.floor(Math.random() * pool.length)];
+            set(state => ({
+                drawStatus: 'idle',
+                drawWinner: winner,
+                previousWinners: [...state.previousWinners, winner.name]
+            }));
+        }, 3000); // 3 seconds spin
     },
 
     resetDraw: () => {
@@ -347,9 +362,16 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
         if (candidates.length === 0) return alert('추첨 대상이 없습니다.');
 
-        const winner = candidates[Math.floor(Math.random() * candidates.length)];
-        set({ voteWinner: winner });
+        // Animation Start
+        set({ isVotePicking: true, voteWinner: null });
+
+        setTimeout(() => {
+            const winner = candidates[Math.floor(Math.random() * candidates.length)];
+            set({ voteWinner: winner, isVotePicking: false });
+        }, 3000);
     },
+
+    resetVoteWinner: () => set({ voteWinner: null, isVotePicking: false }),
 
     resetVote: () => set({ voteItems: [], voteStatus: 'idle', voteWinner: null }),
 
@@ -365,10 +387,6 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
         if (!includeZeroVotes) {
             rItems = rItems.filter(i => i.weight > 0);
-        } else {
-            // Give at least minimal weight if 0? Or just keep 0?
-            // If total weight is 0, roulette breaks.
-            // Let's assume 0 weight items just have 0 angle (invisible) or handled by display.
         }
 
         if (rItems.length === 0) return alert('전환할 투표 결과가 없습니다.');
@@ -381,43 +399,107 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     },
 
     spinRoulette: () => {
-        const { rouletteItems, activeRouletteItems } = get();
+        const { rouletteItems, activeRouletteItems, rouletteRotation } = get();
         const items = activeRouletteItems.length > 0 ? activeRouletteItems : rouletteItems;
         if (items.length === 0) return;
 
-        set({ isSpinning: true, rouletteWinner: null, rouletteTransition: 'none', rouletteRotation: 0 });
-
-        // Random spin logic
-        const spinDuration = 5000; // 5s
-        const totalRotation = 360 * 5 + Math.random() * 360; // At least 5 spins
-
-        // Calculate winner based on weights
+        // 1. Calculate Winner based on Weights
         const totalWeight = items.reduce((a, b) => a + Number(b.weight), 0);
         let randomWeight = Math.random() * totalWeight;
         let winnerIndex = 0;
+        let accumulatedWeight = 0;
+
         for (let i = 0; i < items.length; i++) {
-            randomWeight -= items[i].weight;
-            if (randomWeight <= 0) {
+            accumulatedWeight += items[i].weight;
+            if (randomWeight <= accumulatedWeight) {
                 winnerIndex = i;
                 break;
             }
         }
         const winner = items[winnerIndex];
 
-        // Adjust rotation to land on winner
-        // Winner is at index, we need to calculate angle
-        // ... (Simplified: Just rotate random for visual, showing result is what matters)
+        // 2. Calculate Visual Target Angle
+        // We want to land on the winner's segment.
+        // The wheel spins CLOCKWISE (increasing degrees).
+        // The pointer is at the TOP (0 degrees visual, or -90 offset depending on CSS).
+        // Let's assume standard CSS: 0deg is top, 90deg is right.
+        // Wait, standard CSS rotation: 0deg is usually "12 o'clock" if we built it that way.
+        // In RouletteDisplay, segments are placed with `transform: rotate(...)`
+        // getSegmentRotation calculates center of wedge.
+        // Let's recalculate precise start/end angles for the winner.
 
-        requestAnimationFrame(() => {
-            set({
-                rouletteTransition: `transform ${spinDuration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`,
-                rouletteRotation: totalRotation
-            });
+        let previousWeight = 0;
+        for (let i = 0; i < winnerIndex; i++) previousWeight += items[i].weight;
+
+        // Start angle of the wedge (relative to 0)
+        const startAngle = (previousWeight / totalWeight) * 360;
+        // Size of the wedge
+        const wedgeSize = (items[winnerIndex].weight / totalWeight) * 360;
+
+        // Random landing spot within the wedge (cushioned by 5% padding to avoid edge cases)
+        const padding = wedgeSize * 0.05;
+        const randomOffset = padding + Math.random() * (wedgeSize - 2 * padding);
+        const targetWedgeAngle = startAngle + randomOffset;
+
+        // To land on 'targetWedgeAngle' at the TOP (0deg indicator), 
+        // the wheel must rotate such that 'targetWedgeAngle' ends up at -90deg? 
+        // No, typically indicator is at top. If wedge is at 10deg, we rotate wheel -10deg to bring it to 0.
+        // So target rotation should align the target angle to the indicator.
+        // Let's say indicator is at 0 degrees.
+        // Rotation Required = (Current Rotation) + (Spins) - (Target Angle relative to start of wheel)
+        // But we want to spin forward.
+        // Target Rotation = (Current rounded to 360) + (5 * 360) + (360 - targetWedgeAngle).
+        // Actually simpler: 
+        // Total rotations so far: currentRotation.
+        // Determine "Angle Mod 360" of current position? No, just keep adding.
+
+        const extraSpins = 5 * 360; // 5 full spins
+        // We want final position % 360 to be such that targetWedgeAngle is at top.
+        // Position of wedge `w` at rotation `R` is `(w + R) % 360`.
+        // We want `(targetWedgeAngle + FinalR) % 360 = 0` (assuming indicator is at 0/Top).
+        // FinalR = -targetWedgeAngle (+ k*360).
+        // Since we spin clockwise (positive R), we want to reach a high positive number.
+
+        // The logic in display: pointer is static Top. Wheel rotates.
+        // We need the wheel to rotate such that the *winner segment* is under the pointer.
+        // If segment is at `StartAngle`..`EndAngle` on the static wheel map.
+        // We need Rotation `R` such that `(StartAngle + R) % 360` corresponds to "Top".
+        // Actually, CSS rotation rotates the whole coordinate system.
+        // If segment is at 10deg, and we rotate +350deg, segment ends up at 360=0deg (Top).
+        // So FinalRotation % 360 should ideally be (360 - targetWedgeAngle).
+
+        const currentRotationMod = rouletteRotation % 360; // Current normalized
+        const desiredFinalMod = (360 - targetWedgeAngle) % 360;
+
+        let delta = desiredFinalMod - currentRotationMod;
+        if (delta < 0) delta += 360; // Ensure positive forward movement to alignment
+
+        const totalScan = extraSpins + delta;
+        const targetRotation = rouletteRotation + totalScan;
+
+
+        // 3. Animation Sequence with Recoil
+        // Step A: Recoil (Rotate backward 20deg)
+        set({
+            isSpinning: true,
+            rouletteWinner: null,
+            rouletteTransition: 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Ease Out Back-ish
+            rouletteRotation: rouletteRotation - 20
         });
 
+        // Step B: Spin Forward (after recoil delay)
         setTimeout(() => {
-            set({ isSpinning: false, rouletteWinner: winner.name });
-        }, spinDuration);
+            const spinDuration = 5000; // 4s spin
+            set({
+                rouletteTransition: `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.35, 1)`, // Soft stop custom bezier
+                rouletteRotation: targetRotation
+            });
+
+            // Step C: Finish
+            setTimeout(() => {
+                set({ isSpinning: false, rouletteWinner: winner.name });
+            }, spinDuration);
+        }, 400); // Wait for recoil
     },
 
     resetRoulette: () => set({ rouletteItems: [], activeRouletteItems: [], rouletteWinner: null }),
@@ -452,14 +534,15 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
     // TTS Logic
     if (state.useTTS) {
         // Queue TTS (Simplified directly speaking here, usually use queue)
-        // window.speechSynthesis... (Handled in component usually or a dedicated manager)
     }
+
+    // Add to History (Keep last 50)
+    set((prev: VoteState) => ({
+        chatHistory: [...prev.chatHistory.slice(-49), { nickname, message, timestamp: Date.now() }]
+    }));
 
     // DRAW LOGIC
     if (state.drawStatus === 'recruiting') {
-        // [FIX] Correct Command Logic:
-        // If Command Mode is ON, verify keyword.
-        // If Command Mode is OFF, Accept ALL (unless other filters apply)
         if (state.useDrawCommand) {
             if (state.drawKeyword && !message.startsWith(state.drawKeyword)) return;
         }
@@ -477,7 +560,6 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
     // VOTE LOGIC (Numeric)
     if (state.voteStatus === 'active' && state.voteMode === 'numeric') {
         const msg = message.trim();
-        // Check "1" or "!투표 1"
         let voteId = -1;
 
         const cmdMatch = msg.match(/^!투표\s*(\d+)$/);
@@ -516,31 +598,61 @@ function handleDonation(set: any, get: () => VoteState, donation: any) {
     // donation: { nickname, amount, message }
 
     if (state.voteStatus === 'active') {
-        const message = donation.message || '';
+        const message = (donation.message || '').trim();
+        const nickname = donation.nickname || '';
 
-        // Vote Command Parsing: !투표 1 or just containing number?
-        // Legacy: "!투표 [번호]"
-        const match = message.match(/!투표\s*(\d+)/);
+        // 1. Ignore Anonymous
+        if (!nickname || nickname === '익명' || nickname === 'Unknown') return;
+
+        const match = message.match(/^!투표\s*(\d+)/);
         if (match) {
             const voteId = parseInt(match[1]);
-            const itemIndex = state.voteItems.findIndex(i => i.id === voteId);
+            const targetItemIndex = state.voteItems.findIndex(i => i.id === voteId);
 
-            if (itemIndex !== -1) {
-                // Numeric Vote: 1 person 1 vote usually? Or weight by amount?
-                // Legacy Donate Vote: "Amount / Unit" = Votes
+            if (targetItemIndex !== -1) {
+                // Donation Mode Logic
                 if (state.voteMode === 'donation') {
-                    const votes = Math.floor(donation.amount / state.voteUnit);
-                    if (votes > 0) {
-                        set((prev: VoteState) => {
-                            const newItems = [...prev.voteItems];
-                            newItems[itemIndex] = {
-                                ...newItems[itemIndex],
-                                count: newItems[itemIndex].count + votes,
-                                voters: [...newItems[itemIndex].voters, { name: donation.nickname, role: '후원자', amount: donation.amount }]
-                            };
-                            return { voteItems: newItems };
-                        });
-                    }
+                    // Check Minimum Amount
+                    if (donation.amount < state.voteUnit) return;
+
+                    // Calculate Votes
+                    let voteCountToAdd = Math.floor(donation.amount / state.voteUnit);
+
+                    set((prev: VoteState) => {
+                        let newItems = [...prev.voteItems];
+
+                        // Logic: Multi-Vote Disabled
+                        if (!prev.allowMultiVote) {
+                            // 1. Overwrite Rule: Remove ANY previous vote by this user across ALL items
+                            newItems = newItems.map(item => {
+                                const userVotedHere = item.voters.some(v => v.name === nickname);
+                                if (userVotedHere) {
+                                    // Found previous vote, remove it
+                                    // In 'No Multi', a user contributes exactly 1 vote.
+                                    // So we subtract 1 from count.
+                                    // (Assuming logic integrity meant they only had 1 vote previously)
+                                    return {
+                                        ...item,
+                                        count: Math.max(0, item.count - 1),
+                                        voters: item.voters.filter(v => v.name !== nickname)
+                                    };
+                                }
+                                return item;
+                            });
+
+                            // 2. Fix Vote Count Rule: Always 1 vote if valid
+                            voteCountToAdd = 1;
+                        }
+
+                        // Add New Vote
+                        newItems[targetItemIndex] = {
+                            ...newItems[targetItemIndex],
+                            count: newItems[targetItemIndex].count + voteCountToAdd,
+                            voters: [...newItems[targetItemIndex].voters, { name: nickname, role: '후원자', amount: donation.amount }]
+                        };
+
+                        return { voteItems: newItems };
+                    });
                 }
             }
         }
