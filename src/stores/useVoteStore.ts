@@ -110,6 +110,10 @@ interface VoteState {
     sendFn: ((msg: any) => void) | null;
     handleSync: (payload: any) => void;
     setSendFn: (fn: (msg: any) => void) => void;
+
+    // External Event Handlers (called by Dashboard)
+    onChat: (msg: any) => void;
+    onDonation: (donation: any) => void;
 }
 
 export const useVoteStore = create<VoteState>((set, get) => ({
@@ -349,16 +353,25 @@ export const useVoteStore = create<VoteState>((set, get) => ({
 
     resetVote: () => set({ voteItems: [], voteStatus: 'idle', voteWinner: null }),
 
-    updateRouletteItems: (items) => set({ rouletteItems: items }),
+    updateRouletteItems: (items) => set({ rouletteItems: items, activeRouletteItems: [] }),
 
     transferVotesToRoulette: () => {
-        const { voteItems } = get();
-        const rItems = voteItems.map(v => ({
+        const { voteItems, includeZeroVotes } = get();
+
+        let rItems = voteItems.map(v => ({
             name: v.name,
             weight: v.count
-        })).filter(i => i.weight > 0);
+        }));
 
-        if (rItems.length === 0) return alert('투표 결과가 없습니다.');
+        if (!includeZeroVotes) {
+            rItems = rItems.filter(i => i.weight > 0);
+        } else {
+            // Give at least minimal weight if 0? Or just keep 0?
+            // If total weight is 0, roulette breaks.
+            // Let's assume 0 weight items just have 0 angle (invisible) or handled by display.
+        }
+
+        if (rItems.length === 0) return alert('전환할 투표 결과가 없습니다.');
 
         set({
             rouletteItems: rItems,
@@ -418,7 +431,10 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     // Bridge Implementation
     sendFn: null,
     handleSync: (payload) => set((state) => ({ ...state, ...payload })),
-    setSendFn: (fn) => set({ sendFn: fn })
+    setSendFn: (fn) => set({ sendFn: fn }),
+
+    onChat: (msg) => handleChat(set, get, msg),
+    onDonation: (donation) => handleDonation(set, get, donation)
 }));
 
 
@@ -455,6 +471,42 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
             set((prev: VoteState) => ({
                 drawCandidates: [...prev.drawCandidates, { name: nickname, role, lastMessage: message }]
             }));
+        }
+    }
+
+    // VOTE LOGIC (Numeric)
+    if (state.voteStatus === 'active' && state.voteMode === 'numeric') {
+        const msg = message.trim();
+        // Check "1" or "!투표 1"
+        let voteId = -1;
+
+        const cmdMatch = msg.match(/^!투표\s*(\d+)$/);
+        if (cmdMatch) {
+            voteId = parseInt(cmdMatch[1]);
+        } else if (/^\d+$/.test(msg)) {
+            voteId = parseInt(msg);
+        }
+
+        if (voteId !== -1) {
+            const itemIndex = state.voteItems.findIndex(i => i.id === voteId);
+            if (itemIndex !== -1) {
+                // Check Multivote
+                const alreadyVoted = state.voteItems.some(i => i.voters.some(v => v.name === nickname));
+                if (!state.allowMultiVote && alreadyVoted) return;
+
+                set((prev: VoteState) => {
+                    const newItems = [...prev.voteItems];
+                    const voter = { name: nickname, role };
+
+                    // Add vote
+                    newItems[itemIndex] = {
+                        ...newItems[itemIndex],
+                        count: newItems[itemIndex].count + 1,
+                        voters: [...newItems[itemIndex].voters, voter]
+                    };
+                    return { voteItems: newItems };
+                });
+            }
         }
     }
 }

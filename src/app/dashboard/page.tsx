@@ -66,6 +66,11 @@ export default function DashboardPage() {
 
       case 'newChat':
         currentStore.addChat(payload);
+        useVoteStore.getState().onChat(payload);
+        break;
+
+      case 'donation': // Assuming 'donation' event type exists or needs to be handled
+        useVoteStore.getState().onDonation(payload);
         break;
 
       case 'overlayStateUpdate': currentStore.updateOverlay(payload); break;

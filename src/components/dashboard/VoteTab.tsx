@@ -48,13 +48,6 @@ export default function VoteTab() {
         ttsRate: 1.0,
         ttsVoice: '',
         useTTS: true,
-        overlayChroma: 'transparent',
-        overlayTTS: false,
-        overlayTimer: true,
-        overlayOpacity: 0.9,
-        overlayTheme: 'basic',
-        overlayAccent: '#10b981',
-        overlayScale: 1.0,
         overlayUrl: typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/overlay/${store.channelId || 'demo'}` : ''
     });
 
@@ -65,7 +58,6 @@ export default function VoteTab() {
             const v = window.speechSynthesis.getVoices();
             if (v.length > 0) {
                 setVoices(v);
-                // Auto-select Korean voice if available
                 if (!store.ttsVoice) {
                     const ko = v.find(voice => voice.lang.includes('ko'));
                     if (ko) {
@@ -135,6 +127,8 @@ export default function VoteTab() {
         }
         return '';
     };
+
+    const currentOverlayUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/overlay/${store.channelId || 'demo'}` : '';
 
     return (
         <div className="h-screen w-full flex flex-col p-4 md:p-6 max-w-screen-2xl mx-auto relative text-white bg-neutral-900 overflow-hidden">
@@ -319,14 +313,39 @@ export default function VoteTab() {
 
                                 {/* Settings & Start */}
                                 <div className="mt-auto pt-2 space-y-2 relative z-10 shrink-0">
-                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
-                                        <span className={`text-sm font-bold ${store.isAutoSort ? 'text-white' : 'text-gray-400'}`}>내림차순 정렬</span>
-                                        <Toggle checked={store.isAutoSort} onChange={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })} />
+                                    <div className="bg-[#262626] rounded-xl overflow-hidden border border-transparent hover:border-[#444] transition shadow-sm">
+                                        <div className="flex justify-between items-center p-3">
+                                            <span className={`text-sm font-bold ${store.isAutoSort ? 'text-white' : 'text-gray-400'}`}>내림차순 정렬</span>
+                                            <Toggle checked={store.isAutoSort} onChange={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })} />
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center p-3 bg-[#262626] rounded-xl hover:bg-[#2f2f2f] border border-transparent transition shadow-sm">
-                                        <span className={`text-sm font-bold ${store.includeZeroVotes ? 'text-white' : 'text-gray-400'}`}>0표(0%) 항목 포함</span>
-                                        <Toggle checked={store.includeZeroVotes} onChange={() => store.send({ type: 'updateVoteSettings', includeZeroVotes: !store.includeZeroVotes })} />
+                                    <div className="bg-[#262626] rounded-xl overflow-hidden border border-transparent hover:border-[#444] transition shadow-sm">
+                                        <div className="flex justify-between items-center p-3">
+                                            <span className={`text-sm font-bold ${store.includeZeroVotes ? 'text-white' : 'text-gray-400'}`}>0표(0%) 항목 포함</span>
+                                            <Toggle checked={store.includeZeroVotes} onChange={() => store.send({ type: 'updateVoteSettings', includeZeroVotes: !store.includeZeroVotes })} />
+                                        </div>
                                     </div>
+
+                                    {/* DONATE SETTINGS */}
+                                    {activeTab === 'donate' && (
+                                        <div className="bg-[#262626] rounded-xl overflow-hidden border border-transparent hover:border-[#444] transition shadow-sm">
+                                            <div className="flex justify-between items-center p-3">
+                                                <span className={`text-sm font-bold ${store.allowMultiVote ? 'text-white' : 'text-gray-400'}`}>복수 투표 허용</span>
+                                                <Toggle checked={store.allowMultiVote} onChange={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })} />
+                                            </div>
+                                            <div className="px-3 pb-3 flex items-center gap-2 animate-fadeIn border-t border-[#333] pt-3">
+                                                <span className="text-gray-400 text-xs font-bold w-16">투표 단위</span>
+                                                <input
+                                                    type="number"
+                                                    value={store.voteUnit}
+                                                    onChange={(e) => store.send({ type: 'updateVoteSettings', unit: Number(e.target.value) })}
+                                                    className="flex-1 bg-[#111] text-right text-white font-bold py-1 px-2 rounded outline-none border border-[#333] focus:border-[#00ff80] transition-colors"
+                                                />
+                                                <span className="text-white text-sm font-bold">원</span>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="bg-[#262626] rounded-xl overflow-hidden border border-transparent hover:border-[#444] transition shadow-sm">
                                         <div className="flex justify-between items-center p-3">
                                             <div className="flex items-center gap-2">
@@ -398,8 +417,64 @@ export default function VoteTab() {
                         )}
                         {activeTab === 'settings' && (
                             <div className="flex flex-col gap-2 h-full relative z-10">
-                                <button onClick={() => setSettingCategory('tts')} className={`w-full text-left px-4 py-3 font-bold rounded-xl border transition-all shadow-sm ${settingCategory === 'tts' ? 'bg-[#262626] text-[#00ff80] border-[#00ff80]' : 'text-gray-400 border-transparent hover:bg-[#222]'}`}>TTS 설정</button>
-                                <button onClick={() => setSettingCategory('overlay')} className={`w-full text-left px-4 py-3 font-bold rounded-xl border transition-all shadow-sm ${settingCategory === 'overlay' ? 'bg-[#262626] text-[#00ff80] border-[#00ff80]' : 'text-gray-400 border-transparent hover:bg-[#222]'}`}>OBS 오버레이</button>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setSettingCategory('tts')} className={`flex-1 text-center px-4 py-3 font-bold rounded-xl border transition-all shadow-sm ${settingCategory === 'tts' ? 'bg-[#262626] text-[#00ff80] border-[#00ff80]' : 'text-gray-400 border-transparent hover:bg-[#222]'}`}>TTS 설정</button>
+                                    <button onClick={() => setSettingCategory('overlay')} className={`flex-1 text-center px-4 py-3 font-bold rounded-xl border transition-all shadow-sm ${settingCategory === 'overlay' ? 'bg-[#262626] text-[#00ff80] border-[#00ff80]' : 'text-gray-400 border-transparent hover:bg-[#222]'}`}>OBS 오버레이</button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto custom-scroll space-y-4 pr-1 mt-2">
+                                    {settingCategory === 'tts' && (
+                                        <div className="bg-[#262626] p-4 rounded-xl border border-[#333]">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="font-bold text-white">TTS 사용</span>
+                                                <Toggle checked={store.useTTS} onChange={() => store.updateTTSSettings({ volume: store.ttsVolume, rate: store.ttsRate, voice: store.ttsVoice, enabled: !store.useTTS })} />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <div className="flex justify-between mb-1 text-xs text-gray-400"><span>볼륨</span><span>{Math.round(store.ttsVolume * 100)}%</span></div>
+                                                    <input type="range" min="0" max="1" step="0.1" value={store.ttsVolume} onChange={(e) => store.updateTTSSettings({ ...store, enabled: store.useTTS, volume: Number(e.target.value) } as any)} className="w-full h-2 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#00ff80]" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between mb-1 text-xs text-gray-400"><span>속도</span><span>x{store.ttsRate}</span></div>
+                                                    <input type="range" min="0.5" max="2" step="0.1" value={store.ttsRate} onChange={(e) => store.updateTTSSettings({ ...store, enabled: store.useTTS, rate: Number(e.target.value) } as any)} className="w-full h-2 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#00ff80]" />
+                                                </div>
+                                                <div>
+                                                    <div className="mb-1 text-xs text-gray-400">보이스</div>
+                                                    <select value={store.ttsVoice} onChange={(e) => store.updateTTSSettings({ ...store, enabled: store.useTTS, voice: e.target.value } as any)} className="w-full bg-[#111] text-white p-2 rounded-lg border border-[#333] text-sm outline-none focus:border-[#00ff80]">
+                                                        {voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {settingCategory === 'overlay' && (
+                                        <div className="bg-[#262626] p-4 rounded-xl border border-[#333] space-y-4">
+                                            <div>
+                                                <div className="text-xs text-gray-400 font-bold mb-2">오버레이 URL (OBS용)</div>
+                                                <div className="flex gap-2">
+                                                    <input readOnly value={currentOverlayUrl} className="flex-1 bg-[#111] text-gray-300 p-2 rounded-lg text-xs font-mono border border-[#333]" />
+                                                    <button onClick={() => { navigator.clipboard.writeText(currentOverlayUrl); alert('URL 복사됨'); }} className="bg-[#333] hover:bg-[#444] text-white px-3 rounded-lg"><Copy size={16} /></button>
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 mt-2">* 이 주소를 OBS 브라우저 소스에 추가하세요.</p>
+                                            </div>
+                                            {/* Visibility Toggles */}
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center bg-[#222] p-2 rounded-lg">
+                                                    <span className="text-xs text-gray-300">추첨 오버레이 켜기</span>
+                                                    <Toggle checked={store.showDrawOverlay} onChange={() => store.send({ type: 'updateOverlay', showDrawOverlay: !store.showDrawOverlay })} />
+                                                </div>
+                                                <div className="flex justify-between items-center bg-[#222] p-2 rounded-lg">
+                                                    <span className="text-xs text-gray-300">투표 오버레이 켜기</span>
+                                                    <Toggle checked={store.showVoteOverlay} onChange={() => store.send({ type: 'updateOverlay', showVoteOverlay: !store.showVoteOverlay })} />
+                                                </div>
+                                                <div className="flex justify-between items-center bg-[#222] p-2 rounded-lg">
+                                                    <span className="text-xs text-gray-300">룰렛 오버레이 켜기</span>
+                                                    <Toggle checked={store.showRouletteOverlay} onChange={() => store.send({ type: 'updateOverlay', showRouletteOverlay: !store.showRouletteOverlay })} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -432,11 +507,15 @@ export default function VoteTab() {
                             {activeTab === 'draw' && <DrawDisplay mode="dashboard" />}
                             {['vote', 'donate'].includes(activeTab) && <VoteDisplay mode="dashboard" />}
                             {activeTab === 'roulette' && <RouletteDisplay mode="dashboard" />}
-                            {/* Settings Placeholder */}
                             {activeTab === 'settings' && (
                                 <div className="h-full flex flex-col justify-center items-center text-gray-500">
                                     <Settings size={64} className="mb-4 text-gray-700" />
-                                    <p>오른쪽 패널 미리보기 준비 중...</p>
+                                    <p className="text-lg font-bold">오버레이 설정 가이드</p>
+                                    <ul className="text-sm mt-4 space-y-2 text-gray-400 list-disc list-inside">
+                                        <li>OBS 브라우저 소스를 추가하고 왼쪽 URL을 붙여넣으세요.</li>
+                                        <li>너비: 1920, 높이: 1080으로 설정하세요.</li>
+                                        <li>필요한 오버레이(투표, 추첨 등)를 켜면 화면에 나타납니다.</li>
+                                    </ul>
                                 </div>
                             )}
                         </div>
