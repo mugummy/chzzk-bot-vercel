@@ -27,7 +27,8 @@ export default function RouletteDisplay({ items, className, style }: RouletteDis
     if (count === 0) return null;
 
     const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-    const colors = ['#FF4D4D', '#FFB84D', '#FFFF4D', '#4DFF4D', '#4DFFFF', '#4D4DFF', '#B84DFF', '#FF4DB8'];
+    // Vue Color Palette
+    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#6366f1'];
 
     // Calculate Gradients
     let currentGradientAngle = 0;
@@ -40,52 +41,66 @@ export default function RouletteDisplay({ items, className, style }: RouletteDis
     });
 
     return (
-        <div className={`relative w-[500px] h-[500px] ${className}`} style={style}>
+        <div className={`relative w-[500px] h-[500px] flex items-center justify-center p-8 ${className}`} style={style}>
             {/* Glow Behind */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00ff80] rounded-full blur-[150px] opacity-10 animate-pulse pointer-events-none"></div>
 
-            {/* Pointer */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-30 filter drop-shadow-lg">
-                <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-red-500"></div>
-            </div>
+            <div className="relative w-[500px] h-[500px] flex items-center justify-center z-10">
+                {/* 3D Indicator Arrow (Legacy Style) */}
+                <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-30 drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] filter">
+                    <div className="w-0 h-0 border-l-[25px] border-l-transparent border-r-[25px] border-r-transparent border-t-[50px] border-t-red-500 relative">
+                        <div className="absolute -top-[55px] -left-[25px] w-[50px] h-[10px] bg-red-700 rounded-t-lg"></div>
+                    </div>
+                </div>
 
-            {/* Wheel Container */}
-            <div className={`w-full h-full rounded-full border-[10px] border-gray-300 shadow-2xl relative overflow-hidden`}
-                style={{
-                    transform: `rotate(${store.rouletteRotation}deg)`,
-                    transition: store.rouletteTransition || 'none', // Use store transition
-                }}>
+                {/* Outer Rim */}
+                <div className="absolute inset-[-15px] rounded-full border-[15px] border-gray-400 shadow-[0_0_10px_rgba(0,0,0,0.3)]"></div>
 
-                {/* Conic Gradient for Wedges */}
-                <div className="absolute inset-0 rounded-full"
+                {/* The Wheel */}
+                <div className={`w-[500px] h-[500px] rounded-full border-[8px] border-gray-300 relative overflow-hidden bg-[#111]`}
                     style={{
-                        background: `conic-gradient(${gradientParts.join(', ')})`
-                    }}
-                />
+                        transform: `rotate(${store.rouletteRotation}deg)`,
+                        transition: store.rouletteTransition || 'none',
+                    }}>
 
-                {/* Text Labels */}
-                {(() => {
-                    let currentTextAngle = 0;
-                    return items.map((item, idx) => {
-                        const wedgeAngle = (item.weight / totalWeight) * 360;
-                        const angle = currentTextAngle + (wedgeAngle / 2);
-                        currentTextAngle += wedgeAngle;
+                    {/* Conic Gradient for Wedges */}
+                    <div className="absolute inset-0 rounded-full"
+                        style={{ background: `conic-gradient(${gradientParts.join(', ')})` }}
+                    />
 
-                        return (
-                            <div key={idx}
-                                className="absolute top-0 left-1/2 h-[50%] w-[2px] origin-bottom flex flex-col justify-start items-center pt-8 z-10 pointer-events-none"
-                                style={{ transform: `rotate(${angle}deg)` }}
-                            >
-                                <span className="text-white font-bold text-lg drop-shadow-md whitespace-nowrap" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-                                    {item.name}
-                                </span>
-                            </div>
-                        )
-                    });
-                })()}
+                    {/* Inner Shadow */}
+                    <div className="absolute inset-0 rounded-full shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] pointer-events-none"></div>
 
-                {/* Center Pin */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#333] rounded-full z-20 shadow-sm border border-gray-500"></div>
+                    {/* Text Labels */}
+                    <div className="absolute inset-0">
+                        {(() => {
+                            let currentTextAngle = 0;
+                            return items.map((item, idx) => {
+                                const wedgeAngle = (item.weight / totalWeight) * 360;
+                                const angle = currentTextAngle + (wedgeAngle / 2);
+                                currentTextAngle += wedgeAngle;
+                                const showText = wedgeAngle > 12; // Legacy: > 12 deg check
+
+                                return (
+                                    <div key={idx}
+                                        className="absolute top-0 left-1/2 -translate-x-1/2 h-[250px] w-[30px] origin-bottom flex flex-col items-center justify-center pt-10 pb-10 z-10 pointer-events-none overflow-visible"
+                                        style={{ transform: `rotate(${angle}deg)` }}
+                                    >
+                                        {showText && (
+                                            <span className="text-white font-bold text-base drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap tracking-wide truncate block max-w-[150px]"
+                                                style={{ transform: 'rotate(-90deg)' }}>
+                                                {item.name}
+                                            </span>
+                                        )}
+                                    </div>
+                                )
+                            });
+                        })()}
+                    </div>
+
+                    {/* Center Pin */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#333] rounded-full z-20 shadow-sm border border-gray-500"></div>
+                </div>
             </div>
         </div>
     );
