@@ -41,6 +41,9 @@ export default function RouletteDisplay({ items, className, style }: RouletteDis
 
     return (
         <div className={`relative w-[500px] h-[500px] ${className}`} style={style}>
+            {/* Glow Behind */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00ff80] rounded-full blur-[150px] opacity-10 animate-pulse pointer-events-none"></div>
+
             {/* Pointer */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-30 filter drop-shadow-lg">
                 <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-red-500"></div>

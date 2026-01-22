@@ -45,8 +45,14 @@ export default function DrawDisplay({ mode }: DrawDisplayProps) {
                 </div>
 
                 {store.drawCandidates.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                        대기 중... 채팅창에 "{store.drawKeyword}"를 입력하세요!
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500 animate-pulse">
+                        <div className="w-24 h-24 bg-[#222] rounded-full flex items-center justify-center mb-4 border border-[#333] shadow-inner relative">
+                            <div className="absolute inset-0 bg-[#00ff80] blur-xl opacity-20 rounded-full"></div>
+                            {/* Icon Placeholder, need to check if Users is imported */}
+                            <span className="text-4xl text-[#00ff80]">👥</span>
+                        </div>
+                        <h2 className="text-3xl font-black text-[#555] tracking-widest mb-2 font-mono">WAITING...</h2>
+                        <p className="text-sm">채팅창에 <span className="text-[#00ff80] font-bold">"{store.drawKeyword}"</span>를 입력하세요!</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto custom-scroll">

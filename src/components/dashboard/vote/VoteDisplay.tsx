@@ -19,10 +19,25 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
     // Let's sort by count descending for dashboard visual?
     // Vue Code: (Step 1269) sort items.
 
-    const sortedItems = [...store.voteItems].sort((a, b) => b.id - a.id); // Simple default sort (by creation? or ID)
-    // Or sort by count?
-    // Let's sort by ID to keep position stable, unless `isAutoSort` (not in store yet).
-    // Let's keep stable for now.
+    // Sorting & Filtering
+    const sortedItems = React.useMemo(() => {
+        let items = [...store.voteItems];
+
+        // Filter 0 votes if configured (Dashboard only)
+        if (mode === 'dashboard' && !store.includeZeroVotes) {
+            items = items.filter(i => i.count > 0);
+        }
+
+        // Auto Sort by Count Descending (Dashboard only)
+        if (mode === 'dashboard' && store.isAutoSort) {
+            items.sort((a, b) => b.count - a.count);
+        } else {
+            // Default: Sort by ID (Creation Order) to maintain stability
+            items.sort((a, b) => a.id - b.id);
+        }
+
+        return items;
+    }, [store.voteItems, store.isAutoSort, store.includeZeroVotes, mode]);
 
     const totalVotes = store.voteItems.reduce((sum, item) => sum + item.count, 0);
 
