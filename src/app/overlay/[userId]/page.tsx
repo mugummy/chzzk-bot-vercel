@@ -79,7 +79,7 @@ export default function OverlayPage() {
                     {store.showVoteOverlay && <VoteDisplay mode="overlay" />}
                     {store.showRouletteOverlay && (
                         <div className="transform -translate-y-10 scale-[1.3]">
-                            <RouletteDisplay items={store.rouletteItems} />
+                            <RouletteDisplay mode="overlay" />
                             {store.rouletteWinner && (
                                 <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
                                     <div className="bg-black/80 px-12 py-8 rounded-3xl border border-[#00ff80]/50 backdrop-blur-lg animate-bounce text-center">

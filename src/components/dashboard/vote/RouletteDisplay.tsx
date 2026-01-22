@@ -87,6 +87,8 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
 
     // --- Render: Config Mode ---
     if (!isGameMode) {
+        if (mode === 'overlay') return null; // Don't show config in overlay
+
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#161616] p-8 animate-fadeIn">
                 <div className="w-full max-w-3xl flex flex-col gap-4">
@@ -240,23 +242,25 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
                 </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex gap-4 relative z-20">
-                <button
-                    onClick={handleReset}
-                    className="px-8 py-3 rounded-xl border border-[#00ff80] text-[#00ff80] font-bold text-lg hover:bg-[#00ff80] hover:text-black transition-all"
-                    disabled={store.isSpinning}
-                >
-                    항목 다시 설정하기
-                </button>
-                <button
-                    onClick={store.spinRoulette}
-                    disabled={store.isSpinning}
-                    className="px-12 py-3 rounded-xl bg-[#00ff80] text-black font-black text-2xl shadow-[0_0_20px_rgba(0,255,128,0.4)] hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50 transition-all"
-                >
-                    돌려!
-                </button>
-            </div>
+            {/* Controls - Hide in Overlay */}
+            {mode === 'dashboard' && (
+                <div className="flex gap-4 relative z-20">
+                    <button
+                        onClick={handleReset}
+                        className="px-8 py-3 rounded-xl border border-[#00ff80] text-[#00ff80] font-bold text-lg hover:bg-[#00ff80] hover:text-black transition-all"
+                        disabled={store.isSpinning}
+                    >
+                        항목 다시 설정하기
+                    </button>
+                    <button
+                        onClick={store.spinRoulette}
+                        disabled={store.isSpinning}
+                        className="px-12 py-3 rounded-xl bg-[#00ff80] text-black font-black text-2xl shadow-[0_0_20px_rgba(0,255,128,0.4)] hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50 transition-all"
+                    >
+                        돌려!
+                    </button>
+                </div>
+            )}
 
             {/* Winner Overlay (Center) */}
             <AnimatePresence>
@@ -266,7 +270,7 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
                         className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-                        onClick={() => store.setState({ rouletteWinner: null })}
+                        onClick={() => useVoteStore.setState({ rouletteWinner: null })}
                     >
                         <div className="bg-[#1a1a1a] p-12 rounded-3xl border-2 border-[#00ff80] text-center shadow-2xl transform hover:scale-105 transition-all cursor-pointer">
                             <div className="text-[#00ff80] font-bold text-xl mb-4 tracking-widest">WINNER</div>
