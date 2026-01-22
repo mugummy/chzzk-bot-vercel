@@ -45,7 +45,7 @@ export default function VoteDisplay({ mode, showControls = true }: VoteDisplayPr
 
             <div className={`flex-1 overflow-y-auto pr-2 custom-scroll ${mode === 'overlay' ? 'space-y-4' : 'space-y-3'}`}>
                 <AnimatePresence>
-                    {store.voteItems.map((item, idx) => {
+                    {sortedItems.map((item, idx) => {
                         const percent = totalVotes ? (item.count / totalVotes) * 100 : 0;
                         return (
                             <motion.div

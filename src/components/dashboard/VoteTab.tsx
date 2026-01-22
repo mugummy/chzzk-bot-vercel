@@ -37,6 +37,57 @@ export default function VoteTab() {
         overlayUrl: 'http://localhost:3000/overlay' // Placeholder
     });
 
+    // TTS State
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+    React.useEffect(() => {
+        const loadVoices = () => {
+            const v = window.speechSynthesis.getVoices();
+            if (v.length > 0) {
+                setVoices(v);
+                // Set default to Korean if available and not set
+                if (!localSettings.ttsVoice) {
+                    const ko = v.find(voice => voice.lang.includes('ko'));
+                    if (ko) setLocalSettings(prev => ({ ...prev, ttsVoice: ko.name }));
+                }
+            }
+        };
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }, []);
+
+    const previewVoice = (voice: SpeechSynthesisVoice) => {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance("목소리 테스트입니다.");
+        utterance.voice = voice;
+        utterance.volume = localSettings.ttsVolume;
+        utterance.rate = localSettings.ttsRate;
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const saveSettings = (type: 'tts' | 'overlay') => {
+        if (type === 'tts') {
+            store.updateTTSSettings({
+                volume: localSettings.ttsVolume,
+                rate: localSettings.ttsRate,
+                voice: localSettings.ttsVoice,
+                enabled: localSettings.useTTS
+            });
+            alert('TTS 설정이 저장되었습니다.');
+        } else {
+            store.updateOverlaySettings({
+                chromaKey: localSettings.overlayChroma,
+                enableTTS: localSettings.overlayTTS,
+                showTimer: localSettings.overlayTimer,
+                opacity: localSettings.overlayOpacity,
+                theme: localSettings.overlayTheme,
+                accentColor: localSettings.overlayAccent,
+                scale: localSettings.overlayScale
+            });
+            alert('오버레이 설정이 저장되었습니다.');
+        }
+    };
+
     // Toggle Helper
     const Toggle = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
         <div onClick={onChange} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${checked ? 'bg-[#00ff80]' : 'bg-gray-600'}`}>
@@ -400,13 +451,34 @@ export default function VoteTab() {
                                                 </div>
                                             </div>
 
-                                            {/* Voice List Placeholder */}
-                                            <div className="bg-[#222] p-4 rounded-2xl border border-[#333] text-center py-8">
-                                                <p className="text-gray-500 text-sm">브라우저 음성 목록을 불러오는 중...</p>
-                                                {/* In a real implementation, we would list window.speechSynthesis.getVoices() here */}
+                                            {/* Voice List */}
+                                            <div className="bg-[#222] p-4 rounded-2xl border border-[#333]">
+                                                <h3 className="font-bold text-white mb-2">음성 선택</h3>
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto custom-scroll pr-2">
+                                                    {voices.map((voice) => (
+                                                        <div
+                                                            key={voice.name}
+                                                            onClick={() => {
+                                                                setLocalSettings({ ...localSettings, ttsVoice: voice.name });
+                                                                previewVoice(voice);
+                                                            }}
+                                                            className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between h-[80px] ${localSettings.ttsVoice === voice.name ? 'bg-[#00ff80]/10 border-[#00ff80] shadow-[0_0_15px_rgba(0,255,128,0.2)]' : 'bg-[#1a1a1a] border-[#333] hover:border-gray-500'}`}
+                                                        >
+                                                            <div className="text-[10px] font-mono uppercase text-gray-400 mb-1">{voice.lang}</div>
+                                                            <div className={`font-bold text-xs leading-tight line-clamp-2 ${localSettings.ttsVoice === voice.name ? 'text-[#00ff80]' : 'text-gray-300'}`}>
+                                                                {voice.name.replace('Google', '').replace('Microsoft', '').trim()}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {voices.length === 0 && (
+                                                        <div className="col-span-full text-center text-gray-500 py-4">
+                                                            사용 가능한 음성이 없습니다.
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            <button className="w-full py-4 bg-[#00ff80] text-black font-black rounded-xl hover:bg-[#00cc66] transition shadow-lg">
+                                            <button onClick={() => saveSettings('tts')} className="w-full py-4 bg-[#00ff80] text-black font-black rounded-xl hover:bg-[#00cc66] transition shadow-lg">
                                                 <Save className="inline mr-2" size={18} /> 설정 저장하기
                                             </button>
                                         </div>

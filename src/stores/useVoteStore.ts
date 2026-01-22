@@ -13,6 +13,12 @@ interface VoteState {
     allowMultiVote: boolean;
     showVoteOverlay: boolean;
     voteUnit: number;
+    isAutoSort: boolean;
+    includeZeroVotes: boolean;
+
+    // Settings Actions
+    updateTTSSettings: (settings: any) => void;
+    updateOverlaySettings: (settings: any) => void;
 
     // Draw (Viewer Pickup)
     drawSessionId: string | null;
@@ -72,7 +78,8 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     isConnected: false,
     sendFn: null,
 
-    voteId: null, voteTitle: '', voteItems: [], voteStatus: 'idle', voteMode: 'numeric', voteTimer: 0, allowMultiVote: false, showVoteOverlay: false, voteUnit: 1000,
+    voteId: null, voteTitle: '', voteItems: [], voteStatus: 'idle', voteMode: 'numeric', voteTimer: 0,
+    allowMultiVote: false, showVoteOverlay: false, voteUnit: 1000, isAutoSort: false, includeZeroVotes: true,
     drawSessionId: null, drawStatus: 'idle', drawKeyword: '!참여', drawCandidates: [], drawWinner: null, previousWinners: [], drawTimer: 0, showDrawOverlay: false, drawSubsOnly: false,
     rouletteItems: [], rouletteActiveItems: [], isSpinning: false, rouletteWinner: null, rouletteRotation: 0, rouletteTransition: 'none', showRouletteOverlay: false,
 
@@ -149,4 +156,6 @@ export const useVoteStore = create<VoteState>((set, get) => ({
     resetRoulette: () => get().send({ type: 'resetRoulette' }),
     resetRouletteState: () => set({ rouletteWinner: null }),
     toggleRouletteOverlay: (show) => get().send({ type: 'toggleRouletteOverlay', show }),
+    updateTTSSettings: (settings) => get().send({ type: 'updateTTSSettings', settings }),
+    updateOverlaySettings: (settings) => get().send({ type: 'updateOverlaySettings', settings }),
 }));
