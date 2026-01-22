@@ -149,7 +149,7 @@ export default function VoteTab() {
 
                 {/* 1. HOME MENU GRID */}
                 {activeTab === 'menu' && (
-                    <div className="flex-1 flex items-center justify-center animate-fadeIn">
+                    <div className="flex-1 flex justify-center pt-10 animate-fadeIn">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
                             {/* Card: Draw */}
                             <button onClick={() => setActiveTab('draw')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-8 py-16 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
@@ -181,7 +181,7 @@ export default function VoteTab() {
                 {/* 2. FEATURE VIEWS */}
                 {/* Full Width Wrapper for Logic Views */}
                 {activeTab !== 'menu' && (
-                    <section className="w-full h-full flex flex-col bg-[#1a1a1a] border border-[#333] rounded-2xl shadow-2xl relative overflow-hidden animate-slideUp">
+                    <section className="w-full h-full flex flex-col bg-transparent relative overflow-hidden animate-slideUp">
 
                         {/* Control Panel (Left Sidebar) - Only for Draw Logic if needed (Deprecated from VoteTab, now DrawDisplay handles most) */}
                         {/* Wait, DrawDisplay is purely display or controls too? DrawDisplay currently has no controls, Controls were in VoteTab sidebar. 
