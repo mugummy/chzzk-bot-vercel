@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useVoteStore } from '@/stores/useVoteStore';
-import { Crown, Sparkles, Users, Play, Square, Trophy, Shuffle } from 'lucide-react';
+import { Crown, Sparkles, Users, Play, Square, Trophy, Shuffle, RotateCcw, Diamond, Wrench } from 'lucide-react';
 
 interface DrawDisplayProps {
     mode?: 'dashboard' | 'overlay';
@@ -23,9 +23,13 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
         if (store.drawStatus === 'picking') {
             setShowChatReveal(false);
             interval = setInterval(() => {
-                const candidates = store.drawCandidates.length > 0 ? store.drawCandidates : [{ name: '참여자 없음' }];
-                const randomName = candidates[Math.floor(Math.random() * candidates.length)].name;
-                setSlotName(randomName);
+                const candidates = (store.drawCandidates && store.drawCandidates.length > 0) ? store.drawCandidates : [{ name: '참여자 없음' }];
+                // Safety check
+                if (candidates.length > 0) {
+                    const randomIdx = Math.floor(Math.random() * candidates.length);
+                    const randomName = candidates[randomIdx]?.name || '???';
+                    setSlotName(randomName);
+                }
             }, 50); // Fast cycle
         } else if (store.drawWinner) {
             setSlotName(store.drawWinner.name);
@@ -135,8 +139,8 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                                                     'bg-[#111] text-gray-400 border border-[#333]'}`
                                     }>
                                         {user.role === '스트리머' && <Crown size={14} fill="currentColor" />}
-                                        {user.role === '매니저' && <Sparkles size={14} fill="currentColor" />}
-                                        {user.role === '구독자' && '구'}
+                                        {user.role === '매니저' && <Wrench size={14} fill="currentColor" />}
+                                        {user.role === '구독자' && <Diamond size={14} fill="currentColor" />}
                                         {['팬', '일반', undefined].includes(user.role) && <Users size={14} />}
                                     </div>
                                     <div className="min-w-0">
@@ -175,25 +179,33 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
         <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-transparent">
 
             {/* Reverted Design: Simple Lines & Center Text */}
-            <div className={`relative flex flex-col items-center transition-all duration-700 ${showChatReveal ? '-translate-y-24' : ''}`}>
+            <div className={`
+                relative flex flex-col items-center transition-all duration-700
+                ${(store.drawStatus === 'picking' || store.drawWinner) && isDashboard
+                    ? 'fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex justify-center items-center scale-110'
+                    : `${showChatReveal ? '-translate-y-24' : ''}`
+                }
+            `}>
+
+                {/* Close Button implementation for immersive mode if needed, or just click to close? 
+                    User didn't ask for close, but 'reset' button exists in chat reveal. 
+                    We keep it simple: Just visual transform. 
+                */}
 
                 {/* Top Line */}
-                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mb-8"></div>
+                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mb-8 transition-all duration-500"></div>
 
                 {/* Name Area - Masked for Spinning Effect */}
                 <div className="h-[80px] md:h-[120px] overflow-hidden relative flex items-center justify-center w-full">
                     {store.drawStatus === 'picking' ? (
-                        <div className="flex flex-col items-center animate-text-spin blur-sm opacity-80">
-                            {/* Repeated list for visual spinning effect */}
-                            {Array.from({ length: 20 }).map((_, i) => (
-                                <span key={i} className="text-5xl md:text-8xl font-black text-gray-500 py-4 block">
-                                    {['WAITING', 'PICKING', 'LUCKY', 'WINNER', 'CHZZK'][i % 5]}
-                                </span>
-                            ))}
+                        <div className="flex flex-col items-center animate-pulse blur-[1px]">
+                            <span className="text-6xl md:text-9xl font-black text-white/50 py-4 block">
+                                {slotName}
+                            </span>
                         </div>
                     ) : (
                         <div className="animate-land">
-                            <span className={`text-6xl md:text-8xl font-black tracking-tight px-4 leading-none ${store.drawWinner ? 'text-[#00ff80] drop-shadow-[0_0_30px_rgba(0,255,128,0.6)]' : 'text-gray-600'}`}>
+                            <span className={`text-6xl md:text-9xl font-black tracking-tight px-4 leading-none ${store.drawWinner ? 'text-[#00ff80] drop-shadow-[0_0_50px_rgba(0,255,128,0.8)] scale-125' : 'text-gray-600'}`}>
                                 {slotName}
                             </span>
                         </div>
@@ -201,14 +213,14 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                 </div>
 
                 {/* Bottom Line */}
-                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mt-8"></div>
+                <div className="w-[300px] md:w-[600px] h-[2px] bg-gradient-to-r from-transparent via-[#00ff80] to-transparent mt-8 transition-all duration-500"></div>
 
                 {/* Winner Badge */}
                 {store.drawWinner && !store.isSpinning && (
-                    <div className="absolute -top-20 animate-bounce">
+                    <div className="absolute -top-32 animate-bounce">
                         <div className="flex flex-col items-center gap-2">
-                            <Crown className="text-yellow-400 w-12 h-12 drop-shadow-md" fill="currentColor" />
-                            <div className="px-3 py-1 bg-[#222] border border-[#333] rounded-full text-xs text-gray-300 font-bold">{store.drawWinner.role}</div>
+                            <Crown className="text-yellow-400 w-20 h-20 drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]" fill="currentColor" />
+                            <div className="px-6 py-2 bg-[#222] border border-[#333] rounded-full text-lg text-gray-300 font-bold shadow-xl">{store.drawWinner.role}</div>
                         </div>
                     </div>
                 )}
@@ -235,19 +247,25 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
             {store.drawWinner && (
                 <div className={`absolute bottom-0 w-full max-w-3xl px-6 transition-all duration-700 ease-out flex flex-col items-center ${showChatReveal ? 'h-[40%] opacity-100 mb-8' : 'h-0 opacity-0 mb-0'}`}>
                     <div className="w-full h-[1px] bg-gray-800 mb-4"></div>
-                    <div className="flex-1 w-full bg-[#1a1a1a]/90 backdrop-blur-md rounded-xl border border-[#333] overflow-hidden flex flex-col shadow-2xl">
-                        <div className="bg-[#222] px-4 py-2 border-b border-[#333] flex justify-between items-center">
-                            <span className="text-xs font-bold text-gray-400">당첨자 채팅 (당첨 이후)</span>
-                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                    <div className="flex-1 w-full bg-[#121212]/95 backdrop-blur-xl rounded-2xl border border-[#333] overflow-hidden flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                        <div className="bg-[#1a1a1a] px-6 py-4 border-b border-[#333] flex justify-between items-center">
+                            <span className="text-sm font-bold text-gray-300 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#00ff80]"></div> 당첨자 채팅 반응</span>
+                            <div className="text-xs text-gray-500 font-mono">{new Date(winTime).toLocaleTimeString()}</div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll" ref={scrollRef}>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll bg-black/40" ref={scrollRef}>
                             {store.chatHistory.filter(msg => msg.timestamp >= winTime).length === 0 ? (
-                                <div className="text-center text-gray-600 text-xs py-10">당첨자가 아직 채팅을 입력하지 않았습니다.</div>
+                                <div className="h-full flex flex-col items-center justify-center text-gray-600 text-sm gap-2">
+                                    <div className="animate-spin w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full"></div>
+                                    당첨자의 채팅을 기다리는 중...
+                                </div>
                             ) : (
                                 store.chatHistory.filter(msg => msg.timestamp >= winTime).map((msg, idx) => (
-                                    <div key={idx} className={`text-sm ${msg.nickname === store.drawWinner?.name ? 'bg-[#00ff80]/10 border border-[#00ff80]/30 rounded-lg p-2' : 'opacity-40'}`}>
-                                        <span className={`font-bold mr-2 ${msg.nickname === store.drawWinner?.name ? 'text-[#00ff80]' : 'text-gray-500'}`}>{msg.nickname}:</span>
-                                        <span className="text-gray-200">{msg.message}</span>
+                                    <div key={idx} className={`p-3 rounded-xl border transition-all ${msg.nickname === store.drawWinner?.name ? 'bg-[#00ff80]/10 border-[#00ff80]/30 shadow-[0_0_15px_rgba(0,255,128,0.1)]' : 'bg-[#222] border-[#333] opacity-60'}`}>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className={`font-bold text-sm ${msg.nickname === store.drawWinner?.name ? 'text-[#00ff80]' : 'text-gray-400'}`}>{msg.nickname}</span>
+                                            <span className="text-[10px] text-gray-600">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                                        </div>
+                                        <div className="text-gray-200 text-sm leading-relaxed">{msg.message}</div>
                                     </div>
                                 ))
                             )}
@@ -255,8 +273,12 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                     </div>
                     {isDashboard && (
                         <div className="flex gap-2 mt-4 animate-fadeIn">
-                            <button onClick={() => store.pickDrawWinner(1)} className="px-6 py-2 bg-[#00ff80] text-black hover:bg-[#00cc66] rounded-lg font-bold text-sm transition-all shadow-lg">다시 추첨하기</button>
-                            <button onClick={store.resetDraw} className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white rounded-lg font-bold text-sm transition-all border border-[#444]">목록으로</button>
+                            <button onClick={() => store.pickDrawWinner(1)} className="px-6 py-2 bg-[#00ff80] text-black hover:bg-[#00cc66] rounded-lg font-bold text-sm transition-all shadow-lg flex items-center gap-2">
+                                <Shuffle size={16} /> 다시 추첨하기
+                            </button>
+                            <button onClick={store.resetDraw} className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white rounded-lg font-bold text-sm transition-all border border-[#444] flex items-center gap-2">
+                                <RotateCcw size={16} /> 목록으로
+                            </button>
                         </div>
                     )}
                 </div>

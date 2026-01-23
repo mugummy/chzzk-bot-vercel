@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVoteStore } from '@/stores/useVoteStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Clock, Play, RotateCcw, Shuffle, X, Plus, Crown, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Clock, Play, RotateCcw, Shuffle, X, Plus, Crown, Trash2, Eye, EyeOff, Diamond, Wrench, Users, Sparkles } from 'lucide-react';
 import Toggle from '@/components/ui/Toggle';
 
 interface VoteDisplayProps {
@@ -356,7 +356,17 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                                                 <div className="flex-1 overflow-y-auto p-4 custom-scroll grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 content-start">
                                                     {item.voters.map((voter: any, idx: number) => (
                                                         <div key={idx} className="bg-[#222] p-3 rounded-lg border border-[#333] flex items-center gap-3">
-                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${voter.role === '구독자' ? 'bg-[#00ff80] text-black' : 'bg-[#333] text-gray-400 border border-[#444]'}`}>{voter.role === '구독자' ? '구' : '팬'}</div>
+                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs
+                                                                ${voter.role === '스트리머' ? 'bg-[#00ff80] text-black' :
+                                                                    voter.role === '매니저' ? 'bg-green-700 text-white' :
+                                                                        voter.role === '구독자' ? 'bg-[#333] text-[#00ff80] border border-[#00ff80]' :
+                                                                            'bg-[#333] text-gray-400 border border-[#444]'}`
+                                                            }>
+                                                                {voter.role === '스트리머' && <Crown size={12} fill="currentColor" />}
+                                                                {voter.role === '매니저' && <Wrench size={12} fill="currentColor" />}
+                                                                {voter.role === '구독자' && <Diamond size={12} fill="currentColor" />}
+                                                                {['팬', '일반', undefined].includes(voter.role) && <Users size={12} />}
+                                                            </div>
                                                             <div className="truncate text-sm font-bold text-gray-300">
                                                                 {showRealNames ? voter.name : (voter.name.length > 2 ? voter.name.substring(0, 2) + '***' : voter.name.substring(0, 1) + '*')}
                                                             </div>

@@ -181,7 +181,7 @@ export default function VoteTab() {
                 {/* 2. FEATURE VIEWS */}
                 {/* Full Width Wrapper for Logic Views */}
                 {activeTab !== 'menu' && (
-                    <section className="w-full h-full flex flex-col bg-transparent relative overflow-hidden animate-slideUp">
+                    <section className="w-full h-full flex flex-col bg-transparent relative animate-slideUp">
 
                         {activeTab === 'draw' ? (
                             <div className="flex flex-col md:flex-row h-full">

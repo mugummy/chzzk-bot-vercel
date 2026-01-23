@@ -178,10 +178,10 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
     };
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-transparent animate-fadeIn relative overflow-hidden">
+        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-transparent animate-fadeIn relative">
 
             {/* Wheel Container */}
-            <div className="relative w-[min(600px,80vw)] h-[min(600px,80vw)] mb-12">
+            <div className="relative w-[min(700px,85vw)] h-[min(700px,85vw)] mb-12 mt-8">
 
                 {/* Red Pin Indicator - Fixed Top Right or Custom (Image: Looks like standard Top with style) */}
                 {/* Using Standard Top for alignment with logic, but styled as red marker */}

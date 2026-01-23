@@ -233,7 +233,12 @@ export const useVoteStore = create<VoteState>((set, get) => ({
                 voteTitle: event.title !== undefined ? event.title : state.voteTitle,
                 isAutoSort: event.autoSort !== undefined ? event.autoSort : state.isAutoSort,
                 includeZeroVotes: event.includeZeroVotes !== undefined ? event.includeZeroVotes : state.includeZeroVotes,
-                allowMultiVote: event.allowMulti !== undefined ? event.allowMulti : state.allowMultiVote
+                allowMultiVote: event.allowMulti !== undefined ? event.allowMulti : state.allowMultiVote,
+                // Added missing fields
+                voteUnit: event.unit !== undefined ? event.unit : state.voteUnit,
+                useVoteTimer: event.useTimer !== undefined ? event.useTimer : state.useVoteTimer,
+                voteTimerDuration: event.duration !== undefined ? event.duration : state.voteTimerDuration,
+                voteExcludeWinners: event.voteExcludeWinners !== undefined ? event.voteExcludeWinners : state.voteExcludeWinners
             }));
         }
     },
@@ -535,7 +540,25 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
 
     // TTS Logic
     if (state.useTTS) {
-        // Queue TTS (Simplified directly speaking here, usually use queue)
+        try {
+            // Cancel previous if spamming (optional, or queue) - Simple approach: Speak immediately
+            // For better UX, maybe cancel previous?
+            // window.speechSynthesis.cancel(); // Uncomment if you want to cut off previous
+
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.volume = state.ttsVolume;
+            utterance.rate = state.ttsRate;
+
+            if (state.ttsVoice) {
+                const voices = window.speechSynthesis.getVoices();
+                const selected = voices.find(v => v.name === state.ttsVoice);
+                if (selected) utterance.voice = selected;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        } catch (e) {
+            console.error('TTS Error:', e);
+        }
     }
 
     // Add to History (Keep last 50)
