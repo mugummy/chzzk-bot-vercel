@@ -90,7 +90,7 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
         if (mode === 'overlay') return null; // Don't show config in overlay
 
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#161616] p-8 animate-fadeIn">
+            <div className="w-full h-full flex flex-col items-center p-8 bg-transparent animate-fadeIn">
                 <div className="w-full max-w-3xl flex flex-col gap-4">
                     <div className="flex-1 overflow-y-auto max-h-[60vh] custom-scroll space-y-4 pr-2">
                         {configItems.map((item, idx) => {
@@ -178,7 +178,7 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
     };
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-[#161616] animate-fadeIn relative overflow-hidden">
+        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-transparent animate-fadeIn relative overflow-hidden">
 
             {/* Wheel Container */}
             <div className="relative w-[min(600px,80vw)] h-[min(600px,80vw)] mb-12">

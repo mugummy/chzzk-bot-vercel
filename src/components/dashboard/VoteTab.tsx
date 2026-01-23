@@ -94,7 +94,7 @@ export default function VoteTab() {
     const currentOverlayUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/overlay/${store.channelId || 'demo'}` : '';
 
     return (
-        <div className="h-screen w-full flex flex-col p-4 max-w-screen-2xl mx-auto relative text-white bg-transparent overflow-hidden">
+        <div className="h-full w-full flex flex-col max-w-screen-2xl mx-auto relative text-white bg-transparent overflow-hidden">
 
             {/* Connection Modal */}
             {!store.isConnected && !store.isTestMode && (
@@ -127,7 +127,7 @@ export default function VoteTab() {
             )}
 
             {/* Navigation Bar (Minimal) */}
-            <div className="flex justify-end mb-4 shrink-0 z-20">
+            <div className="flex justify-end mb-4 shrink-0 z-20 px-4 pt-4">
                 {activeTab === 'menu' ? (
                     <button
                         onClick={() => setActiveTab('settings')}
@@ -149,15 +149,8 @@ export default function VoteTab() {
 
                 {/* 1. HOME MENU GRID */}
                 {activeTab === 'menu' && (
-                    <div className="flex-1 flex justify-center pt-4 animate-fadeIn"> {/* Reduced pt-10 to pt-4, keeping justify-center for horizontal centering but flex-1 allows it to take space, let's align items-start instead of default stretch? Actually existing flex settings: flex-1 flex justify-center. If I want it higher, I should remove items-center if it exists (it doesn't). The issue is justify-center (horizontal) is fine, but vertical alignment? The previous code had flex-col on main? No. Let's see. 
-                    
-                    Wait, `main className="flex-1 flex flex-col..."`
-                    The div here is `flex-1 flex justify-center pt-10`. 
-                    If the parent has limited height, justify-center centers it horizontally. 
-                    If the user said "scroll required", it means the buttons are too tall or too much padding. 
-                    
-                    I will reduce py-16 to py-10 and make them look nicer. */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl h-min"> {/* Added h-min to prevent stretching if that was an issue, reduced gap */}
+                    <div className="flex-1 flex justify-center pt-4 px-4 animate-fadeIn">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl h-min">
                             {/* Card: Draw */}
                             <button onClick={() => setActiveTab('draw')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
                                 <Users size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
@@ -190,19 +183,10 @@ export default function VoteTab() {
                 {activeTab !== 'menu' && (
                     <section className="w-full h-full flex flex-col bg-transparent relative overflow-hidden animate-slideUp">
 
-                        {/* Control Panel (Left Sidebar) - Only for Draw Logic if needed (Deprecated from VoteTab, now DrawDisplay handles most) */}
-                        {/* Wait, DrawDisplay is purely display or controls too? DrawDisplay currently has no controls, Controls were in VoteTab sidebar. 
-                            I need to preserve the Draw Controls. 
-                            If I am removing the sidebar structure, I must move Draw controls into DrawDisplay OR keep a sidebar for Draw.
-                            The user design implies "Go to Feature" -> Specific UI.
-                            Vote/Donate/Roulette have FULL SCREEN UIs now.
-                            Draw previously relied on the VoteTab sidebar. I need to check DrawDisplay.
-                            If DrawDisplay is just the list, I need to bring the Controls into it or wrapper.
-                        */}
                         {activeTab === 'draw' ? (
                             <div className="flex flex-col md:flex-row h-full">
                                 {/* DRAW CONTROLS (Moved from Sidebar to Inline Panel) */}
-                                <div className="w-full md:w-[350px] bg-[#1a1a1a] border-r border-[#333] flex flex-col p-4 shrink-0 overflow-hidden">
+                                <div className="w-full md:w-[350px] bg-black/20 border-r border-[#333] flex flex-col p-4 shrink-0 overflow-hidden">
                                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
                                         <SlidersHorizontal size={18} className="text-[#00ff80]" /> 추첨 설정
                                     </h2>
@@ -263,7 +247,7 @@ export default function VoteTab() {
                                     </div>
                                 </div>
                                 {/* Draw Display */}
-                                <div className="flex-1 min-h-0 relative bg-[#1a1a1a] flex flex-col">
+                                <div className="flex-1 min-h-0 relative bg-transparent flex flex-col">
                                     <div className="absolute top-4 right-4 z-20">
                                         <span className="text-5xl font-mono font-black text-white">{activeTimerString()}</span>
                                     </div>
@@ -290,7 +274,7 @@ export default function VoteTab() {
                                             <button onClick={() => setSettingCategory('tts')} className={`w-full text-left px-4 py-3 font-bold rounded-lg mb-1 ${settingCategory === 'tts' ? 'bg-[#00ff80] text-black' : 'text-gray-400 hover:text-white hover:bg-[#333]'}`}>TTS 설정</button>
                                             <button onClick={() => setSettingCategory('overlay')} className={`w-full text-left px-4 py-3 font-bold rounded-lg mb-1 ${settingCategory === 'overlay' ? 'bg-[#00ff80] text-black' : 'text-gray-400 hover:text-white hover:bg-[#333]'}`}>OBS 설정</button>
                                         </div>
-                                        <div className="flex-1 bg-[#1a1a1a] relative h-full">
+                                        <div className="flex-1 bg-transparent relative h-full">
                                             {settingCategory === 'tts' && <TTSSettings />}
                                             {settingCategory === 'overlay' && (
                                                 <div className="p-8">

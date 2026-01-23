@@ -73,7 +73,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
     // 1. CREATION SCREEN (Dashboard Only)
     if (mode === 'dashboard' && store.voteStatus === 'idle') {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-transparent animate-fadeIn">
+            <div className="w-full h-full flex flex-col items-center p-8 bg-transparent animate-fadeIn">
                 <div className="w-full max-w-2xl space-y-6">
                     {/* Amount Input for Donation Vote */}
                     {activeTab === 'donate' && (
