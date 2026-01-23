@@ -71,9 +71,9 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
     // RENDER: RECRUITING OR READY
     if (store.drawStatus === 'recruiting' || store.drawStatus === 'ready') {
         return (
-            <div className="w-full h-full flex flex-col items-center relative bg-[#1a1a1a] overflow-hidden">
+            <div className="w-full h-full flex flex-col items-center relative bg-transparent overflow-hidden">
                 {/* Header Info */}
-                <div className="w-full p-6 border-b border-[#333] bg-[#222]/50 flex justify-between items-center shrink-0 z-10">
+                <div className="w-full p-6 border-b border-[#333] bg-black/20 flex justify-between items-center shrink-0 z-10">
                     <div className="flex items-center gap-4">
                         <span className={`px-4 py-1 rounded-full text-xs font-bold ${store.drawStatus === 'recruiting' ? 'bg-green-500/10 text-green-400 border border-green-500/50 animate-pulse' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/50'}`}>
                             {store.drawStatus === 'recruiting' ? '● 모집 중' : '● 대기 중 (추첨 준비)'}
@@ -172,7 +172,7 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
     }, [store.drawWinner]);
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-[#161616]">
+        <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-transparent">
 
             {/* Reverted Design: Simple Lines & Center Text */}
             <div className={`relative flex flex-col items-center transition-all duration-700 ${showChatReveal ? '-translate-y-24' : ''}`}>

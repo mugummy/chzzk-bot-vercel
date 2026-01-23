@@ -149,30 +149,37 @@ export default function VoteTab() {
 
                 {/* 1. HOME MENU GRID */}
                 {activeTab === 'menu' && (
-                    <div className="flex-1 flex justify-center pt-10 animate-fadeIn">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+                    <div className="flex-1 flex justify-center pt-4 animate-fadeIn"> {/* Reduced pt-10 to pt-4, keeping justify-center for horizontal centering but flex-1 allows it to take space, let's align items-start instead of default stretch? Actually existing flex settings: flex-1 flex justify-center. If I want it higher, I should remove items-center if it exists (it doesn't). The issue is justify-center (horizontal) is fine, but vertical alignment? The previous code had flex-col on main? No. Let's see. 
+                    
+                    Wait, `main className="flex-1 flex flex-col..."`
+                    The div here is `flex-1 flex justify-center pt-10`. 
+                    If the parent has limited height, justify-center centers it horizontally. 
+                    If the user said "scroll required", it means the buttons are too tall or too much padding. 
+                    
+                    I will reduce py-16 to py-10 and make them look nicer. */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl h-min"> {/* Added h-min to prevent stretching if that was an issue, reduced gap */}
                             {/* Card: Draw */}
-                            <button onClick={() => setActiveTab('draw')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-8 py-16 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
-                                <Users size={64} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
-                                <span className="text-2xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">시청자 추첨</span>
+                            <button onClick={() => setActiveTab('draw')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
+                                <Users size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
+                                <span className="text-xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">시청자 추첨</span>
                             </button>
 
                             {/* Card: Numeric Vote */}
-                            <button onClick={() => setActiveTab('vote')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-8 py-16 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
-                                <BarChart2 size={64} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
-                                <span className="text-2xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">숫자 투표</span>
+                            <button onClick={() => setActiveTab('vote')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
+                                <BarChart2 size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
+                                <span className="text-xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">숫자 투표</span>
                             </button>
 
                             {/* Card: Donation Vote */}
-                            <button onClick={() => setActiveTab('donate')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-8 py-16 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
-                                <Coins size={64} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
-                                <span className="text-2xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">도네 투표</span>
+                            <button onClick={() => setActiveTab('donate')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
+                                <Coins size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
+                                <span className="text-xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">도네 투표</span>
                             </button>
 
                             {/* Card: Roulette */}
-                            <button onClick={() => setActiveTab('roulette')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-8 py-16 rounded-3xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
-                                <Disc size={64} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
-                                <span className="text-2xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">룰렛</span>
+                            <button onClick={() => setActiveTab('roulette')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
+                                <Disc size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />
+                                <span className="text-xl font-black text-white group-hover:text-[#00ff80] transition-colors tracking-wide">룰렛</span>
                             </button>
                         </div>
                     </div>

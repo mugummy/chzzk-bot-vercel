@@ -73,7 +73,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
     // 1. CREATION SCREEN (Dashboard Only)
     if (mode === 'dashboard' && store.voteStatus === 'idle') {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-[#161616] animate-fadeIn">
+            <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-transparent animate-fadeIn">
                 <div className="w-full max-w-2xl space-y-6">
                     {/* Amount Input for Donation Vote */}
                     {activeTab === 'donate' && (
@@ -84,11 +84,11 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                                     type="number"
                                     value={store.voteUnit}
                                     onChange={(e) => store.send({ type: 'updateVoteSettings', unit: Number(e.target.value) })}
-                                    className="w-full bg-[#262626] border border-[#333] rounded-xl pl-4 pr-12 py-3 text-white focus:border-[#00ff80] outline-none transition-all font-bold text-right text-xl"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-white focus:border-[#00ff80] outline-none transition-all font-bold text-right text-xl"
                                 />
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
                             </div>
-                            <div className="flex items-center gap-2 cursor-pointer bg-[#262626] px-4 py-3 rounded-xl border border-[#333] hover:border-[#555]" onClick={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })}>
+                            <div className="flex items-center gap-2 cursor-pointer bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:border-white/20" onClick={() => store.send({ type: 'updateVoteSettings', allowMulti: !store.allowMultiVote })}>
                                 <Toggle checked={store.allowMultiVote} onChange={() => { }} />
                                 <span className="text-sm text-gray-400 font-bold">복수투표 허용</span>
                             </div>
@@ -107,7 +107,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                                     setLocalItems(newItems);
                                 }}
                                 placeholder="투표 이름"
-                                className="flex-1 bg-[#262626] border border-[#333] rounded-xl px-4 py-3 text-gray-300 focus:text-white focus:border-[#00ff80] outline-none transition-all placeholder-gray-600"
+                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-gray-300 focus:text-white focus:border-[#00ff80] outline-none transition-all placeholder-gray-600"
                             />
                             <button onClick={() => setLocalItems(localItems.filter((_, i) => i !== idx))} className="text-gray-500 hover:text-red-500 transition-colors p-2"><X size={24} /></button>
                         </div>
@@ -118,7 +118,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                     </button>
 
                     <div className="flex justify-center items-center gap-4 mt-8">
-                        <div className="bg-[#262626] px-4 py-2 rounded-lg flex items-center gap-2 border border-[#333]">
+                        <div className="bg-white/5 px-4 py-2 rounded-lg flex items-center gap-2 border border-white/10">
                             <Toggle checked={store.useVoteTimer} onChange={() => store.send({ type: 'updateVoteSettings', useTimer: !store.useVoteTimer })} />
                             <span className="text-gray-400 text-sm font-bold">타이머 사용하기</span>
                         </div>
@@ -147,7 +147,7 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
 
     // 2. ACTIVE & ENDED SCREEN
     return (
-        <div className={`flex flex-col h-full w-full relative ${mode === 'overlay' ? 'p-2 gap-4' : 'p-6 gap-3 bg-[#161616]'}`}>
+        <div className={`flex flex-col h-full w-full relative ${mode === 'overlay' ? 'p-2 gap-4' : 'p-6 gap-3 bg-transparent'}`}>
 
             {/* Header */}
             {mode === 'dashboard' && (
