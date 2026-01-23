@@ -18,28 +18,47 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
     const isDashboard = mode === 'dashboard';
 
     // Slot Machine Animation Logic
+    const { drawStatus, drawWinner, drawCandidates } = store;
+
     useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (store.drawStatus === 'picking') {
+        let interval: NodeJS.Timeout | null = null;
+
+        if (drawStatus === 'picking') {
             setShowChatReveal(false);
+
             interval = setInterval(() => {
-                const candidates = (store.drawCandidates && store.drawCandidates.length > 0) ? store.drawCandidates : [{ name: '참여자 없음' }];
-                // Safety check
-                if (candidates.length > 0) {
-                    const randomIdx = Math.floor(Math.random() * candidates.length);
-                    const randomName = candidates[randomIdx]?.name || '???';
-                    setSlotName(prev => prev !== randomName ? randomName : prev);
-                }
-            }, 50); // Fast cycle
-        } else if (store.drawWinner) {
-            setSlotName(prev => prev !== store.drawWinner?.name ? store.drawWinner?.name || '???' : prev);
+                // Use functional update to access latest candidates if needed, 
+                // but candidates usually stable during pick. 
+                // We use the closure's candidates.
+                const currentCandidates = (drawCandidates && drawCandidates.length > 0)
+                    ? drawCandidates
+                    : [{ name: '참여자 없음' }];
+
+                const randomIdx = Math.floor(Math.random() * currentCandidates.length);
+                const randomName = currentCandidates[randomIdx]?.name || '???';
+
+                setSlotName(prev => {
+                    if (prev === randomName) return prev;
+                    return randomName;
+                });
+            }, 50);
+
+        } else if (drawWinner) {
+            setSlotName(prev => prev !== drawWinner.name ? drawWinner.name : prev);
             // Delay reveal of chat
-            setTimeout(() => setShowChatReveal(true), 1000);
+            const timer = setTimeout(() => setShowChatReveal(true), 1000);
+            return () => clearTimeout(timer);
         }
-        return () => clearInterval(interval);
-    }, [store.drawStatus, store.drawWinner, store.drawCandidates]);
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [drawStatus, drawWinner, drawCandidates]); // specific deps
 
     // TTS & Auto-scroll for Winner Chat
+    const lastSpokenTime = useRef<number>(0);
+    const { chatHistory, useTTS, ttsVolume, ttsRate, ttsVoice } = store;
+
     useEffect(() => {
         if (!showChatReveal) {
             window.speechSynthesis.cancel();
@@ -51,27 +70,35 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
         }
 
         // TTS Logic for Winner Chat
-        if (store.useTTS && store.drawWinner) {
-            // Find recent messages from winner
-            const recentMsgs = store.chatHistory.filter(msg =>
-                msg.nickname === store.drawWinner?.name && msg.timestamp >= Date.now() - 2000
+        if (useTTS && drawWinner) {
+            // Find messages from winner sent AFTER the win time (or close to it)
+            // We use 'winTime' state from component if available? No, we didn't export it. 
+            // But we can filter by logic: only NEW messages since we started tracking? 
+            // Or just ensure we don't repeat the same timestamp.
+
+            const recentMsgs = chatHistory.filter(msg =>
+                msg.nickname === drawWinner.name && msg.timestamp > lastSpokenTime.current
             );
 
+            // Speak only the NEWEST message that hasn't been spoken
             const latestMsg = recentMsgs[recentMsgs.length - 1];
+
             if (latestMsg) {
+                lastSpokenTime.current = latestMsg.timestamp;
+
                 const utterance = new SpeechSynthesisUtterance(latestMsg.message);
-                utterance.volume = store.ttsVolume;
-                utterance.rate = store.ttsRate;
-                if (store.ttsVoice) {
+                utterance.volume = ttsVolume;
+                utterance.rate = ttsRate;
+                if (ttsVoice) {
                     const voices = window.speechSynthesis.getVoices();
-                    const selected = voices.find(v => v.name === store.ttsVoice);
+                    const selected = voices.find(v => v.name === ttsVoice);
                     if (selected) utterance.voice = selected;
                 }
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-    }, [store.chatHistory, showChatReveal, store.useTTS, store.drawWinner]);
+    }, [chatHistory, showChatReveal, useTTS, drawWinner, ttsVolume, ttsRate, ttsVoice]);
 
 
     // RENDER: IDLE (Start Button)
@@ -116,34 +143,43 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                     </div>
 
                     {isDashboard && (
-                        <div className="flex gap-2">
-                            {store.drawStatus === 'ready' ? (
-                                <>
-                                    <button
-                                        onClick={() => store.startDrawRecruit({ duration: store.useDrawTimer ? store.drawTimerDuration : undefined })}
-                                        className="bg-[#333] hover:bg-[#444] text-white px-6 py-2 rounded-lg font-bold transition-all border border-[#444]"
-                                    >
-                                        추가 모집하기
-                                    </button>
-                                    <button
-                                        onClick={() => store.pickDrawWinner(1)}
-                                        className="bg-[#00ff80] text-black px-8 py-2 rounded-lg font-bold hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,128,0.3)] transition-all"
-                                    >
-                                        추첨하기
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={store.stopDraw}
-                                    className="bg-red-500/10 text-red-500 border border-red-500/50 px-6 py-2 rounded-lg font-bold hover:bg-red-500 hover:text-white transition-all"
-                                >
-                                    모집 종료
-                                </button>
+                        <div className="flex gap-4 items-center">
+                            {store.drawStatus === 'recruiting' && store.useDrawTimer && (
+                                <div className="text-4xl font-mono font-black text-[#00ff80] drop-shadow-[0_0_10px_rgba(0,255,128,0.5)]">
+                                    {store.drawTimer}s
+                                </div>
                             )}
+
+                            <div className="flex gap-2">
+                                {store.drawStatus === 'ready' ? (
+                                    <>
+                                        <button
+                                            onClick={() => store.startDrawRecruit({ duration: store.useDrawTimer ? store.drawTimerDuration : undefined })}
+                                            className="bg-[#333] hover:bg-[#444] text-white px-6 py-2 rounded-lg font-bold transition-all border border-[#444]"
+                                        >
+                                            추가 모집하기
+                                        </button>
+                                        <button
+                                            onClick={() => store.pickDrawWinner(1)}
+                                            className="bg-[#00ff80] text-black px-8 py-2 rounded-lg font-bold hover:bg-[#00cc66] shadow-[0_0_15px_rgba(0,255,128,0.3)] transition-all"
+                                        >
+                                            추첨하기
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={store.stopDraw}
+                                        className="bg-red-500/10 text-red-500 border border-red-500/50 px-6 py-2 rounded-lg font-bold hover:bg-red-500 hover:text-white transition-all"
+                                    >
+                                        모집 종료
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
 
+                {/* Participant List (Scrollable) */}
                 {/* Participant List (Scrollable) */}
                 <div className="flex-1 w-full overflow-y-auto p-4 custom-scroll relative">
                     {store.drawCandidates.length === 0 ? (
@@ -159,17 +195,17 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                             {store.drawCandidates.map((user, idx) => (
                                 <div key={idx} className="bg-[#262626] p-3 rounded-lg border border-[#333] flex items-center gap-3 hover:border-[#444] transition-colors">
                                     {/* Role Icon */}
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs
-                                        ${user.role === '스트리머' ? 'bg-[#00ff80] text-black' :
-                                            user.role === '매니저' ? 'bg-green-700 text-white' :
-                                                user.role === '구독자' ? 'bg-[#333] text-[#00ff80] border border-[#00ff80]' :
-                                                    'bg-[#111] text-gray-400 border border-[#333]'}`
-                                    }>
-                                        {user.role === '스트리머' && <Crown size={14} fill="currentColor" />}
-                                        {user.role === '매니저' && <Wrench size={14} fill="currentColor" />}
-                                        {user.role === '구독자' && <Diamond size={14} fill="currentColor" />}
-                                        {['팬', '일반', undefined].includes(user.role) && <Users size={14} />}
-                                    </div>
+                                    {['스트리머', '매니저', '구독자'].includes(user.role || '') && (
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs
+                                            ${user.role === '스트리머' ? 'bg-[#00ff80] text-black' :
+                                                user.role === '매니저' ? 'bg-green-700 text-white' :
+                                                    'bg-[#333] text-[#00ff80] border border-[#00ff80]'}`
+                                        }>
+                                            {user.role === '스트리머' && <Crown size={14} fill="currentColor" />}
+                                            {user.role === '매니저' && <Wrench size={14} fill="currentColor" />}
+                                            {user.role === '구독자' && <Diamond size={14} fill="currentColor" />}
+                                        </div>
+                                    )}
                                     <div className="min-w-0">
                                         <div className="text-gray-200 font-bold truncate text-sm">{user.name}</div>
                                         {user.lastMessage && <div className="text-gray-500 text-xs truncate">{user.lastMessage}</div>}

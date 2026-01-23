@@ -155,12 +155,9 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                     <div>
                         <h1 className="text-4xl font-black text-white">총 {totalVotes}표</h1>
                     </div>
+                    {/* Removed duplicate timer here as requested */}
                     <div className="text-4xl font-mono font-black text-white">
-                        {store.voteStatus === 'active' && store.useVoteTimer ? (
-                            `${Math.floor(store.voteTimer / 60).toString().padStart(2, '0')}:${(store.voteTimer % 60).toString().padStart(2, '0')}`
-                        ) : (
-                            store.voteStatus === 'active' ? 'LIVE' : 'CLOSED'
-                        )}
+                        {store.voteStatus === 'active' ? 'LIVE' : 'CLOSED'}
                     </div>
                 </div>
             )}
@@ -251,7 +248,11 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
             {/* Active/Ended Footer Controls */}
             {mode === 'dashboard' && (
                 <div className="mt-4 flex justify-between items-center bg-[#161616] p-2 border-t border-[#333] pt-4">
-                    <div className="flex items-center gap-2 cursor-pointer hover:bg-[#222] p-2 rounded-lg transition-colors" onClick={() => store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort })}>
+                    <div className="flex items-center gap-2 cursor-pointer hover:bg-[#222] p-2 rounded-lg transition-colors" onClick={() => {
+                        // Optimistic update
+                        store.send({ type: 'updateVoteSettings', autoSort: !store.isAutoSort });
+                        // Also force local re-render if needed, but memo should handle it
+                    }}>
                         <Toggle checked={!!store.isAutoSort} onChange={() => { }} />
                         <span className="text-gray-400 font-bold text-sm">투표수가 높은 순으로 표시하기</span>
                     </div>
@@ -354,25 +355,28 @@ export default function VoteDisplay({ mode, showControls = true, activeTab = 'vo
                                                 </div>
                                                 {/* List */}
                                                 <div className="flex-1 overflow-y-auto p-4 custom-scroll grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 content-start">
-                                                    {item.voters.map((voter: any, idx: number) => (
-                                                        <div key={idx} className="bg-[#222] p-3 rounded-lg border border-[#333] flex items-center gap-3">
-                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs
-                                                                ${voter.role === '스트리머' ? 'bg-[#00ff80] text-black' :
-                                                                    voter.role === '매니저' ? 'bg-green-700 text-white' :
-                                                                        voter.role === '구독자' ? 'bg-[#333] text-[#00ff80] border border-[#00ff80]' :
-                                                                            'bg-[#333] text-gray-400 border border-[#444]'}`
-                                                            }>
-                                                                {voter.role === '스트리머' && <Crown size={12} fill="currentColor" />}
-                                                                {voter.role === '매니저' && <Wrench size={12} fill="currentColor" />}
-                                                                {voter.role === '구독자' && <Diamond size={12} fill="currentColor" />}
-                                                                {['팬', '일반', undefined].includes(voter.role) && <Users size={12} />}
+                                                    {item.voters.map((voter: any, idx: number) => {
+                                                        const hasRole = ['스트리머', '매니저', '구독자'].includes(voter.role);
+                                                        return (
+                                                            <div key={idx} className="bg-[#222] p-3 rounded-lg border border-[#333] flex items-center gap-3">
+                                                                {hasRole && (
+                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs
+                                                                    ${voter.role === '스트리머' ? 'bg-[#00ff80] text-black' :
+                                                                            voter.role === '매니저' ? 'bg-green-700 text-white' :
+                                                                                'bg-[#333] text-[#00ff80] border border-[#00ff80]'}`
+                                                                    }>
+                                                                        {voter.role === '스트리머' && <Crown size={12} fill="currentColor" />}
+                                                                        {voter.role === '매니저' && <Wrench size={12} fill="currentColor" />}
+                                                                        {voter.role === '구독자' && <Diamond size={12} fill="currentColor" />}
+                                                                    </div>
+                                                                )}
+                                                                <div className="truncate text-sm font-bold text-gray-300">
+                                                                    {showRealNames ? voter.name : (voter.name.length > 2 ? voter.name.substring(0, 2) + '***' : voter.name.substring(0, 1) + '*')}
+                                                                </div>
+                                                                {store.voteMode === 'donation' && voter.amount && <span className="ml-auto text-xs text-[#00ff80]">{voter.amount.toLocaleString()}</span>}
                                                             </div>
-                                                            <div className="truncate text-sm font-bold text-gray-300">
-                                                                {showRealNames ? voter.name : (voter.name.length > 2 ? voter.name.substring(0, 2) + '***' : voter.name.substring(0, 1) + '*')}
-                                                            </div>
-                                                            {store.voteMode === 'donation' && voter.amount && <span className="ml-auto text-xs text-[#00ff80]">{voter.amount.toLocaleString()}</span>}
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                                 {/* Footer Stats / Draw Button */}
                                                 <div className="p-6 border-t border-[#333] bg-[#1a1a1a] flex justify-between items-center">

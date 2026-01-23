@@ -53,6 +53,12 @@ export default function VoteTab() {
 
         loadVoices();
         window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        // Cleanup to prevent blank screen crash on tab switch
+        return () => {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.onvoiceschanged = null;
+        };
     }, []);
 
 
@@ -137,7 +143,13 @@ export default function VoteTab() {
                     </button>
                 ) : (
                     <button
-                        onClick={() => setActiveTab('menu')}
+                        onClick={() => {
+                            setActiveTab('menu');
+                            // Reset all features when returning to menu
+                            store.resetVote();
+                            store.resetDraw();
+                            store.resetRoulette();
+                        }}
                         className="px-4 py-2 rounded-lg text-sm font-bold bg-[#222] text-gray-300 hover:text-white hover:bg-[#333] border border-[#444] transition-all flex items-center gap-2"
                     >
                         <RotateCcw size={16} className="rotate-90" /> 메뉴로
@@ -248,9 +260,7 @@ export default function VoteTab() {
                                 </div>
                                 {/* Draw Display */}
                                 <div className="flex-1 min-h-0 relative bg-transparent flex flex-col">
-                                    <div className="absolute top-4 right-4 z-20">
-                                        <span className="text-5xl font-mono font-black text-white">{activeTimerString()}</span>
-                                    </div>
+                                    {/* Timer moved to DrawDisplay Header to avoid overlap */}
                                     <div className="p-6 h-full">
                                         <DrawDisplay mode="dashboard" />
                                     </div>

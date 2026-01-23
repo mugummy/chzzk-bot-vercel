@@ -53,8 +53,9 @@ export default function TTSSettings() {
 
         const utterance = new SpeechSynthesisUtterance("치지직 봇 테스트 메시지입니다.");
         utterance.voice = voice;
-        utterance.volume = store.ttsVolume;
-        utterance.rate = store.ttsRate;
+        // Ensure finite numbers
+        utterance.volume = Number.isFinite(store.ttsVolume) ? store.ttsVolume : 1;
+        utterance.rate = Number.isFinite(store.ttsRate) ? store.ttsRate : 1;
         utterance.onend = () => setPreviewing(null);
 
         setPreviewing(voice.name);

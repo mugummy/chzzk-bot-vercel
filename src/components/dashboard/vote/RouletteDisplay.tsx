@@ -48,35 +48,21 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
         // We need a generic "Start Roulette" which copies rouletteItems -> activeRouletteItems
     };
 
-    // Helper to start (simulate transfer or direct set)
+    // Helper to start
     const startGame = () => {
         const validItems = configItems.filter(i => i.name.trim() !== '');
         if (validItems.length < 2) return alert('최소 2개의 항목이 필요합니다.');
 
-        // Update store with latest
+        // 1. Update global items
         store.updateRouletteItems(validItems);
 
-        // Force active items (We might need to add a store action or just use internal logic if store allows)
-        // Store doesn't seem to have a "Start Manual Roulette" action that populates activeRouletteItems?
-        // logic: updateRouletteItems clears active. transferVotesToRoulette sets active.
-        // We need a way to set active from current items.
-        // Workaround: We can add a temporary action or logic.
-        // Actually, let's use a workaround:
-        // We will Modify useVoteStore to add `startRoulette(items)` or `setActiveRouletteItems`.
-        // For now, let's assume we can simply set it via `handleSync` or similar if accessible, 
-        // OR we just use the `transferVotesToRoulette` logic if we repurpose it? No that takes functionality.
-        // Let's just create a quick direct setter via the generic `send` / internal setState if possible from outside? No.
-
-        // Best approach: Add `startManualRoulette` to store.
-        // Since I cannot edit store in this file, I will rely on a new store action I added? 
-        // Wait, did I add it? No.
-        // I will use `transferVotesToRoulette` logic modification or `sendFn`.
-        // Let's modify the store in the NEXT Step to add `startRoulette`. 
-        // For this file build, I will assume `store.startRoulette()` exists or I will patch it.
-        // Let's patch `transferVotesToRoulette` or use a "hack" for now?
-        // Actually, I can just use `store.updateRouletteItems(validItems)` and `store.setState({ activeRouletteItems: validItems })` 
-        // because zustand store is usually available via `useVoteStore.setState`.
-        useVoteStore.setState({ rouletteItems: validItems, activeRouletteItems: validItems });
+        // 2. Set Active Items manually to switch mode
+        // Since we don't have a specific action, we can just use the store setter normally
+        useVoteStore.setState({
+            activeRouletteItems: validItems,
+            rouletteRotation: 0,
+            rouletteWinner: null
+        });
     };
 
     const handleReset = () => {
@@ -201,7 +187,7 @@ export default function RouletteDisplay({ mode = 'dashboard' }: RouletteDisplayP
                     className="w-full h-full rounded-full border-[10px] border-[#333] relative overflow-hidden shadow-inner"
                     style={{
                         transform: `rotate(${store.rouletteRotation}deg)`,
-                        transition: store.rouletteTransition || 'none',
+                        transition: `transform ${store.isSpinning ? 4 : 0}s cubic-bezier(0.2, 0.8, 0.2, 1)`,
                     }}
                 >
                     <div className="absolute inset-0" style={{ background: gradientString }}></div>
