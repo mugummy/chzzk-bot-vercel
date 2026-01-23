@@ -149,8 +149,8 @@ export default function VoteTab() {
 
                 {/* 1. HOME MENU GRID */}
                 {activeTab === 'menu' && (
-                    <div className="flex-1 flex justify-center pt-4 px-4 animate-fadeIn">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl h-min">
+                    <div className="flex-1 flex justify-center pt-4 px-4 pb-20 animate-fadeIn overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl h-min p-4">
                             {/* Card: Draw */}
                             <button onClick={() => setActiveTab('draw')} className="group bg-[#161616] border border-[#333] hover:border-[#00ff80] p-6 py-10 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all hover:bg-[#1a1a1a] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(0,255,128,0.1)]">
                                 <Users size={48} className="text-gray-400 group-hover:text-[#00ff80] transition-colors" />

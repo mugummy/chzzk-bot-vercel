@@ -28,23 +28,50 @@ export default function DrawDisplay({ mode = 'dashboard' }: DrawDisplayProps) {
                 if (candidates.length > 0) {
                     const randomIdx = Math.floor(Math.random() * candidates.length);
                     const randomName = candidates[randomIdx]?.name || '???';
-                    setSlotName(randomName);
+                    setSlotName(prev => prev !== randomName ? randomName : prev);
                 }
             }, 50); // Fast cycle
         } else if (store.drawWinner) {
-            setSlotName(store.drawWinner.name);
+            setSlotName(prev => prev !== store.drawWinner?.name ? store.drawWinner?.name || '???' : prev);
             // Delay reveal of chat
             setTimeout(() => setShowChatReveal(true), 1000);
         }
         return () => clearInterval(interval);
     }, [store.drawStatus, store.drawWinner, store.drawCandidates]);
 
-    // Auto-scroll chat to bottom
+    // TTS & Auto-scroll for Winner Chat
     useEffect(() => {
-        if (showChatReveal && scrollRef.current) {
+        if (!showChatReveal) {
+            window.speechSynthesis.cancel();
+            return;
+        }
+
+        if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [store.chatHistory, showChatReveal]);
+
+        // TTS Logic for Winner Chat
+        if (store.useTTS && store.drawWinner) {
+            // Find recent messages from winner
+            const recentMsgs = store.chatHistory.filter(msg =>
+                msg.nickname === store.drawWinner?.name && msg.timestamp >= Date.now() - 2000
+            );
+
+            const latestMsg = recentMsgs[recentMsgs.length - 1];
+            if (latestMsg) {
+                const utterance = new SpeechSynthesisUtterance(latestMsg.message);
+                utterance.volume = store.ttsVolume;
+                utterance.rate = store.ttsRate;
+                if (store.ttsVoice) {
+                    const voices = window.speechSynthesis.getVoices();
+                    const selected = voices.find(v => v.name === store.ttsVoice);
+                    if (selected) utterance.voice = selected;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+    }, [store.chatHistory, showChatReveal, store.useTTS, store.drawWinner]);
 
 
     // RENDER: IDLE (Start Button)

@@ -538,7 +538,8 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
     const message = msg.message;
     const role = msg.extras?.role || '팬'; // '구독자', '시스템', etc
 
-    // TTS Logic
+    // TTS Logic - Handled by components (e.g. DrawDisplay) based on context
+    /*
     if (state.useTTS) {
         try {
             // Cancel previous if spamming (optional, or queue) - Simple approach: Speak immediately
@@ -560,6 +561,7 @@ function handleChat(set: any, get: () => VoteState, msg: any) {
             console.error('TTS Error:', e);
         }
     }
+    */
 
     // Add to History (Keep last 50)
     set((prev: VoteState) => ({
